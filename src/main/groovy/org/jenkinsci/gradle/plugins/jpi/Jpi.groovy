@@ -25,7 +25,7 @@ import org.gradle.api.tasks.bundling.War
  * @author Andrew Bayer
  */
 class Jpi extends War {
-    public static final String JPI_EXTENSION = 'hpi'
+    public static final String JPI_EXTENSION = 'jpi'
 
     Jpi() {
         extension = JPI_EXTENSION

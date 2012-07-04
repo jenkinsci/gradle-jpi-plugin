@@ -1,87 +1,92 @@
 apply plugin: 'groovy'
 apply plugin: 'maven'
 apply plugin: 'signing'
+apply plugin: 'idea'
+
+task wrapper(type: Wrapper) {
+    gradleVersion = '1.0'
+}
 
 repositories {
-  mavenCentral()
-  maven {
-    name "jenkins"
-    delegate.url("http://repo.jenkins-ci.org/releases")
-  }
+    mavenCentral()
+    maven {
+        name "jenkins"
+        delegate.url("http://repo.jenkins-ci.org/releases")
+    }
 }
 
 dependencies {
-  compile gradleApi()
-  compile('org.jvnet.localizer:maven-localizer-plugin:1.13',
-          'org.jenkins-ci:version-number:1.0')
-  groovy localGroovy()
+    compile gradleApi()
+    compile('org.jvnet.localizer:maven-localizer-plugin:1.13',
+            'org.jenkins-ci:version-number:1.0')
+    groovy localGroovy()
 }
 
 artifacts {
-  archives jar
+    archives jar
 }
 
 signing {
-  sign configurations.archives
+    sign configurations.archives
 }
 
 uploadArchives {
-  repositories {
-    mavenDeployer {
-      beforeDeployment { MavenDeployment deployment -> signPom(deployment) }
-      
-      repository(url: "http://maven.jenkins-ci.org:8081/content/repositories/releases") { 
-        authentication(userName: jenkinsUsername, password: jenkinsPassword)
-      }
- 
-      pom.project {
-        name 'Gradle JPI Plugin'
-        packaging 'jar'
-        description 'The Gradle JPI plugin is a Gradle plugin for building Jenkins plugins'
-        url 'http://github.com/jenkinsci/gradle-jpi-plugin'
- 
-        scm {
-          url 'scm:git@github.com:jenkinsci/gradle-jpi-plugin.git'
-          connection 'scm:git@github.com:jenkinsci/gradle-jpi-plugin.git'
-          developerConnection 'scm:git@github.com:jenkinsci/gradle-jpi-plugin.git'
+    repositories {
+        mavenDeployer {
+            beforeDeployment { MavenDeployment deployment -> signPom(deployment) }
+
+            repository(url: "http://maven.jenkins-ci.org:8081/content/repositories/releases") {
+                authentication(userName: jenkinsUsername, password: jenkinsPassword)
+            }
+
+            pom.project {
+                name 'Gradle JPI Plugin'
+                packaging 'jar'
+                description 'The Gradle JPI plugin is a Gradle plugin for building Jenkins plugins'
+                url 'http://github.com/jenkinsci/gradle-jpi-plugin'
+
+                scm {
+                    url 'scm:git@github.com:jenkinsci/gradle-jpi-plugin.git'
+                    connection 'scm:git@github.com:jenkinsci/gradle-jpi-plugin.git'
+                    developerConnection 'scm:git@github.com:jenkinsci/gradle-jpi-plugin.git'
+                }
+
+                licenses {
+                    license {
+                        name 'Apache 2.0'
+                        url 'http://www.apache.org/licenses/LICENSE-2.0.txt'
+                        distribution 'repo'
+                    }
+                }
+
+                developers {
+                    developer {
+                        id 'abayer'
+                        name 'Andrew Bayer'
+                    }
+                    developer {
+                        id 'kohsuke'
+                        name 'Kohsuke Kawaguchi'
+                    }
+                }
+            }
+
+            //mess with the generated pom to set the 'packaging' tag
+            pom.withXml { XmlProvider xmlProvider ->
+                def xml = xmlProvider.asString()
+                def pomXml = new XmlParser().parse(new ByteArrayInputStream(xml.toString().bytes))
+
+                pomXml.version[0] + { packaging('jar') }
+
+                def newXml = new StringWriter()
+                def printer = new XmlNodePrinter(new PrintWriter(newXml))
+                printer.preserveWhitespace = true
+                printer.print(pomXml)
+                xml.setLength(0)
+                xml.append(newXml.toString())
+            }
         }
-        
-        licenses {
-          license {
-            name 'Apache 2.0'
-            url 'http://www.apache.org/licenses/LICENSE-2.0.txt'
-            distribution 'repo'
-          }
-        }
-        
-        developers {
-          developer {
-            id 'abayer'
-            name 'Andrew Bayer'
-          }
-          developer {
-            id 'kohsuke'
-            name 'Kohsuke Kawaguchi'
-          }
-        }
-      }
-      
-      //mess with the generated pom to set the 'packaging' tag
-      pom.withXml { XmlProvider xmlProvider ->
-        def xml = xmlProvider.asString()
-        def pomXml = new XmlParser().parse(new ByteArrayInputStream(xml.toString().bytes))
-        
-        pomXml.version[0] + { packaging('jar') }
-        
-        def newXml = new StringWriter()
-        def printer = new XmlNodePrinter(new PrintWriter(newXml))
-        printer.preserveWhitespace = true
-        printer.print(pomXml)
-        xml.setLength(0)
-        xml.append(newXml.toString())
-      }
     }
-  }
 }
 
 group = 'org.jenkins-ci.tools'

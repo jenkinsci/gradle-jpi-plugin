@@ -12,7 +12,7 @@ Add the following to your build.gradle:
 >
 >        // Whatever other plugins you need to load.
 >
->        groupId = "org.jenkins-ci.plugins"
+>        group = "org.jenkins-ci.plugins"
 >        version = "0.0.1-SNAPSHOT"    // Or whatever your version is.
 >        description = "A description of your plugin"
 >
