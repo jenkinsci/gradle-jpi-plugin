@@ -111,6 +111,8 @@ class JpiExtension {
         return coreVersion
     }
 
+    public boolean pluginFirstClassLoader
+
     void setCoreVersion(String v) {
         this.coreVersion = v
 

@@ -22,7 +22,6 @@ import org.gradle.api.plugins.JavaPluginConvention
 import org.gradle.api.tasks.SourceSet
 import org.gradle.api.artifacts.ResolvedArtifact
 import org.gradle.api.artifacts.Configuration
-import org.gradle.api.plugins.WarPluginConvention
 
 /**
  * Encapsulates the Jenkins plugin manifest and its generation.
@@ -67,6 +66,9 @@ class JpiManifest extends HashMap<String,Object> {
         if(dep.length()>0)
             this["Plugin-Dependencies"] = dep;
 
+        if(conv.pluginFirstClassLoader)
+            this["PluginFirstClassLoader"] = "true"
+
         if (conv.developers != null) {
             def developers = []
             conv.developers.each {
@@ -77,8 +79,6 @@ class JpiManifest extends HashMap<String,Object> {
 
         // more TODO
 /*
-        if(pluginFirstClassLoader)
-            mainSection.addAttributeAndCheck( new Attribute( "PluginFirstClassLoader", "true" ) );
 
         Boolean b = isSupportDynamicLoading();
         if (b!=null)

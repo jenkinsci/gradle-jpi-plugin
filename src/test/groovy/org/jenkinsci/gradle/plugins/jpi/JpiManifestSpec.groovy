@@ -67,4 +67,20 @@ class JpiManifestSpec extends Specification {
             ]
         ]
     }
+
+    def "PluginFirstClassLoader"() {
+        given:
+        project.with {
+            apply plugin: 'jpi'
+            jenkinsPlugin {
+                pluginFirstClassLoader = true
+            }
+        }
+
+        when:
+        def manifest = new JpiManifest(project)
+
+        then:
+        manifest['PluginFirstClassLoader'] == 'true'
+    }
 }
