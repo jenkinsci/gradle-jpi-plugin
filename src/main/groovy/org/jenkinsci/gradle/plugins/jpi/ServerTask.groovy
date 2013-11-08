@@ -42,6 +42,7 @@ class ServerTask extends DefaultTask {
         System.setProperty("JENKINS_HOME",conv.workDir.getAbsolutePath())
         System.setProperty("stapler.trace","true")
         System.setProperty("debug.YUI","true")
+        System.setProperty("stapler.jelly.noCache","true")
 
         def cl = new URLClassLoader([war.toURI().toURL()] as URL[])
         def mainClass = new JarFile(war).getManifest().mainAttributes.getValue("Main-Class")
