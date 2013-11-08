@@ -18,7 +18,6 @@ package org.jenkinsci.gradle.plugins.jpi
 
 import java.util.jar.JarFile
 import org.gradle.api.DefaultTask
-import org.gradle.api.plugins.WarPluginConvention
 import org.gradle.api.tasks.TaskAction
 
 /**
