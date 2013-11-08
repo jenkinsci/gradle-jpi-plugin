@@ -67,14 +67,18 @@ class JpiManifest extends HashMap<String,Object> {
         if(dep.length()>0)
             this["Plugin-Dependencies"] = dep;
 
+        if (conv.developers != null) {
+            def developers = []
+            conv.developers.each {
+                developers << "${it.name?:''}:${it.id?:''}:${it.email?:''}"
+            }
+            this["Plugin-Developers"] = developers.join(',')
+        }
+
         // more TODO
 /*
         if(pluginFirstClassLoader)
             mainSection.addAttributeAndCheck( new Attribute( "PluginFirstClassLoader", "true" ) );
-
-        if (project.getDevelopers() != null) {
-            mainSection.addAttributeAndCheck(new Attribute("Plugin-Developers",getDevelopersForManifest()));
-        }
 
         Boolean b = isSupportDynamicLoading();
         if (b!=null)

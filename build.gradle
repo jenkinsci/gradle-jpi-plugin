@@ -34,6 +34,7 @@ dependencies {
     compile('org.jvnet.localizer:maven-localizer-plugin:1.13',
             'org.jenkins-ci:version-number:1.0')
     groovy localGroovy()
+    testCompile 'org.spockframework:spock-core:0.7-groovy-1.8'
 }
 
 artifacts {
