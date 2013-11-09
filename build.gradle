@@ -32,7 +32,8 @@ repositories {
 dependencies {
     compile gradleApi()
     compile('org.jvnet.localizer:maven-localizer-plugin:1.13',
-            'org.jenkins-ci:version-number:1.0')
+            'org.jenkins-ci:version-number:1.0',
+            'net.java.sezpoz:sezpoz:1.9')
     groovy localGroovy()
     testCompile 'org.spockframework:spock-core:0.7-groovy-1.8'
 }

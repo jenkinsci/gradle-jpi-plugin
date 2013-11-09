@@ -16,12 +16,18 @@
 
 package org.jenkinsci.gradle.plugins.jpi
 
+import hudson.Extension
+import jenkins.YesNoMaybe
+import net.java.sezpoz.IndexItem
+import org.gradle.api.plugins.JavaPlugin
+
 import java.text.SimpleDateFormat
 import org.gradle.api.Project
 import org.gradle.api.plugins.JavaPluginConvention
 import org.gradle.api.tasks.SourceSet
 import org.gradle.api.artifacts.ResolvedArtifact
 import org.gradle.api.artifacts.Configuration
+import net.java.sezpoz.Index
 
 /**
  * Encapsulates the Jenkins plugin manifest and its generation.
@@ -77,13 +83,10 @@ class JpiManifest extends HashMap<String,Object> {
             this["Plugin-Developers"] = developers.join(',')
         }
 
-        // more TODO
-/*
-
-        Boolean b = isSupportDynamicLoading();
+        Boolean b = isSupportDynamicLoading()
         if (b!=null)
-            mainSection.addAttributeAndCheck(new Attribute("Support-Dynamic-Loading",b.toString()));
-*/
+            this["Support-Dynamic-Loading"] = b.toString()
+
         // remove null values
         for (Iterator itr = this.entrySet().iterator(); itr.hasNext();) {
             if (itr.next().value==null) itr.remove();
@@ -112,7 +115,18 @@ class JpiManifest extends HashMap<String,Object> {
         }
     }
 
-
+    protected Boolean isSupportDynamicLoading() throws IOException {
+        def cl = new URLClassLoader(
+            [project.tasks.compileJava.destinationDir.toURI().toURL()].toArray(new URL[1]),
+            getClass().getClassLoader())
+        EnumSet<YesNoMaybe> e = EnumSet.noneOf(YesNoMaybe)
+        Index.load(Extension, Object, cl).each {
+            e.add(it.annotation().dynamicLoadable())
+        }
+        if (e.contains(YesNoMaybe.NO)) return false
+        if (e.contains(YesNoMaybe.MAYBE)) return null
+        return true
+    }
 
     public void writeTo(File f) {
         def m = new java.util.jar.Manifest()
