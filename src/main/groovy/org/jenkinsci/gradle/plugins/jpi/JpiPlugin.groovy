@@ -34,6 +34,7 @@ import org.gradle.api.artifacts.maven.Conf2ScopeMappingContainer;
 import org.gradle.api.artifacts.maven.MavenResolver
 import org.gradle.api.artifacts.maven.MavenDeployer
 import org.gradle.api.artifacts.maven.MavenPom;
+import org.gradle.api.tasks.bundling.Jar
 
 /**
  * Loads HPI related tasks into the current project.
@@ -86,6 +87,7 @@ public class JpiPlugin implements Plugin<Project> {
         gradleProject.tasks.getByName("war").onlyIf { false }
 
         def ext = new JpiExtension(gradleProject)
+
         gradleProject.extensions.jenkinsPlugin = ext;
 
         gradleProject.tasks.withType(Jpi) { Jpi task ->
@@ -131,6 +133,15 @@ public class JpiPlugin implements Plugin<Project> {
         gradleProject.sourceSets.main.java.srcDirs += ext.getLocalizerDestDir()
 
         gradleProject.tasks.compileJava.dependsOn(LocalizerTask.TASK_NAME)
+
+        def jar = gradleProject.tasks.add(Jar.TASK_NAME, Jar)
+        def sourcesJar = gradleProject.task('sourcesJar', type: Jar, dependsOn:'classes') {
+            classifier = 'sources'
+            from gradleProject.sourceSets.main.allSource
+        }
+        gradleProject.artifacts {
+            archives jar, sourcesJar
+        }
 
         configureConfigurations(gradleProject.configurations);
 
