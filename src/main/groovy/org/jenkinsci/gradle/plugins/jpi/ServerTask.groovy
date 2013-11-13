@@ -18,7 +18,6 @@ package org.jenkinsci.gradle.plugins.jpi
 
 import java.util.jar.JarFile
 import org.gradle.api.DefaultTask
-import org.gradle.api.plugins.WarPluginConvention
 import org.gradle.api.tasks.TaskAction
 
 /**
@@ -42,6 +41,7 @@ class ServerTask extends DefaultTask {
         System.setProperty("JENKINS_HOME",conv.workDir.getAbsolutePath())
         System.setProperty("stapler.trace","true")
         System.setProperty("debug.YUI","true")
+        System.setProperty("stapler.jelly.noCache","true")
 
         def cl = new URLClassLoader([war.toURI().toURL()] as URL[])
         def mainClass = new JarFile(war).getManifest().mainAttributes.getValue("Main-Class")
