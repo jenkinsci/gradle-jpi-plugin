@@ -120,12 +120,18 @@ gradle.taskGraph.whenReady { taskGraph ->
         uploadArchives {
             repositories {
                 mavenDeployer {
-                    def credentials = loadCredentialsForJenkinsCommunityRepository()
-                    repository(url: 'http://maven.jenkins-ci.org:8081/content/repositories/releases') {
-                        authentication(credentials)
-                    }
-                    snapshotRepository(url: 'http://maven.jenkins-ci.org:8081/content/repositories/snapshots') {
-                        authentication(credentials)
+                    if(project.version.endsWith('-LOCAL')) {
+                        repository(url: "file://${projectDir}/build/repo")
+                    } else if(project.version.endsWith('-SNAPSHOT')) {
+                        def credentials = loadCredentialsForJenkinsCommunityRepository()
+                        repository(url: 'http://maven.jenkins-ci.org:8081/content/repositories/snapshots') {
+                            authentication(credentials)
+                        }
+                    } else {
+                        def credentials = loadCredentialsForJenkinsCommunityRepository()
+                        repository(url: 'http://maven.jenkins-ci.org:8081/content/repositories/releases') {
+                            authentication(credentials)
+                        }
                     }
                 }
             }
