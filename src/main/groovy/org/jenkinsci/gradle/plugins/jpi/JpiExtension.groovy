@@ -256,7 +256,7 @@ class JpiExtension {
      */
     FileCollection getRuntimeClasspath() {
         def providedRuntime = project.configurations.getByName(WarPlugin.PROVIDED_RUNTIME_CONFIGURATION_NAME)
-        def groovyRuntime = project.configurations.getByName(GroovyBasePlugin.GROOVY_CONFIGURATION_NAME)
+        def groovyRuntime = project.configurations.getByName('compile')
         mainSourceTree().runtimeClasspath - providedRuntime - groovyRuntime
     }
 
