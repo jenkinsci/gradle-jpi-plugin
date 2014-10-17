@@ -19,7 +19,6 @@ import org.gradle.api.Project
 import org.gradle.api.file.FileCollection
 import org.gradle.api.plugins.JavaPluginConvention
 import org.gradle.api.plugins.WarPlugin
-import org.gradle.api.plugins.GroovyBasePlugin
 import org.gradle.api.tasks.SourceSet
 import org.gradle.api.GradleException
 import org.gradle.util.ConfigureUtil
