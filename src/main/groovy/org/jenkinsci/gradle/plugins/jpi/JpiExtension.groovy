@@ -19,7 +19,6 @@ import org.gradle.api.Project
 import org.gradle.api.file.FileCollection
 import org.gradle.api.plugins.JavaPluginConvention
 import org.gradle.api.plugins.WarPlugin
-import org.gradle.api.plugins.GroovyBasePlugin
 import org.gradle.api.tasks.SourceSet
 import org.gradle.api.GradleException
 import org.gradle.util.ConfigureUtil
@@ -256,7 +255,7 @@ class JpiExtension {
      */
     FileCollection getRuntimeClasspath() {
         def providedRuntime = project.configurations.getByName(WarPlugin.PROVIDED_RUNTIME_CONFIGURATION_NAME)
-        def groovyRuntime = project.configurations.getByName(GroovyBasePlugin.GROOVY_CONFIGURATION_NAME)
+        def groovyRuntime = project.configurations.getByName('compile')
         mainSourceTree().runtimeClasspath - providedRuntime - groovyRuntime
     }
 

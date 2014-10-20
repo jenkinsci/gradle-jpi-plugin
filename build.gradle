@@ -15,12 +15,20 @@ repositories {
     }
 }
 
+// detect appropriate spock version
+def spockVersion
+if (GroovySystem.getVersion().startsWith('2.3')) { // for gradle 2.x
+    spockVersion = '0.7-groovy-2.0'
+} else { // for gradle 1.x
+    spockVersion = '0.7-groovy-1.8' 
+}
+
 dependencies {
     compile gradleApi()
     compile 'org.jvnet.localizer:maven-localizer-plugin:1.13'
     compile 'org.jenkins-ci:version-number:1.0'
     compile localGroovy()
-    testCompile('org.spockframework:spock-core:0.7-groovy-1.8') {
+    testCompile("org.spockframework:spock-core:${spockVersion}") {
         exclude module: 'groovy-all' // use the version that is distributed with Gradle
     }
 }
