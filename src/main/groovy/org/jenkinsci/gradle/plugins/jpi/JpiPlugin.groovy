@@ -197,7 +197,7 @@ class JpiPlugin implements Plugin<Project> {
                 setDescription('Jenkins war that corresponds to the Jenkins core')
     }
 
-    private static configurePublishing(Project project) {
+    protected static configurePublishing(Project project) {
         PublishingExtension publishingExtension = project.extensions.getByType(PublishingExtension)
         JpiExtension jpiExtension = project.extensions.getByType(JpiExtension)
 
