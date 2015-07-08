@@ -2,6 +2,7 @@
 
   * allow to override system properties for the embedded Jenkins instance which is started by the `server` task
     ([JENKINS-29297](https://issues.jenkins-ci.org/browse/JENKINS-29297))
+  * updated Gradle to version 2.6
 
 ## 0.12.1 (2015-06-17)
 
