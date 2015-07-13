@@ -109,6 +109,15 @@ configuration.
 Note that you must use the artifact only notation (append `@jar` if you're using the semicolon notation as in the
 example or specify `ext: 'jar'` if you're using the map-style notation). 
 
+## Java Versions
+
+Jenkins 1.580+ still uses Java 7, not Java 8 (as of July 2015 anyway). So it makes sense to put this into your build.gradle:
+
+    sourceCompatibility = 1.7
+    targetCompatibility = 1.7
+
+Otherwise your plugin will be built by whatever JDK is available to Gradle, which may be JDK 8. This will lead to fatal exceptions when Jenkins tries to load your plugin on startup.
+
 ## Usage
 
 * `gradle jpi` - Build the Jenkins plugin file, which can then be
