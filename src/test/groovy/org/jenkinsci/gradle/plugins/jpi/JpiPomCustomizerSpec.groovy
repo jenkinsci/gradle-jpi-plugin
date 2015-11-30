@@ -2,7 +2,12 @@ package org.jenkinsci.gradle.plugins.jpi
 
 import org.custommonkey.xmlunit.XMLUnit
 import org.gradle.api.Project
+import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.strategy.DefaultVersionComparator
+import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.strategy.DefaultVersionSelectorScheme
+import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.strategy.VersionSelectorScheme
 import org.gradle.api.internal.project.ProjectInternal
+import org.gradle.api.publication.maven.internal.MavenVersionRangeMapper
+import org.gradle.api.publication.maven.internal.VersionRangeMapper
 import org.gradle.api.publish.PublishingExtension
 import org.gradle.api.publish.maven.MavenPublication
 import org.gradle.api.publish.maven.internal.publication.MavenPomInternal
@@ -195,7 +200,9 @@ class JpiPomCustomizerSpec extends Specification {
         MavenPublication publication = publishingExtension.publications.getByName('mavenJpi') as MavenPublication
         MavenPomInternal pomInternal = (MavenPomInternal) publication.pom
 
-        MavenPomFileGenerator pomGenerator = new MavenPomFileGenerator(pomInternal.projectIdentity)
+        VersionSelectorScheme versionSelectorScheme = new DefaultVersionSelectorScheme(new DefaultVersionComparator())
+        VersionRangeMapper versionRangeMapper = new MavenVersionRangeMapper(versionSelectorScheme)
+        MavenPomFileGenerator pomGenerator = new MavenPomFileGenerator(pomInternal.projectIdentity, versionRangeMapper)
         pomGenerator.packaging = pomInternal.packaging
         pomInternal.runtimeDependencies.each { pomGenerator.addRuntimeDependency(it) }
         pomGenerator.withXml(pomInternal.xmlAction)
