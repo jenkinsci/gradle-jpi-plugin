@@ -23,7 +23,7 @@ class TestDependenciesTaskIntegrationSpec extends Specification {
 
         then:
         result.task(':resolveTestDependencies').outcome == TaskOutcome.SUCCESS
-        result.task(':processTestResources').outcome == TaskOutcome.UP_TO_DATE
+        result.task(':processTestResources').outcome == TaskOutcome.NO_SOURCE
         File dir = new File(project.root, 'build/resources/test/test-dependencies')
         dir.directory
         new File(dir, 'index').text == [
