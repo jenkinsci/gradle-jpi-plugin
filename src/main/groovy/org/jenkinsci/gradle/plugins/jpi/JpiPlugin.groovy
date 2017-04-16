@@ -271,7 +271,7 @@ class JpiPlugin implements Plugin<Project> {
                 setVisible(false).
                 setDescription('Jenkins war that corresponds to the Jenkins core')
 
-        cc.getByName(JavaPlugin.TEST_COMPILE_CONFIGURATION_NAME).incoming.beforeResolve {
+        cc.getByName(JavaPlugin.TEST_COMPILE_CONFIGURATION_NAME).defaultDependencies {
             jenkinsTestConfiguration.resolvedConfiguration.resolvedArtifacts.each { ResolvedArtifact ra ->
                 if (ra.extension == 'hpi' || ra.extension == 'jpi') {
                     project.dependencies.add(JavaPlugin.TEST_COMPILE_CONFIGURATION_NAME, "${ra.moduleVersion.id}@jar")
