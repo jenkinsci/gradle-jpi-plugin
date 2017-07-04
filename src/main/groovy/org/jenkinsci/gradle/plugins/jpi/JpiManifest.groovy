@@ -20,12 +20,13 @@ import jenkins.YesNoMaybe
 import net.java.sezpoz.Index
 import org.gradle.api.Project
 import org.gradle.api.artifacts.Configuration
-import org.gradle.api.artifacts.ResolvedArtifact
+import org.gradle.api.artifacts.Dependency
+import org.gradle.api.java.archives.Attributes
+import org.gradle.api.java.archives.Manifest
+import org.gradle.api.java.archives.ManifestException
 import org.gradle.api.plugins.JavaPluginConvention
 
 import java.text.SimpleDateFormat
-import java.util.jar.Attributes
-import java.util.jar.Manifest
 
 import static java.util.jar.Attributes.Name.MANIFEST_VERSION
 import static org.gradle.api.tasks.SourceSet.MAIN_SOURCE_SET_NAME
@@ -37,28 +38,37 @@ import static org.jenkinsci.gradle.plugins.jpi.JpiPlugin.PLUGINS_DEPENDENCY_CONF
  *
  * @author Kohsuke Kawaguchi
  */
-class JpiManifest extends Manifest {
+class JpiManifest implements Manifest {
+    protected final Project project
+
     JpiManifest(Project project) {
+        this.project = project
+    }
+
+    @Override
+    Attributes getAttributes() {
         def conv = project.extensions.getByType(JpiExtension)
         def javaPluginConvention = project.convention.getPlugin(JavaPluginConvention)
         def classDir = javaPluginConvention.sourceSets.getByName(MAIN_SOURCE_SET_NAME).output.classesDir
 
-        mainAttributes[MANIFEST_VERSION] = '1.0'
+        Attributes mainAttributes = new JpiAttributes()
+
+        mainAttributes[MANIFEST_VERSION.toString()] = '1.0'
 
         File pluginImpl = new File(classDir, 'META-INF/services/hudson.Plugin')
         if (pluginImpl.exists()) {
-            mainAttributes.putValue('Plugin-Class', pluginImpl.readLines('UTF-8')[0])
+            mainAttributes['Plugin-Class'] = pluginImpl.readLines('UTF-8')[0]
         }
 
-        mainAttributes.putValue('Group-Id', project.group.toString())
-        mainAttributes.putValue('Short-Name', conv.shortName)
-        mainAttributes.putValue('Long-Name', conv.displayName)
-        mainAttributes.putValue('Url', conv.url)
-        mainAttributes.putValue('Compatible-Since-Version', conv.compatibleSinceVersion)
+        mainAttributes['Group-Id'] = project.group.toString()
+        mainAttributes['Short-Name'] = conv.shortName
+        mainAttributes['Long-Name'] = conv.displayName
+        mainAttributes['Url'] = conv.url
+        mainAttributes['Compatible-Since-Version'] = conv.compatibleSinceVersion
         if (conv.sandboxStatus) {
-            mainAttributes.putValue('Sandbox-Status', conv.sandboxStatus.toString())
+            mainAttributes['Sandbox-Status'] = conv.sandboxStatus.toString()
         }
-        mainAttributes.putValue('Extension-Name', conv.shortName)
+        mainAttributes['Extension-Name'] = conv.shortName
 
         def version = project.version
         if (version == Project.DEFAULT_VERSION) {
@@ -68,35 +78,89 @@ class JpiManifest extends Manifest {
             String dt = new SimpleDateFormat('MM/dd/yyyy HH:mm', Locale.default).format(new Date())
             version += " (private-$dt-${System.getProperty('user.name')})"
         }
-        mainAttributes.putValue('Plugin-Version', version.toString())
+        mainAttributes['Plugin-Version'] = version.toString()
 
-        mainAttributes.putValue('Jenkins-Version', conv.coreVersion)
+        mainAttributes['Jenkins-Version'] = conv.coreVersion
 
-        mainAttributes.putValue('Mask-Classes', conv.maskClasses)
+        mainAttributes['Mask-Classes'] = conv.maskClasses
 
         def dep = findDependencyProjects(project)
         if (dep.length() > 0) {
-            mainAttributes.putValue('Plugin-Dependencies', dep)
+            mainAttributes['Plugin-Dependencies'] = dep
         }
 
         if (conv.pluginFirstClassLoader) {
-            mainAttributes.putValue('PluginFirstClassLoader', 'true')
+            mainAttributes['PluginFirstClassLoader'] = 'true'
         }
 
         if (conv.developers) {
-            mainAttributes.putValue(
-                    'Plugin-Developers',
-                    conv.developers.collect { "${it.name ?: ''}:${it.id ?: ''}:${it.email ?: ''}" }.join(',')
-            )
+            mainAttributes['Plugin-Developers'] = conv.developers.collect {
+                "${it.name ?: ''}:${it.id ?: ''}:${it.email ?: ''}"
+            }.join(',')
         }
 
         YesNoMaybe supportDynamicLoading = isSupportDynamicLoading(classDir)
         if (supportDynamicLoading != YesNoMaybe.MAYBE) {
-            mainAttributes.putValue('Support-Dynamic-Loading', (supportDynamicLoading == YesNoMaybe.YES).toString())
+            mainAttributes['Support-Dynamic-Loading'] = (supportDynamicLoading == YesNoMaybe.YES).toString()
         }
 
         // remove empty values
         mainAttributes.entrySet().removeAll { it.value == null || it.value.toString().empty }
+
+        mainAttributes
+    }
+
+    @Override
+    Map<String, Attributes> getSections() {
+        [:]
+    }
+
+    @Override
+    Manifest attributes(Map<String, ?> map) throws ManifestException {
+        throw new UnsupportedOperationException()
+    }
+
+    @Override
+    Manifest attributes(Map<String, ?> map, String s) throws ManifestException {
+        throw new UnsupportedOperationException()
+    }
+
+    @Override
+    Manifest getEffectiveManifest() {
+        this
+    }
+
+    @Override
+    Manifest writeTo(Writer writer) {
+        throw new UnsupportedOperationException()
+    }
+
+    @Override
+    @SuppressWarnings('Instanceof')
+    Manifest writeTo(Object o) {
+        if (!(o instanceof OutputStream)) {
+            throw new IllegalArgumentException()
+        }
+        toJavaManifest().write(o)
+        this
+    }
+
+    @Override
+    Manifest from(Object... objects) {
+        throw new UnsupportedOperationException()
+    }
+
+    @Override
+    Manifest from(Object o, Closure<?> closure) {
+        throw new UnsupportedOperationException()
+    }
+
+    java.util.jar.Manifest toJavaManifest() {
+        java.util.jar.Manifest manifest = new java.util.jar.Manifest()
+        attributes.each {
+            manifest.mainAttributes.putValue(it.key, it.value.toString())
+        }
+        manifest
     }
 
     private static String findDependencyProjects(Project project) {
@@ -109,13 +173,13 @@ class JpiManifest extends Manifest {
     }
 
     private static listUpDependencies(Configuration c, boolean optional, StringBuilder buf) {
-        for (ResolvedArtifact a : c.resolvedConfiguration.resolvedArtifacts) {
+        for (Dependency d : c.dependencies) {
             if (buf.length() > 0) {
                 buf.append(',')
             }
-            buf.append(a.moduleVersion.id.name)
+            buf.append(d.name)
             buf.append(':')
-            buf.append(a.moduleVersion.id.version)
+            buf.append(d.version)
             if (optional) {
                 buf.append(';resolution:=optional')
             }
@@ -137,7 +201,6 @@ class JpiManifest extends Manifest {
         YesNoMaybe.YES
     }
 
-    static Map<String, ?> attributesToMap(Attributes attributes) {
-        attributes.collectEntries { k, v -> [k.toString(), v] } as Map<String, ?>
+    static class JpiAttributes extends HashMap<String, Object> implements Attributes {
     }
 }

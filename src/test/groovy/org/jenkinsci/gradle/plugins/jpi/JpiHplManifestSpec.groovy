@@ -22,7 +22,7 @@ class JpiHplManifestSpec extends Specification {
         libraries*.mkdirs()
 
         when:
-        Manifest manifest = new JpiHplManifest(project)
+        Manifest manifest = new JpiHplManifest(project).toJavaManifest()
 
         then:
         manifest.mainAttributes.getValue('Resource-Path') == new File(project.projectDir, 'src/main/webapp').path
@@ -36,7 +36,7 @@ class JpiHplManifestSpec extends Specification {
         }
 
         when:
-        JpiHplManifest manifest = new JpiHplManifest(project)
+        Manifest manifest = new JpiHplManifest(project).toJavaManifest()
 
         then:
         manifest.mainAttributes.getValue('Resource-Path') == new File(project.projectDir, 'src/main/webapp').path
