@@ -1,5 +1,8 @@
 ## 0.23.0 (unreleased)
 
+  * fixed incremental build
+    ([JENKINS-45126](https://issues.jenkins-ci.org/browse/JENKINS-45126))
+
 ## 0.22.0 (2017-02-23)
 
   * fixed compatibility with Gradle 3.4

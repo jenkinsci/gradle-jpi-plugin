@@ -41,7 +41,6 @@ import org.gradle.execution.TaskGraphExecuter
 
 import static org.gradle.api.logging.LogLevel.INFO
 import static org.gradle.api.tasks.SourceSet.TEST_SOURCE_SET_NAME
-import static org.jenkinsci.gradle.plugins.jpi.JpiManifest.attributesToMap
 
 /**
  * Loads HPI related tasks into the current project.
@@ -151,9 +150,7 @@ class JpiPlugin implements Plugin<Project> {
 
         War war = project.tasks[WarPlugin.WAR_TASK_NAME] as War
         war.description = 'Generates the JPI package'
-        war.doFirst {
-            war.manifest.attributes(attributesToMap(new JpiManifest(project).mainAttributes))
-        }
+        war.manifest = new JpiManifest(project)
 
         project.afterEvaluate {
             war.archiveName = "${jpiExtension.shortName}.${jpiExtension.fileExtension}"
@@ -169,9 +166,7 @@ class JpiPlugin implements Plugin<Project> {
     private static configureJar(Project project) {
         // add manifest to the JAR file
         Jar jarTask = project.tasks.getByName(JavaPlugin.JAR_TASK_NAME) as Jar
-        jarTask.doFirst {
-            jarTask.manifest.attributes(attributesToMap(new JpiManifest(project).mainAttributes))
-        }
+        jarTask.manifest = new JpiManifest(project)
     }
 
     private static configureTestDependencies(Project project) {
@@ -344,7 +339,7 @@ class JpiPlugin implements Plugin<Project> {
             outputs.file hpl
             doLast {
                 hpl.parentFile.mkdirs()
-                hpl.withOutputStream { new JpiHplManifest(project).write(it) }
+                hpl.withOutputStream { new JpiHplManifest(project).writeTo(it) }
             }
         }
         project.tasks.test.dependsOn(generateTestHpl)
