@@ -20,7 +20,7 @@ import jenkins.YesNoMaybe
 import net.java.sezpoz.Index
 import org.gradle.api.Project
 import org.gradle.api.artifacts.Configuration
-import org.gradle.api.artifacts.ResolvedArtifact
+import org.gradle.api.artifacts.Dependency
 import org.gradle.api.plugins.JavaPluginConvention
 
 import java.text.SimpleDateFormat
@@ -109,13 +109,13 @@ class JpiManifest extends Manifest {
     }
 
     private static listUpDependencies(Configuration c, boolean optional, StringBuilder buf) {
-        for (ResolvedArtifact a : c.resolvedConfiguration.resolvedArtifacts) {
+        for (Dependency d : c.dependencies) {
             if (buf.length() > 0) {
                 buf.append(',')
             }
-            buf.append(a.moduleVersion.id.name)
+            buf.append(d.name)
             buf.append(':')
-            buf.append(a.moduleVersion.id.version)
+            buf.append(d.version)
             if (optional) {
                 buf.append(';resolution:=optional')
             }

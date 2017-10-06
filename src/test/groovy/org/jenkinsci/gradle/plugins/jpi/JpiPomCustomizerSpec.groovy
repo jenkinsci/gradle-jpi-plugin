@@ -149,7 +149,7 @@ class JpiPomCustomizerSpec extends Specification {
                 coreVersion = '1.580.1'
             }
             dependencies {
-                jenkinsPlugins 'org.jenkins-ci.plugins:credentials:1.9.4@jar'
+                jenkinsPlugins 'org.jenkins-ci.plugins:credentials:1.9.4'
             }
         }
         (project as ProjectInternal).evaluate()
@@ -169,7 +169,7 @@ class JpiPomCustomizerSpec extends Specification {
                 coreVersion = '1.580.1'
             }
             dependencies {
-                optionalJenkinsPlugins 'org.jenkins-ci.plugins:credentials:1.9.4@jar'
+                optionalJenkinsPlugins 'org.jenkins-ci.plugins:credentials:1.9.4'
             }
         }
         (project as ProjectInternal).evaluate()

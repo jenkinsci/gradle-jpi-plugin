@@ -9,7 +9,6 @@ import org.gradle.api.plugins.JavaPlugin
 
 import static org.gradle.api.artifacts.ArtifactRepositoryContainer.DEFAULT_MAVEN_CENTRAL_REPO_NAME
 import static org.gradle.api.artifacts.ArtifactRepositoryContainer.DEFAULT_MAVEN_LOCAL_REPO_NAME
-import static org.gradle.api.plugins.JavaPlugin.RUNTIME_ELEMENTS_CONFIGURATION_NAME
 import static org.jenkinsci.gradle.plugins.jpi.JpiPlugin.CORE_DEPENDENCY_CONFIGURATION_NAME
 import static org.jenkinsci.gradle.plugins.jpi.JpiPlugin.OPTIONAL_PLUGINS_DEPENDENCY_CONFIGURATION_NAME
 import static org.jenkinsci.gradle.plugins.jpi.JpiPlugin.PLUGINS_DEPENDENCY_CONFIGURATION_NAME
@@ -65,14 +64,13 @@ class JpiPomCustomizer {
                 getByName(OPTIONAL_PLUGINS_DEPENDENCY_CONFIGURATION_NAME).dependencies
         DependencySet coreDependencies = project.configurations.
                 getByName(CORE_DEPENDENCY_CONFIGURATION_NAME).dependencies
-        DependencySet runtimeDependencies = project.configurations[RUNTIME_ELEMENTS_CONFIGURATION_NAME].allDependencies
         DependencySet compileDependencies = project.configurations.
                 getByName(JavaPlugin.COMPILE_CONFIGURATION_NAME).dependencies
         Set<Dependency> allPluginDependencies = pluginDependencies + optionalPluginDependencies
 
         Node dependenciesNode = pom.dependencies[0] as Node
         dependenciesNode = dependenciesNode ?: pom.appendNode('dependencies')
-        (runtimeDependencies - coreDependencies).each {
+        (compileDependencies - coreDependencies + pluginDependencies + optionalPluginDependencies).each {
             Node dependency = dependenciesNode.appendNode('dependency')
             dependency.appendNode('groupId', it.group)
             dependency.appendNode('artifactId', it.name)

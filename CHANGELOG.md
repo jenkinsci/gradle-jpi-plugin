@@ -1,6 +1,9 @@
 ## 0.23.0 (unreleased)
 
   * updated to Gradle 3.5.1
+  * fixed transitive plugin dependency resolution, plugin dependencies must not longer be specified with artifact only
+    notation
+    ([JENKINS-35412](https://issues.jenkins-ci.org/browse/JENKINS-35412))
 
 ## 0.22.0 (2017-02-23)
 

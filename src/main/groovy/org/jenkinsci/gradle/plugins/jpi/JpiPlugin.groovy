@@ -22,7 +22,7 @@ import org.gradle.api.Task
 import org.gradle.api.XmlProvider
 import org.gradle.api.artifacts.Configuration
 import org.gradle.api.artifacts.ConfigurationContainer
-import org.gradle.api.artifacts.ResolvedArtifact
+import org.gradle.api.artifacts.ResolvableDependencies
 import org.gradle.api.plugins.BasePlugin
 import org.gradle.api.plugins.JavaPlugin
 import org.gradle.api.plugins.JavaPluginConvention
@@ -40,6 +40,8 @@ import org.gradle.api.tasks.testing.Test
 import org.gradle.execution.TaskGraphExecuter
 
 import static org.gradle.api.logging.LogLevel.INFO
+import static org.gradle.api.plugins.JavaPlugin.TEST_COMPILE_CONFIGURATION_NAME
+import static org.gradle.api.plugins.WarPlugin.PROVIDED_COMPILE_CONFIGURATION_NAME
 import static org.gradle.api.tasks.SourceSet.TEST_SOURCE_SET_NAME
 import static org.jenkinsci.gradle.plugins.jpi.JpiManifest.attributesToMap
 
@@ -262,22 +264,16 @@ class JpiPlugin implements Plugin<Project> {
                 setDescription('Jenkins plugin test dependencies.')
                 .exclude(group: 'org.jenkins-ci.modules', module: 'ssh-cli-auth')
                 .exclude(group: 'org.jenkins-ci.modules', module: 'sshd')
-        cc.getByName(WarPlugin.PROVIDED_COMPILE_CONFIGURATION_NAME).extendsFrom(jenkinsCoreConfiguration)
-        cc.getByName(WarPlugin.PROVIDED_COMPILE_CONFIGURATION_NAME).extendsFrom(jenkinsPluginsConfiguration)
-        cc.getByName(WarPlugin.PROVIDED_COMPILE_CONFIGURATION_NAME).extendsFrom(optionalJenkinsPluginsConfiguration)
-        cc.getByName(JavaPlugin.TEST_COMPILE_CONFIGURATION_NAME).extendsFrom(jenkinsTestConfiguration)
+        cc.getByName(PROVIDED_COMPILE_CONFIGURATION_NAME).extendsFrom(jenkinsCoreConfiguration)
+        cc.getByName(PROVIDED_COMPILE_CONFIGURATION_NAME).extendsFrom(jenkinsPluginsConfiguration)
+        cc.getByName(PROVIDED_COMPILE_CONFIGURATION_NAME).extendsFrom(optionalJenkinsPluginsConfiguration)
+        cc.getByName(TEST_COMPILE_CONFIGURATION_NAME).extendsFrom(jenkinsTestConfiguration)
 
         cc.create(WAR_DEPENDENCY_CONFIGURATION_NAME).
                 setVisible(false).
                 setDescription('Jenkins war that corresponds to the Jenkins core')
 
-        cc.getByName(JavaPlugin.TEST_COMPILE_CONFIGURATION_NAME).incoming.beforeResolve {
-            jenkinsTestConfiguration.resolvedConfiguration.resolvedArtifacts.each { ResolvedArtifact ra ->
-                if (ra.extension == 'hpi' || ra.extension == 'jpi') {
-                    project.dependencies.add(JavaPlugin.TEST_COMPILE_CONFIGURATION_NAME, "${ra.moduleVersion.id}@jar")
-                }
-            }
-        }
+        resolvePluginDependencies(project)
     }
 
     private static configurePublishing(Project project) {
@@ -348,5 +344,32 @@ class JpiPlugin implements Plugin<Project> {
             }
         }
         project.tasks.test.dependsOn(generateTestHpl)
+    }
+
+    private static void resolvePluginDependencies(Project project) {
+        resolvePluginDependencies(
+                project,
+                PLUGINS_DEPENDENCY_CONFIGURATION_NAME,
+                PROVIDED_COMPILE_CONFIGURATION_NAME
+        )
+        resolvePluginDependencies(
+                project,
+                OPTIONAL_PLUGINS_DEPENDENCY_CONFIGURATION_NAME,
+                PROVIDED_COMPILE_CONFIGURATION_NAME
+        )
+        resolvePluginDependencies(
+                project,
+                JENKINS_TEST_DEPENDENCY_CONFIGURATION_NAME,
+                TEST_COMPILE_CONFIGURATION_NAME
+        )
+    }
+
+    private static void resolvePluginDependencies(Project project, String from, String to) {
+        ConfigurationContainer configurations = project.configurations
+        configurations.getByName(to).incoming.beforeResolve { ResolvableDependencies resolvableDependencies ->
+            configurations.getByName(from).resolvedConfiguration.resolvedArtifacts
+                    .findAll { it.type == 'hpi' || it.type == 'jpi' }
+                    .each { project.dependencies.add(to, "${it.moduleVersion.id}@jar") }
+        }
     }
 }

@@ -162,17 +162,17 @@ class JpiExtension {
         if (this.coreVersion) {
             project.dependencies {
                 jenkinsCore(
-                        [group: 'org.jenkins-ci.main', name: 'jenkins-core', version: v, ext: 'jar', transitive: true],
+                        [group: 'org.jenkins-ci.main', name: 'jenkins-core', version: v],
                         [group: findBugsGroup, name: 'annotations', version: findBugsVersion],
                         [group: 'javax.servlet', name: servletApiArtifact, version: servletApiVersion],
                 )
 
                 jenkinsWar(group: 'org.jenkins-ci.main', name: 'jenkins-war', version: v, ext: 'war')
 
-                jenkinsTest("org.jenkins-ci.main:jenkins-test-harness:${testHarnessVersion}@jar") { transitive = true }
-                jenkinsTest("org.jenkins-ci.main:ui-samples-plugin:${uiSamplesVersion}@jar",
-                        "org.jenkins-ci.main:jenkins-war:${v}:war-for-test@jar",
-                        'junit:junit-dep:4.10@jar')
+                jenkinsTest("org.jenkins-ci.main:jenkins-test-harness:${testHarnessVersion}")
+                jenkinsTest("org.jenkins-ci.main:ui-samples-plugin:${uiSamplesVersion}",
+                        "org.jenkins-ci.main:jenkins-war:${v}:war-for-test",
+                        'junit:junit-dep:4.10')
             }
         }
     }

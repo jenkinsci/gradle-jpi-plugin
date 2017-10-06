@@ -134,7 +134,7 @@ version = '1.2'"""
                 coreVersion = '1.509.3'
             }
             dependencies {
-                jenkinsPlugins 'org.jenkins-ci.plugins:ant:1.2@jar'
+                jenkinsPlugins 'org.jenkins-ci.plugins:ant:1.2'
             }
         }
         (project as ProjectInternal).evaluate()
@@ -156,8 +156,8 @@ version = '1.2'"""
                 coreVersion = '1.509.3'
             }
             dependencies {
-                jenkinsPlugins 'org.jenkinsci.plugins:git:1.1.15@jar'
-                jenkinsPlugins 'org.jenkins-ci.plugins:ant:1.2@jar'
+                jenkinsPlugins 'org.jenkinsci.plugins:git:1.1.15'
+                jenkinsPlugins 'org.jenkins-ci.plugins:ant:1.2'
             }
         }
         (project as ProjectInternal).evaluate()
@@ -179,7 +179,7 @@ version = '1.2'"""
                 coreVersion = '1.509.3'
             }
             dependencies {
-                optionalJenkinsPlugins 'org.jenkins-ci.plugins:ant:1.2@jar'
+                optionalJenkinsPlugins 'org.jenkins-ci.plugins:ant:1.2'
             }
         }
         (project as ProjectInternal).evaluate()
@@ -201,8 +201,8 @@ version = '1.2'"""
                 coreVersion = '1.509.3'
             }
             dependencies {
-                optionalJenkinsPlugins 'org.jenkinsci.plugins:git:1.1.15@jar'
-                optionalJenkinsPlugins 'org.jenkins-ci.plugins:ant:1.2@jar'
+                optionalJenkinsPlugins 'org.jenkinsci.plugins:git:1.1.15'
+                optionalJenkinsPlugins 'org.jenkins-ci.plugins:ant:1.2'
             }
         }
         (project as ProjectInternal).evaluate()
@@ -224,10 +224,10 @@ version = '1.2'"""
                 coreVersion = '1.509.3'
             }
             dependencies {
-                jenkinsPlugins 'org.jenkinsci.plugins:git:1.1.15@jar'
-                jenkinsPlugins 'org.jenkins-ci.plugins:ant:1.2@jar'
-                optionalJenkinsPlugins 'org.jenkins-ci.plugins:cloudbees-folder:4.2@jar'
-                optionalJenkinsPlugins 'org.jenkins-ci.plugins:credentials:1.9.4@jar'
+                jenkinsPlugins 'org.jenkinsci.plugins:git:1.1.15'
+                jenkinsPlugins 'org.jenkins-ci.plugins:ant:1.2'
+                optionalJenkinsPlugins 'org.jenkins-ci.plugins:cloudbees-folder:4.2'
+                optionalJenkinsPlugins 'org.jenkins-ci.plugins:credentials:1.9.4'
             }
         }
         (project as ProjectInternal).evaluate()
