@@ -181,6 +181,7 @@ version = '1.2'"""
 
         when:
         buildFile.text = PROJECT.replace('1.2', '1.3')
+        sleep(2000)
         result = runner.build()
 
         then:
