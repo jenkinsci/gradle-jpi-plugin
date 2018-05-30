@@ -7,12 +7,12 @@ import org.gradle.api.artifacts.Configuration
 import org.gradle.api.artifacts.Dependency
 import org.gradle.api.artifacts.ModuleVersionIdentifier
 import org.gradle.api.artifacts.ResolvedArtifact
+import org.gradle.api.artifacts.component.ProjectComponentIdentifier
 import org.gradle.api.file.FileCollection
 import org.gradle.api.tasks.InputFiles
 import org.gradle.api.tasks.Internal
 import org.gradle.api.tasks.OutputDirectory
 import org.gradle.api.tasks.TaskAction
-import org.gradle.internal.component.local.model.DefaultProjectComponentIdentifier
 
 class LicenseTask extends DefaultTask {
     @Internal
@@ -83,7 +83,7 @@ class LicenseTask extends DefaultTask {
 
     private Dependency[] collectDependencies() {
         collectArtifacts().findAll { ResolvedArtifact artifact ->
-            !(artifact.id.componentIdentifier instanceof DefaultProjectComponentIdentifier)
+            !(artifact.id.componentIdentifier instanceof ProjectComponentIdentifier)
         }.collect { ResolvedArtifact artifact ->
             ModuleVersionIdentifier id = artifact.moduleVersion.id
             project.dependencies.create("${id.group}:${id.name}:${id.version}@pom")

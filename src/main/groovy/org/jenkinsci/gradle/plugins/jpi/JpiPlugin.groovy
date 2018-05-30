@@ -23,6 +23,7 @@ import org.gradle.api.XmlProvider
 import org.gradle.api.artifacts.Configuration
 import org.gradle.api.artifacts.ConfigurationContainer
 import org.gradle.api.artifacts.ResolvableDependencies
+import org.gradle.api.execution.TaskExecutionGraph
 import org.gradle.api.plugins.BasePlugin
 import org.gradle.api.plugins.JavaPlugin
 import org.gradle.api.plugins.JavaPluginConvention
@@ -37,7 +38,6 @@ import org.gradle.api.tasks.bundling.War
 import org.gradle.api.tasks.compile.GroovyCompile
 import org.gradle.api.tasks.compile.JavaCompile
 import org.gradle.api.tasks.testing.Test
-import org.gradle.execution.TaskGraphExecuter
 
 import static org.gradle.api.artifacts.Configuration.State.UNRESOLVED
 import static org.gradle.api.logging.LogLevel.INFO
@@ -368,7 +368,7 @@ class JpiPlugin implements Plugin<Project> {
         }
 
         // load credentials only when publishing
-        project.gradle.taskGraph.whenReady { TaskGraphExecuter taskGraph ->
+        project.gradle.taskGraph.whenReady { TaskExecutionGraph taskGraph ->
             if (jpiExtension.configurePublishing && taskGraph.hasTask(project.tasks.publish)) {
                 def credentials = loadDotJenkinsOrg()
                 PublishingExtension publishingExtension = project.extensions.getByType(PublishingExtension)

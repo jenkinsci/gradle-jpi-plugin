@@ -13,6 +13,7 @@ import org.gradle.api.publish.maven.MavenPublication
 import org.gradle.api.publish.maven.internal.publication.MavenPomInternal
 import org.gradle.api.publish.maven.internal.tasks.MavenPomFileGenerator
 import org.gradle.testfixtures.ProjectBuilder
+import org.gradle.util.GradleVersion
 import org.junit.Rule
 import org.junit.rules.TemporaryFolder
 import org.xmlunit.builder.DiffBuilder
@@ -266,7 +267,11 @@ class JpiPomCustomizerSpec extends Specification {
         VersionSelectorScheme versionSelectorScheme = new DefaultVersionSelectorScheme(versionComparator)
         VersionRangeMapper versionRangeMapper = new MavenVersionRangeMapper(versionSelectorScheme)
         MavenPomFileGenerator pomGenerator = new MavenPomFileGenerator(pomInternal.projectIdentity, versionRangeMapper)
-        pomGenerator.packaging = pomInternal.packaging
+        if (GradleVersion.version(project.gradle.gradleVersion) > GradleVersion.version('4.7')) {
+            pomGenerator.model.packaging = pomInternal.packaging
+        } else {
+            pomGenerator.packaging = pomInternal.packaging
+        }
         pomInternal.runtimeDependencies.each { pomGenerator.addRuntimeDependency(it) }
         pomGenerator.withXml(pomInternal.xmlAction)
 
