@@ -22,6 +22,7 @@ import org.gradle.api.plugins.JavaPluginConvention
 import org.gradle.api.tasks.Delete
 import org.gradle.api.tasks.SourceSet
 import org.gradle.util.ConfigureUtil
+import org.gradle.util.GradleVersion
 
 /**
  * This gets exposed to the project as 'jpi' to offer additional convenience methods.
@@ -165,6 +166,9 @@ class JpiExtension {
 
         if (this.coreVersion) {
             project.dependencies {
+                if (GradleVersion.current() >= GradleVersion.version('4.6')) {
+                    annotationProcessor "org.jenkins-ci.main:jenkins-core:$v"
+                }
                 jenkinsCore(
                         [group: 'org.jenkins-ci.main', name: 'jenkins-core', version: v],
                         [group: findBugsGroup, name: 'annotations', version: findBugsVersion],

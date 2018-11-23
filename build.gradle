@@ -18,8 +18,8 @@ repositories {
     jcenter()
 }
 
-sourceCompatibility = '1.7'
-targetCompatibility = '1.7'
+sourceCompatibility = '1.8'
+targetCompatibility = '1.8'
 
 def sezpoz = 'net.java.sezpoz:sezpoz:1.12'
 
@@ -113,7 +113,6 @@ codenarcTest {
 }
 
 test {
-    jvmArgs += ['-XX:MaxPermSize=256m']
     ignoreFailures = ciBuild
 }
 
