@@ -51,6 +51,7 @@ class ServerTask extends DefaultTask {
         setSystemPropertyIfEmpty('stapler.trace', 'true')
         setSystemPropertyIfEmpty('stapler.jelly.noCache', 'true')
         setSystemPropertyIfEmpty('debug.YUI', 'true')
+        setSystemPropertyIfEmpty('hudson.Main.development', 'true')
 
         List<String> args = []
         String port = project.properties[HTTP_PORT] ?: System.properties[HTTP_PORT]
