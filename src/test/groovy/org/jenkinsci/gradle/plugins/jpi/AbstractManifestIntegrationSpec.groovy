@@ -140,6 +140,35 @@ abstract class AbstractManifestIntegrationSpec extends Specification {
         actual['Compatible-Since-Version'] == expected
     }
 
+    def 'should populate Minimum-Java-Version from targetCompatibility (case: #input)'(String input, String expected) {
+        given:
+        build << """\
+            targetCompatibility = $input
+            """.stripIndent()
+
+        expect:
+        def actual = generateManifestThroughGradle()
+        actual['Minimum-Java-Version'] == expected
+
+        where:
+        input                     | expected
+        '\'1.8\''                 | '1.8'
+        'JavaVersion.VERSION_1_8' | '1.8'
+        '\'11\''                  | '11'
+        'JavaVersion.VERSION_11'  | '11'
+    }
+
+    def 'should populate Minimum-Java-Version from implicit targetCompatibility'() {
+        given:
+        String expected = System.getProperty("java.specification.version")
+
+        when:
+        def actual = generateManifestThroughGradle()
+
+        then:
+        actual['Minimum-Java-Version'] == expected
+    }
+
     def 'should populate Mask-Classes if defined'() {
         given:
         String expected = 'org.example.test org.example2.test'
