@@ -6,6 +6,7 @@ import org.gradle.api.XmlProvider
 import org.gradle.api.artifacts.Dependency
 import org.gradle.api.artifacts.DependencySet
 import org.gradle.api.artifacts.ModuleDependency
+import org.gradle.api.artifacts.ModuleVersionIdentifier
 import org.gradle.api.artifacts.repositories.MavenArtifactRepository
 import org.gradle.api.plugins.JavaPlugin
 import org.gradle.api.provider.Property
@@ -119,10 +120,15 @@ class JpiPomCustomizer {
         Node dependenciesNode = pom.dependencies[0] as Node
         dependenciesNode = dependenciesNode ?: pom.appendNode('dependencies')
         (compileDependencies - coreDependencies + pluginDependencies + optionalPluginDependencies).each {
+            ModuleVersionIdentifier mvid = ResolvedDependencySelector.selectedModuleVersion(
+                    project,
+                    'compile',
+                    it.group,
+                    it.name)
             Node dependency = dependenciesNode.appendNode('dependency')
             dependency.appendNode('groupId', it.group)
             dependency.appendNode('artifactId', it.name)
-            dependency.appendNode('version', it.version)
+            dependency.appendNode('version', mvid.version ?: it.version)
         }
         dependenciesNode.each { Node dependency ->
             String groupId = dependency.groupId.text()
@@ -161,9 +167,14 @@ class JpiPomCustomizer {
 
         coreDependencies.each {
             Node dependency = dependenciesNode.appendNode('dependency')
+            ModuleVersionIdentifier mvid = ResolvedDependencySelector.selectedModuleVersion(
+                    project,
+                    'compile',
+                    it.group,
+                    it.name)
             dependency.appendNode('groupId', it.group)
             dependency.appendNode('artifactId', it.name)
-            dependency.appendNode('version', it.version)
+            dependency.appendNode('version',  mvid.version ?: it.version)
             dependency.appendNode('scope', 'provided')
         }
     }

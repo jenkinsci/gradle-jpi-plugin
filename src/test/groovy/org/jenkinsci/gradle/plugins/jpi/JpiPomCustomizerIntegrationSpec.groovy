@@ -185,6 +185,42 @@ class JpiPomCustomizerIntegrationSpec extends IntegrationSpec {
         compareXml('plugin-dependencies-pom.xml', actualPomIn(projectDir))
     }
 
+    def 'plugin with dynamic dependency - 1.9.+'() {
+        setup:
+        build << """\
+            jenkinsPlugin {
+                coreVersion = '1.580.1'
+            }
+            dependencies {
+                jenkinsPlugins 'org.jenkins-ci.plugins:credentials:1.9.+'
+            }
+            """.stripIndent()
+
+        when:
+        generatePom()
+
+        then:
+        compareXml('plugin-dependencies-pom.xml', actualPomIn(projectDir))
+    }
+
+    def 'plugin with dynamic dependency - latest.release'() {
+        setup:
+        build << """\
+            jenkinsPlugin {
+                coreVersion = '1.580.1'
+            }
+            dependencies {
+                jenkinsPlugins 'org.jenkins-ci.plugins:credentials:latest.release'
+            }
+            """.stripIndent()
+
+        when:
+        generatePom()
+
+        then:
+        !actualPomIn(projectDir).text.contains('latest.release')
+    }
+
     def 'optional plugin dependencies'() {
         setup:
         build << """\
@@ -292,7 +328,7 @@ class JpiPomCustomizerIntegrationSpec extends IntegrationSpec {
 
     void generatePom() {
         gradleRunner()
-                .withArguments('generatePomFileForMavenJpiPublication')
+        .withArguments('generatePomFileForMavenJpiPublication')
                 .build()
     }
 
