@@ -42,7 +42,7 @@ class ServerTask extends DefaultTask {
             files = c.resolve()
         }
         if (files.isEmpty()) {
-            throw new GradleException('No jenkins.war dependency is specified')
+            throw new GradleException('No jenkins.war dependency is specified. Did you specify "coreVersion" property in build.gradle?')
         }
         File war = files.first()
 
