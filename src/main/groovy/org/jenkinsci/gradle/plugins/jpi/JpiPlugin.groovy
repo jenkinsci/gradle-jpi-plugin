@@ -50,6 +50,7 @@ import org.gradle.api.tasks.compile.JavaCompile
 import org.gradle.api.tasks.testing.Test
 import org.gradle.language.base.plugins.LifecycleBasePlugin
 import org.gradle.util.GradleVersion
+import org.jenkinsci.gradle.plugins.jpi.discovery.DiscoverDynamicLoadingSupportTask
 import org.jenkinsci.gradle.plugins.jpi.discovery.DiscoverPluginClassTask
 import org.jenkinsci.gradle.plugins.jpi.internal.DependencyLookup
 import org.jenkinsci.gradle.plugins.jpi.legacy.LegacyWorkaroundsPlugin
@@ -57,6 +58,8 @@ import org.jenkinsci.gradle.plugins.jpi.server.GenerateJenkinsServerHplTask
 import org.jenkinsci.gradle.plugins.jpi.server.InstallJenkinsServerPluginsTask
 import org.jenkinsci.gradle.plugins.jpi.server.JenkinsServerTask
 import org.jenkinsci.gradle.plugins.jpi.verification.CheckOverlappingSourcesTask
+
+import java.util.jar.Manifest
 
 import static org.gradle.api.logging.LogLevel.INFO
 import static org.gradle.api.tasks.SourceSet.MAIN_SOURCE_SET_NAME
@@ -119,6 +122,17 @@ class JpiPlugin implements Plugin<Project> {
                 DiscoverPluginClassTask) { DiscoverPluginClassTask t ->
             t.group = LifecycleBasePlugin.BUILD_GROUP
             t.description = 'Discovers class that extends hudson.Plugin'
+
+            def javaPluginConvention = project.convention.getPlugin(JavaPluginConvention)
+            def classDirs = javaPluginConvention.sourceSets.getByName(MAIN_SOURCE_SET_NAME).output.classesDirs
+            t.classesDirs.set(classDirs)
+            t.dependsOn(gradleProject.tasks.getByName('classes'))
+        }
+
+        gradleProject.tasks.register(DiscoverDynamicLoadingSupportTask.TASK_NAME,
+                DiscoverDynamicLoadingSupportTask) { DiscoverDynamicLoadingSupportTask t ->
+            t.group = LifecycleBasePlugin.BUILD_GROUP
+            t.description = 'Discovers dynamic loading support in @hudson.Extension'
 
             def javaPluginConvention = project.convention.getPlugin(JavaPluginConvention)
             def classDirs = javaPluginConvention.sourceSets.getByName(MAIN_SOURCE_SET_NAME).output.classesDirs
