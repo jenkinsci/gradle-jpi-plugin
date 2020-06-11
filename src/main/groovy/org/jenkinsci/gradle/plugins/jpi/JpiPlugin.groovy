@@ -50,6 +50,7 @@ import org.gradle.api.tasks.compile.JavaCompile
 import org.gradle.api.tasks.testing.Test
 import org.gradle.language.base.plugins.LifecycleBasePlugin
 import org.gradle.util.GradleVersion
+import org.jenkinsci.gradle.plugins.jpi.discovery.DiscoverPluginClassTask
 import org.jenkinsci.gradle.plugins.jpi.internal.DependencyLookup
 import org.jenkinsci.gradle.plugins.jpi.legacy.LegacyWorkaroundsPlugin
 import org.jenkinsci.gradle.plugins.jpi.server.GenerateJenkinsServerHplTask
@@ -114,8 +115,19 @@ class JpiPlugin implements Plugin<Project> {
             t.dependsOn(gradleProject.tasks.getByName('classes'))
         }
 
+        def discoverPlugin = gradleProject.tasks.register(DiscoverPluginClassTask.TASK_NAME,
+                DiscoverPluginClassTask) { DiscoverPluginClassTask t ->
+            t.group = LifecycleBasePlugin.BUILD_GROUP
+            t.description = 'Discovers class that extends hudson.Plugin'
+
+            def javaPluginConvention = project.convention.getPlugin(JavaPluginConvention)
+            def classDirs = javaPluginConvention.sourceSets.getByName(MAIN_SOURCE_SET_NAME).output.classesDirs
+            t.classesDirs.set(classDirs)
+            t.dependsOn(gradleProject.tasks.getByName('classes'))
+        }
+
         gradleProject.tasks.getByName('check').configure {
-            it.dependsOn(overlap)
+            it.dependsOn(overlap, discoverPlugin)
         }
 
         def generateHpl = gradleProject.tasks.register(GenerateJenkinsServerHplTask.TASK_NAME,

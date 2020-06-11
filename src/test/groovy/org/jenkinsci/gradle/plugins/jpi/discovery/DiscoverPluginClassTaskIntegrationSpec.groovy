@@ -1,4 +1,4 @@
-package org.jenkinsci.gradle.plugins.jpi.verification
+package org.jenkinsci.gradle.plugins.jpi.discovery
 
 import org.gradle.testkit.runner.TaskOutcome
 import org.jenkinsci.gradle.plugins.jpi.IntegrationSpec
@@ -6,7 +6,7 @@ import org.jenkinsci.gradle.plugins.jpi.TestDataGenerator
 import org.jenkinsci.gradle.plugins.jpi.TestSupport
 import spock.lang.Unroll
 
-class CheckOverlappingSourcesTaskIntegrationSpec extends IntegrationSpec {
+class DiscoverPluginClassTaskIntegrationSpec extends IntegrationSpec {
     private final String projectName = TestDataGenerator.generateName()
     private File settings
     private File build
@@ -48,38 +48,43 @@ class CheckOverlappingSourcesTaskIntegrationSpec extends IntegrationSpec {
     }
 
     @Unroll
-    def 'should pass with extensions defined in #dir'(String dir, String language) {
+    def 'should pass if sole legacy plugin implemented as .#language in #dir'(String dir, String language) {
         given:
         String pkg = 'my.example'
         String name = 'TestPlugin'
+        String expectedText = '''\
+            my.example.TestPlugin
+            '''.stripIndent().denormalize()
         build << """\
             jenkinsPlugin {
                 jenkinsVersion = '${TestSupport.RECENT_JENKINS_VERSION}'
             }
             """.stripIndent()
         projectDir.newFolder('src', 'main', dir, 'my', 'example')
-        projectDir.newFile("src/main/${dir}/my/example/TestPlugin.${language}") << """\
+        projectDir.newFile("src/main/${dir}/my/example/${name}.${language}") << """\
             package $pkg;
 
-            @hudson.Extension
-            public class $name {
-            }
-            """.stripIndent()
-        projectDir.newFile("src/main/${dir}/my/example/OtherTestPlugin.java") << """\
-            package $pkg;
-
-            @hudson.Extension
-            public class OtherTestPlugin {
+            public class $name extends hudson.Plugin {
             }
             """.stripIndent()
 
         when:
         def result = gradleRunner()
-                .withArguments(CheckOverlappingSourcesTask.TASK_NAME)
+                .withArguments(DiscoverPluginClassTask.TASK_NAME)
                 .build()
 
         then:
         result.task(taskPath()).outcome == TaskOutcome.SUCCESS
+        new File(projectDir.root, 'build/discovered/plugin-class.txt').text == expectedText
+
+        and:
+        def rerunResult = gradleRunner()
+                .withArguments(DiscoverPluginClassTask.TASK_NAME)
+                .build()
+
+        then:
+        rerunResult.task(taskPath()).outcome == TaskOutcome.UP_TO_DATE
+        new File(projectDir.root, 'build/discovered/plugin-class.txt').text == expectedText
 
         where:
         dir      | language
@@ -88,7 +93,7 @@ class CheckOverlappingSourcesTaskIntegrationSpec extends IntegrationSpec {
         'groovy' | 'java'
     }
 
-    def 'should fail with extensions defined in java and groovy dirs'() {
+    def 'should fail if legacy plugins implemented in java and groovy dirs'() {
         given:
         String pkg = 'my.example'
         String name = 'TestPlugin'
@@ -102,23 +107,22 @@ class CheckOverlappingSourcesTaskIntegrationSpec extends IntegrationSpec {
             projectDir.newFile("src/main/${dir}/my/example/TestPlugin${idx}.java") << """\
             package $pkg;
 
-            @hudson.Extension
-            public class ${name}${idx} {
+            public class ${name}${idx} extends hudson.Plugin {
             }
             """.stripIndent()
         }
 
         when:
         def result = gradleRunner()
-                .withArguments(CheckOverlappingSourcesTask.TASK_NAME)
+                .withArguments(DiscoverPluginClassTask.TASK_NAME)
                 .buildAndFail()
 
         then:
         result.task(taskPath()).outcome == TaskOutcome.FAILED
-        result.output.contains('Found overlapping Sezpoz file: ')
+        result.output.contains('Found multiple directories containing Jenkins plugin implementations ')
     }
 
     private static String taskPath() {
-        ':' + CheckOverlappingSourcesTask.TASK_NAME
+        ':' + DiscoverPluginClassTask.TASK_NAME
     }
 }

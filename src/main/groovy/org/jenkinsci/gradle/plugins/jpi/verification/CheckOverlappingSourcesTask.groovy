@@ -47,21 +47,6 @@ class CheckOverlappingSourcesTask extends DefaultTask {
             }
         }
 
-        def pluginImpls = dirs.collect {
-            new File(it, 'META-INF/services/hudson.Plugin')
-        }.findAll {
-            it.exists()
-        }
-
-        if (pluginImpls.size() > 1) {
-            throw new GradleException(
-                    'Found multiple directories containing Jenkins plugin implementations ' +
-                            "('${pluginImpls*.path.join("', '")}'). " +
-                            'Use joint compilation to work around this problem.'
-            )
-        }
-        discovered.addAll(pluginImpls)
-
         outputFile.get().asFile.withWriter('UTF-8') { w ->
             discovered.each {
                 w.append(it.absolutePath).append('\n')
