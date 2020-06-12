@@ -11,6 +11,8 @@ import org.gradle.api.tasks.InputFiles
 import org.gradle.api.tasks.OutputFile
 import org.gradle.api.tasks.TaskAction
 
+import java.util.jar.Manifest
+
 @CompileStatic
 class DiscoverPluginClassTask extends DefaultTask {
     static final String TASK_NAME = 'discoverPluginClass'
@@ -20,7 +22,7 @@ class DiscoverPluginClassTask extends DefaultTask {
 
     @OutputFile
     final Provider<RegularFile> pluginClassFile = project.layout.buildDirectory.dir('discovered').map {
-        it.file('plugin-class.txt')
+        it.file('plugin-class.mf')
     }
 
     @TaskAction
@@ -40,12 +42,15 @@ class DiscoverPluginClassTask extends DefaultTask {
             )
         }
 
-        pluginClassFile.get().asFile.withWriter('UTF-8') { w ->
-            pluginImpls.each { servicesFile ->
-                servicesFile.eachLine {
-                    w.writeLine(it)
-                }
-            }
+        def manifest = new Manifest()
+        manifest.mainAttributes.putValue('Manifest-Version', '1.0')
+        def pluginImpl = pluginImpls.find()
+        if (pluginImpl?.exists()) {
+            manifest.mainAttributes.putValue('Plugin-Class', pluginImpl.readLines('UTF-8')[0])
+        }
+
+        pluginClassFile.get().asFile.withOutputStream {
+            manifest.write(it)
         }
     }
 }

@@ -6,6 +6,8 @@ import org.jenkinsci.gradle.plugins.jpi.TestDataGenerator
 import org.jenkinsci.gradle.plugins.jpi.TestSupport
 import spock.lang.Unroll
 
+import java.util.jar.Manifest
+
 class DiscoverPluginClassTaskIntegrationSpec extends IntegrationSpec {
     private final String projectName = TestDataGenerator.generateName()
     private File settings
@@ -52,9 +54,9 @@ class DiscoverPluginClassTaskIntegrationSpec extends IntegrationSpec {
         given:
         String pkg = 'my.example'
         String name = 'TestPlugin'
-        String expectedText = '''\
-            my.example.TestPlugin
-            '''.stripIndent().denormalize()
+        Manifest expected = new Manifest()
+        expected.mainAttributes.putValue('Manifest-Version', '1.0')
+        expected.mainAttributes.putValue('Plugin-Class', 'my.example.TestPlugin')
         build << """\
             jenkinsPlugin {
                 jenkinsVersion = '${TestSupport.RECENT_JENKINS_VERSION}'
@@ -72,10 +74,11 @@ class DiscoverPluginClassTaskIntegrationSpec extends IntegrationSpec {
         def result = gradleRunner()
                 .withArguments(DiscoverPluginClassTask.TASK_NAME)
                 .build()
+        def actual = new File(projectDir.root, 'build/discovered/plugin-class.mf')
 
         then:
         result.task(taskPath()).outcome == TaskOutcome.SUCCESS
-        new File(projectDir.root, 'build/discovered/plugin-class.txt').text == expectedText
+        new Manifest(actual.newInputStream()) == expected
 
         and:
         def rerunResult = gradleRunner()
@@ -84,7 +87,54 @@ class DiscoverPluginClassTaskIntegrationSpec extends IntegrationSpec {
 
         then:
         rerunResult.task(taskPath()).outcome == TaskOutcome.UP_TO_DATE
-        new File(projectDir.root, 'build/discovered/plugin-class.txt').text == expectedText
+        new Manifest(actual.newInputStream()) == expected
+
+        where:
+        dir      | language
+        'java'   | 'java'
+        'groovy' | 'groovy'
+        'groovy' | 'java'
+    }
+
+    @Unroll
+    def 'should pass if no legacy plugin implemented as .#language in #dir'(String dir, String language) {
+        given:
+        String pkg = 'my.example'
+        String name = 'TestPlugin'
+        Manifest expected = new Manifest()
+        expected.mainAttributes.putValue('Manifest-Version', '1.0')
+        build << """\
+            jenkinsPlugin {
+                jenkinsVersion = '${TestSupport.RECENT_JENKINS_VERSION}'
+            }
+            """.stripIndent()
+        projectDir.newFolder('src', 'main', dir, 'my', 'example')
+        projectDir.newFile("src/main/${dir}/my/example/${name}.${language}") << """\
+            package $pkg;
+
+            @hudson.Extension
+            public class $name {
+            }
+            """.stripIndent()
+
+        when:
+        def result = gradleRunner()
+                .withArguments(DiscoverPluginClassTask.TASK_NAME)
+                .build()
+        def actual = new File(projectDir.root, 'build/discovered/plugin-class.mf')
+
+        then:
+        result.task(taskPath()).outcome == TaskOutcome.SUCCESS
+        new Manifest(actual.newInputStream()) == expected
+
+        and:
+        def rerunResult = gradleRunner()
+                .withArguments(DiscoverPluginClassTask.TASK_NAME)
+                .build()
+
+        then:
+        rerunResult.task(taskPath()).outcome == TaskOutcome.UP_TO_DATE
+        new Manifest(actual.newInputStream()) == expected
 
         where:
         dir      | language

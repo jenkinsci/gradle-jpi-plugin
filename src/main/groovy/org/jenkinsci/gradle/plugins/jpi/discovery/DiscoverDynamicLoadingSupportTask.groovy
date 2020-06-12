@@ -1,6 +1,5 @@
 package org.jenkinsci.gradle.plugins.jpi.discovery
 
-
 import hudson.Extension
 import jenkins.YesNoMaybe
 import net.java.sezpoz.Index
@@ -13,6 +12,8 @@ import org.gradle.api.tasks.InputFiles
 import org.gradle.api.tasks.OutputFile
 import org.gradle.api.tasks.TaskAction
 
+import java.util.jar.Manifest
+
 class DiscoverDynamicLoadingSupportTask extends DefaultTask {
     static final String TASK_NAME = 'discoverDynamicLoadingSupport'
 
@@ -21,7 +22,7 @@ class DiscoverDynamicLoadingSupportTask extends DefaultTask {
 
     @OutputFile
     final Provider<RegularFile> pluginClassFile = project.layout.buildDirectory.dir('discovered').map {
-        it.file('dynamic-loading-support.txt')
+        it.file('dynamic-loading-support.mf')
     }
 
     @TaskAction
@@ -40,8 +41,15 @@ class DiscoverDynamicLoadingSupportTask extends DefaultTask {
             support = YesNoMaybe.MAYBE
         }
 
-        pluginClassFile.get().asFile.withWriter('UTF-8') { w ->
-            w.writeLine(support.name())
+        def manifest = new Manifest()
+        manifest.mainAttributes.putValue('Manifest-Version', '1.0')
+        def isSupported = support == YesNoMaybe.YES
+        if (support != YesNoMaybe.MAYBE) {
+            manifest.mainAttributes.putValue('Support-Dynamic-Loading', String.valueOf(isSupported))
+        }
+
+        pluginClassFile.get().asFile.withOutputStream {
+            manifest.write(it)
         }
     }
 }
