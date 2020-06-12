@@ -1,4 +1,4 @@
-package org.jenkinsci.gradle.plugins.jpi.discovery
+package org.jenkinsci.gradle.plugins.jpi.manifest
 
 import groovy.transform.CompileStatic
 import org.gradle.api.DefaultTask

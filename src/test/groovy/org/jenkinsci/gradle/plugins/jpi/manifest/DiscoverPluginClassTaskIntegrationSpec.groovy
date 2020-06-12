@@ -1,4 +1,4 @@
-package org.jenkinsci.gradle.plugins.jpi.discovery
+package org.jenkinsci.gradle.plugins.jpi.manifest
 
 import org.gradle.testkit.runner.TaskOutcome
 import org.jenkinsci.gradle.plugins.jpi.IntegrationSpec

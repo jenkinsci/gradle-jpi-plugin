@@ -1,4 +1,4 @@
-package org.jenkinsci.gradle.plugins.jpi.discovery
+package org.jenkinsci.gradle.plugins.jpi.manifest
 
 import hudson.Extension
 import jenkins.YesNoMaybe
@@ -30,7 +30,7 @@ class DiscoverDynamicLoadingSupportTask extends DefaultTask {
         def dirs = classesDirs.get()
         ClassLoader classLoader = new URLClassLoader(
                 dirs*.toURI()*.toURL() as URL[],
-                DiscoverPluginClassTask.classLoader as ClassLoader
+                DiscoverDynamicLoadingSupportTask.classLoader as ClassLoader
         )
         def support = YesNoMaybe.YES
         def enums = Index.load(Extension, Object, classLoader).collect { it.annotation().dynamicLoadable() }
