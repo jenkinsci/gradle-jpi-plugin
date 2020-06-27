@@ -36,6 +36,8 @@ class JpiExtension {
     Map<String, String> jenkinsWarCoordinates
     final Property<String> jenkinsVersion
     final Provider<String> validatedJenkinsVersion
+    final Property<String> id
+    final Property<String> displayId
 
     JpiExtension(Project project) {
         this.project = project
@@ -47,20 +49,32 @@ class JpiExtension {
             }
             resolved
         }
+        this.id = project.objects.property(String).convention(trimOffPluginSuffix(project.name))
+        this.displayId = project.objects.property(String).convention(id)
+        this.compatibleSinceVersion = project.objects.property(String)
+        this.maskClasses = project.objects.property(String)
+        this.pluginFirstClassLoader = project.objects.property(Boolean).convention(false)
+        this.sandboxStatus = project.objects.property(Boolean).convention(false)
     }
 
+    @Deprecated
+    @ReplacedBy('id')
     private String shortName
 
     /**
      * Short name of the plugin is the ID that uniquely identifies a plugin.
      * If unspecified, we use the project name except the trailing "-plugin"
      */
+    @Deprecated
+    @ReplacedBy('id')
     String getShortName() {
-        shortName ?: trimOffPluginSuffix(project.name)
+        id.get()
     }
 
+    @Deprecated
+    @ReplacedBy('id')
     void setShortName(String shortName) {
-        this.shortName = shortName
+        id.set(shortName)
     }
 
     private static String trimOffPluginSuffix(String s) {
@@ -80,19 +94,25 @@ class JpiExtension {
         this.fileExtension = s
     }
 
+    @Deprecated
+    @ReplacedBy('displayId')
     private String displayName
 
     /**
      * One-line display name of this plugin. Should be human readable.
      * For example, "Git plugin", "Acme Executor plugin", etc.
      */
+    @Deprecated
+    @ReplacedBy('displayId')
     @SuppressWarnings('UnnecessaryGetter')
     String getDisplayName() {
-        displayName ?: getShortName()
+        displayId.get()
     }
 
+    @Deprecated
+    @ReplacedBy('displayId')
     void setDisplayName(String s) {
-        this.displayName = s
+        this.displayId.convention(s)
     }
 
     /**
@@ -103,19 +123,19 @@ class JpiExtension {
     /**
      * TODO: document
      */
-    String compatibleSinceVersion
+    final Property<String> compatibleSinceVersion
 
     /**
      * TODO: document
      */
-    boolean sandboxStatus
+    final Property<Boolean> sandboxStatus
 
     /**
      * TODO: document
      */
-    String maskClasses
+    final Property<String> maskClasses
 
-    boolean pluginFirstClassLoader
+    final Property<Boolean> pluginFirstClassLoader
 
     /**
      * Version of core that we depend on.

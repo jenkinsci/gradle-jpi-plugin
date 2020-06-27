@@ -21,7 +21,7 @@ class DiscoverPluginClassTask extends DefaultTask {
     final Property<FileCollection> classesDirs = project.objects.property(FileCollection)
 
     @OutputFile
-    final Provider<RegularFile> pluginClassFile = project.layout.buildDirectory.dir('discovered').map {
+    final Provider<RegularFile> outputFile = project.layout.buildDirectory.dir('discovered').map {
         it.file('plugin-class.mf')
     }
 
@@ -49,7 +49,7 @@ class DiscoverPluginClassTask extends DefaultTask {
             manifest.mainAttributes.putValue('Plugin-Class', pluginImpl.readLines('UTF-8')[0])
         }
 
-        pluginClassFile.get().asFile.withOutputStream {
+        outputFile.get().asFile.withOutputStream {
             manifest.write(it)
         }
     }

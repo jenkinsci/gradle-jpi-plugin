@@ -6,6 +6,7 @@ import org.gradle.testkit.runner.TaskOutcome
 import spock.lang.Unroll
 
 import java.util.jar.JarInputStream
+import java.util.jar.Manifest
 
 abstract class AbstractManifestIntegrationSpec extends IntegrationSpec {
     protected final String projectName = TestDataGenerator.generateName()
@@ -35,6 +36,7 @@ abstract class AbstractManifestIntegrationSpec extends IntegrationSpec {
                 jenkinsVersion = '${TestSupport.RECENT_JENKINS_VERSION}'
             }
             """.stripIndent()
+        def expectedM = new Manifest()
         def expected = [
                 'Long-Name'              : projectName,
                 'Support-Dynamic-Loading': 'true',
@@ -44,12 +46,18 @@ abstract class AbstractManifestIntegrationSpec extends IntegrationSpec {
                 'Short-Name'             : projectName,
                 'Minimum-Java-Version'   : System.getProperty('java.specification.version'),
                 'Jenkins-Version'        : TestSupport.RECENT_JENKINS_VERSION,
-        ]
+        ].each { k, v ->
+            expectedM.mainAttributes.putValue(k, v)
+        }
         when:
         def actual = generateManifestThroughGradle()
+        def actualM = new Manifest()
+        actual.each { k, v ->
+            actualM.mainAttributes.putValue(k, v)
+        }
 
         then:
-        actual == expected
+        actualM == expectedM
     }
 
     def 'should populate Long-Name from Short-Name if unset'() {

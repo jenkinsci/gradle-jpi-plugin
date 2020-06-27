@@ -32,6 +32,7 @@ import org.gradle.api.attributes.Usage
 import org.gradle.api.attributes.java.TargetJvmVersion
 import org.gradle.api.component.AdhocComponentWithVariants
 import org.gradle.api.execution.TaskExecutionGraph
+import org.gradle.api.java.archives.Manifest
 import org.gradle.api.plugins.BasePlugin
 import org.gradle.api.plugins.GroovyPlugin
 import org.gradle.api.plugins.JavaLibraryPlugin
@@ -54,15 +55,17 @@ import org.jenkinsci.gradle.plugins.jpi.manifest.DiscoverDynamicLoadingSupportTa
 import org.jenkinsci.gradle.plugins.jpi.manifest.DiscoverPluginClassTask
 import org.jenkinsci.gradle.plugins.jpi.internal.DependencyLookup
 import org.jenkinsci.gradle.plugins.jpi.legacy.LegacyWorkaroundsPlugin
+import org.jenkinsci.gradle.plugins.jpi.manifest.GenerateManifestTask
 import org.jenkinsci.gradle.plugins.jpi.server.GenerateJenkinsServerHplTask
 import org.jenkinsci.gradle.plugins.jpi.server.InstallJenkinsServerPluginsTask
 import org.jenkinsci.gradle.plugins.jpi.server.JenkinsServerTask
 import org.jenkinsci.gradle.plugins.jpi.verification.CheckOverlappingSourcesTask
 
+import java.util.concurrent.Callable
+
 import static org.gradle.api.logging.LogLevel.INFO
 import static org.gradle.api.tasks.SourceSet.MAIN_SOURCE_SET_NAME
 import static org.gradle.api.tasks.SourceSet.TEST_SOURCE_SET_NAME
-import static org.jenkinsci.gradle.plugins.jpi.JpiManifest.attributesToMap
 
 /**
  * Loads HPI related tasks into the current project.
@@ -127,7 +130,7 @@ class JpiPlugin implements Plugin<Project> {
             t.dependsOn(gradleProject.tasks.getByName('classes'))
         }
 
-        gradleProject.tasks.register(DiscoverDynamicLoadingSupportTask.TASK_NAME,
+        def discoverDynamic = gradleProject.tasks.register(DiscoverDynamicLoadingSupportTask.TASK_NAME,
                 DiscoverDynamicLoadingSupportTask) { DiscoverDynamicLoadingSupportTask t ->
             t.group = LifecycleBasePlugin.BUILD_GROUP
             t.description = 'Discovers dynamic loading support in @hudson.Extension'
@@ -136,6 +139,41 @@ class JpiPlugin implements Plugin<Project> {
             def classDirs = javaPluginConvention.sourceSets.getByName(MAIN_SOURCE_SET_NAME).output.classesDirs
             t.classesDirs.set(classDirs)
             t.dependsOn(gradleProject.tasks.getByName('classes'))
+        }
+
+        def generateManifest = gradleProject.tasks.register('generateManifest',
+                GenerateManifestTask) { GenerateManifestTask t ->
+            t.pluginClassFile.set(discoverPlugin.get().outputFile)
+            t.dynamicLoadingSupportFile.set(discoverDynamic.get().outputFile)
+            t.groupId.set(project.provider(new Callable<String>() {
+                @Override
+                String call() throws Exception {
+                    return gradleProject.group.toString()
+                }
+            }))
+            t.shortName.set(ext.id)
+            t.longName.set(ext.displayId)
+            t.url.set(ext.url)
+            t.compatibleSinceVersion.set(ext.compatibleSinceVersion)
+            t.sandboxStatus.set(ext.sandboxStatus)
+            t.pluginVersion.set(project.provider(new Callable<String>() {
+                @Override
+                String call() throws Exception {
+                    return gradleProject.version.toString()
+                }
+            }))
+            t.jenkinsVersion.set(ext.jenkinsVersion)
+            t.minimumJavaVersion.set(project.provider(new Callable<String>() {
+                @Override
+                String call() throws Exception {
+                    gradleProject.convention.getPlugin(JavaPluginConvention).targetCompatibility.toString()
+                }
+            }))
+            t.maskClasses.set(ext.maskClasses)
+            t.pluginDependencies.set(dependencyAnalysis.analyse().manifestPluginDependencies)
+            t.pluginFirstClassLoader.set(ext.pluginFirstClassLoader)
+            t.pluginDevelopers.set('')
+            t.dependsOn(discoverPlugin.get(), discoverDynamic.get())
         }
 
         gradleProject.tasks.getByName('check').configure {
@@ -220,7 +258,7 @@ class JpiPlugin implements Plugin<Project> {
         configureRepositories(gradleProject)
         configureJpi(gradleProject)
         configureConfigurations(gradleProject)
-        configureManifest(gradleProject)
+        configureManifest(gradleProject, generateManifest.get())
         configureLicenseInfo(gradleProject)
         configureTestDependencies(gradleProject)
         configurePublishing(gradleProject)
@@ -243,29 +281,47 @@ class JpiPlugin implements Plugin<Project> {
         props
     }
 
-    private static configureManifest(Project project) {
+    private static configureManifest(Project project, GenerateManifestTask task) {
         JavaPluginConvention javaPluginConvention = project.convention.getPlugin(JavaPluginConvention)
         TaskProvider<War> jpiProvider = project.tasks.named(JPI_TASK_NAME) as TaskProvider<War>
         TaskProvider<Jar> jarProvider = project.tasks.named(JavaPlugin.JAR_TASK_NAME) as TaskProvider<Jar>
 
-        def configureManifest = project.tasks.register('configureManifest') {
-            it.doLast {
-                Map<String, ?> attributes = attributesToMap(new JpiManifest(project).mainAttributes)
-                jpiProvider.configure {
-                    it.manifest.attributes(attributes)
-                    it.inputs.property('manifest', attributes)
-                }
-                jarProvider.configure {
-                    it.manifest.attributes(attributes)
-                    it.inputs.property('manifest', attributes)
+        jarProvider.configure { jar ->
+            jar.doFirst {
+                jar.manifest { Manifest m ->
+                    m.from(task.manifestFile.get())
                 }
             }
-
-            it.dependsOn(javaPluginConvention.sourceSets.getByName(MAIN_SOURCE_SET_NAME).output)
+            jar.dependsOn(task)
         }
 
-        jpiProvider.configure { it.dependsOn(configureManifest) }
-        jarProvider.configure { it.dependsOn(configureManifest) }
+        jpiProvider.configure { war ->
+            war.doFirst {
+                war.manifest { Manifest m ->
+                    m.from(task.manifestFile.get())
+                }
+            }
+            war.dependsOn(task)
+        }
+
+//        def configureManifest = project.tasks.register('configureManifest') {
+//            it.doLast {
+//                Map<String, ?> attributes = attributesToMap(new JpiManifest(project).mainAttributes)
+//                jpiProvider.configure {
+//                    it.manifest.attributes(attributes)
+//                    it.inputs.property('manifest', attributes)
+//                }
+//                jarProvider.configure {
+//                    it.manifest.attributes(attributes)
+//                    it.inputs.property('manifest', attributes)
+//                }
+//            }
+//
+//            it.dependsOn(javaPluginConvention.sourceSets.getByName(MAIN_SOURCE_SET_NAME).output)
+//        }
+//
+//        jpiProvider.configure { it.dependsOn(configureManifest) }
+//        jarProvider.configure { it.dependsOn(configureManifest) }
     }
 
     private configureJpi(Project project) {
