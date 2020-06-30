@@ -273,7 +273,7 @@ If you combine java and groovy code and both provide extensions you need to eith
 
 Here are some real world examples of Jenkins plugins using the Gradle JPI plugin:
 
-* [Job DSL Plugin](https://github.com/jenkinsci/job-dsl-plugin)
+* [Synopsys Detect Plugin](https://github.com/jenkinsci/synopsys-detect-plugin)
 * [Selenium Axis Plugin](https://github.com/jenkinsci/selenium-axis-plugin)
 * [Doktor Plugin](https://github.com/jenkinsci/doktor-plugin)
 
