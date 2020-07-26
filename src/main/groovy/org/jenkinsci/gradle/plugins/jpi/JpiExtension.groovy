@@ -15,14 +15,20 @@
  */
 package org.jenkinsci.gradle.plugins.jpi
 
+import org.gradle.api.Action
 import org.gradle.api.Project
+import org.gradle.api.model.ObjectFactory
 import org.gradle.api.model.ReplacedBy
 import org.gradle.api.plugins.JavaPluginConvention
+import org.gradle.api.provider.ListProperty
 import org.gradle.api.provider.Property
 import org.gradle.api.provider.Provider
+import org.gradle.api.publish.maven.MavenPomDeveloper
+import org.gradle.api.publish.maven.MavenPomDeveloperSpec
 import org.gradle.api.tasks.SourceSet
 import org.gradle.util.ConfigureUtil
 import org.gradle.util.GradleVersion
+import org.jenkinsci.gradle.plugins.jpi.manifest.JpiPomDeveloper
 
 /**
  * This gets exposed to the project as 'jpi' to offer additional convenience methods.
@@ -30,7 +36,8 @@ import org.gradle.util.GradleVersion
  * @author Kohsuke Kawaguchi
  * @author Andrew Bayer
  */
-class JpiExtension {
+class JpiExtension implements MavenPomDeveloperSpec {
+    private final ObjectFactory objects
     final Project project
     @Deprecated
     Map<String, String> jenkinsWarCoordinates
@@ -38,8 +45,11 @@ class JpiExtension {
     final Provider<String> validatedJenkinsVersion
     final Property<String> id
     final Property<String> displayId
+    final ListProperty<JpiPomDeveloper> developerListProperty
+    final Provider<String> developersForManifest
 
     JpiExtension(Project project) {
+        this.objects = project.objects
         this.project = project
         this.jenkinsVersion = project.objects.property(String)
         this.validatedJenkinsVersion = jenkinsVersion.map {
@@ -55,6 +65,10 @@ class JpiExtension {
         this.maskClasses = project.objects.property(String)
         this.pluginFirstClassLoader = project.objects.property(Boolean).convention(false)
         this.sandboxStatus = project.objects.property(Boolean).convention(false)
+        this.developerListProperty = project.objects.listProperty(JpiPomDeveloper)
+        this.developersForManifest = developerListProperty.map {
+            it*.toManifestFormat().join(',')
+        }
     }
 
     @Deprecated
@@ -93,10 +107,6 @@ class JpiExtension {
     void setFileExtension(String s) {
         this.fileExtension = s
     }
-
-    @Deprecated
-    @ReplacedBy('displayId')
-    private String displayName
 
     /**
      * One-line display name of this plugin. Should be human readable.
@@ -262,10 +272,11 @@ class JpiExtension {
      */
     boolean configurePublishing = true
 
+    @Deprecated
     Developers developers = new Developers()
 
-    def developers(Closure closure) {
-        ConfigureUtil.configure(closure, developers)
+    void developers(Action<? super MavenPomDeveloperSpec> spec) {
+        spec.execute(this)
     }
 
     SourceSet mainSourceTree() {
@@ -276,6 +287,14 @@ class JpiExtension {
         project.convention.getPlugin(JavaPluginConvention).sourceSets.getByName(SourceSet.TEST_SOURCE_SET_NAME)
     }
 
+    @Override
+    void developer(Action<? super MavenPomDeveloper> action) {
+        def dev = new JpiPomDeveloper(objects)
+        action.execute(dev)
+        developerListProperty.add(dev)
+    }
+
+    @Deprecated
     class Developers {
         def developerMap = [:]
 

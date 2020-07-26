@@ -37,7 +37,7 @@ abstract class AbstractManifestIntegrationSpec extends IntegrationSpec {
             }
             """.stripIndent()
         def expectedM = new Manifest()
-        def expected = [
+        [
                 'Long-Name'              : projectName,
                 'Support-Dynamic-Loading': 'true',
                 'Plugin-Version'         : projectVersion,
@@ -422,9 +422,9 @@ abstract class AbstractManifestIntegrationSpec extends IntegrationSpec {
                 jenkinsVersion = '${TestSupport.RECENT_JENKINS_VERSION}'
                 developers {
                     developer {
-                        id 'abayer'
-                        name 'Andrew Bayer'
-                        email 'andrew.bayer@gmail.com'
+                        id = 'abayer'
+                        name = 'Andrew Bayer'
+                        email = 'andrew.bayer@gmail.com'
                     }
                 }
             }
@@ -444,12 +444,12 @@ abstract class AbstractManifestIntegrationSpec extends IntegrationSpec {
                 jenkinsVersion = '${TestSupport.RECENT_JENKINS_VERSION}'
                 developers {
                     developer {
-                        id 'abayer'
-                        email 'andrew.bayer@gmail.com'
+                        id = 'abayer'
+                        email = 'andrew.bayer@gmail.com'
                     }
                     developer {
-                        id 'kohsuke'
-                        name 'Kohsuke Kawaguchi'
+                        id = 'kohsuke'
+                        name = 'Kohsuke Kawaguchi'
                     }
                 }
             }

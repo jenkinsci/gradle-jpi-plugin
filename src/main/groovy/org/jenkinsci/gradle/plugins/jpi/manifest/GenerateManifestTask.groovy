@@ -120,7 +120,10 @@ class GenerateManifestTask extends DefaultTask {
             manifest.mainAttributes.putValue('PluginFirstClassLoader', String.valueOf(classLoader))
         }
 
-        // TODO developers
+        def developers = pluginDevelopers.get()
+        if (!developers.isEmpty()) {
+            manifest.mainAttributes.putValue('Plugin-Developers', developers)
+        }
 
         manifestFile.get().asFile.withOutputStream {
             manifest.write(it)

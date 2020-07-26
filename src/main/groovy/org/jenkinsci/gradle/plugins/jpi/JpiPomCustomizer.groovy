@@ -6,11 +6,10 @@ import org.gradle.api.XmlProvider
 import org.gradle.api.artifacts.repositories.MavenArtifactRepository
 import org.gradle.api.provider.Property
 import org.gradle.api.publish.maven.MavenPom
-import org.gradle.api.publish.maven.MavenPomDeveloper
-import org.gradle.api.publish.maven.MavenPomDeveloperSpec
 import org.gradle.api.publish.maven.MavenPomLicense
 import org.gradle.api.publish.maven.MavenPomLicenseSpec
 import org.gradle.api.publish.maven.MavenPomScm
+import org.jenkinsci.gradle.plugins.jpi.manifest.JpiPomDeveloper
 
 import static org.gradle.api.artifacts.ArtifactRepositoryContainer.DEFAULT_MAVEN_CENTRAL_REPO_NAME
 import static org.gradle.api.artifacts.ArtifactRepositoryContainer.DEFAULT_MAVEN_LOCAL_REPO_NAME
@@ -66,21 +65,17 @@ class JpiPomCustomizer {
                 }
             }
         }
-        if (!jpiExtension.developers.isEmpty()) {
-            pom.developers { MavenPomDeveloperSpec s ->
-                jpiExtension.developers.each { JpiDeveloper declared ->
-                    s.developer { MavenPomDeveloper d ->
-                        ['id'             : d.id,
-                         'name'           : d.name,
-                         'email'          : d.email,
-                         'url'            : d.url,
-                         'organization'   : d.organization,
-                         'organizationUrl': d.organizationUrl,
-                         'timezone'       : d.timezone,
-                        ].each {
-                            mapExtensionToProperty(declared, it.key, it.value)
-                        }
-                    }
+        def developers = jpiExtension.developerListProperty.get()
+        pom.developers { spec ->
+            for (JpiPomDeveloper dev : developers) {
+                spec.developer { d ->
+                    d.id.set(dev.id)
+                    d.name.set(dev.name)
+                    d.email.set(dev.email)
+                    d.url.set(dev.url)
+                    d.organization.set(dev.organization)
+                    d.organizationUrl.set(dev.organizationUrl)
+                    d.timezone.set(dev.timezone)
                 }
             }
         }

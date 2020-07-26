@@ -96,9 +96,9 @@ class JpiPomCustomizerIntegrationSpec extends IntegrationSpec {
                 gitHubUrl = 'https://github.com/lorem/ipsum'
                 developers {
                     developer {
-                        id 'abayer'
-                        name 'Andrew Bayer'
-                        email 'andrew.bayer@gmail.com'
+                        id = 'abayer'
+                        name = 'Andrew Bayer'
+                        email = 'andrew.bayer@gmail.com'
                     }
                 }
                 licenses {

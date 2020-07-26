@@ -58,9 +58,12 @@ class JpiManifest extends Manifest {
         mainAttributes.putValue('Short-Name', conv.shortName)
         mainAttributes.putValue('Long-Name', conv.displayName)
         mainAttributes.putValue('Url', conv.url)
-        mainAttributes.putValue('Compatible-Since-Version', conv.compatibleSinceVersion)
-        if (conv.sandboxStatus) {
-            mainAttributes.putValue('Sandbox-Status', conv.sandboxStatus.toString())
+        if (conv.compatibleSinceVersion.isPresent()) {
+            mainAttributes.putValue('Compatible-Since-Version', conv.compatibleSinceVersion.get())
+        }
+        def sandboxStatus = conv.sandboxStatus
+        if (sandboxStatus.getOrElse(false)) {
+            mainAttributes.putValue('Sandbox-Status', sandboxStatus.get().toString())
         }
         mainAttributes.putValue('Extension-Name', conv.shortName)
 
@@ -70,22 +73,21 @@ class JpiManifest extends Manifest {
         mainAttributes.putValue('Jenkins-Version', conv.jenkinsVersion.get())
         mainAttributes.putValue('Minimum-Java-Version', javaPluginConvention.targetCompatibility.toString())
 
-        mainAttributes.putValue('Mask-Classes', conv.maskClasses)
+        if (conv.maskClasses.isPresent()) {
+            mainAttributes.putValue('Mask-Classes', conv.maskClasses.get())
+        }
 
         def dep = project.plugins.getPlugin(JpiPlugin).dependencyAnalysis.analyse().manifestPluginDependencies
         if (dep.length() > 0) {
             mainAttributes.putValue('Plugin-Dependencies', dep)
         }
 
-        if (conv.pluginFirstClassLoader) {
+        if (conv.pluginFirstClassLoader.getOrElse(false)) {
             mainAttributes.putValue('PluginFirstClassLoader', 'true')
         }
 
-        if (conv.developers) {
-            mainAttributes.putValue(
-                    'Plugin-Developers',
-                    conv.developers.collect { "${it.name ?: ''}:${it.id ?: ''}:${it.email ?: ''}" }.join(',')
-            )
+        if (conv.developersForManifest.orElse('')) {
+            mainAttributes.putValue('Plugin-Developers', conv.developersForManifest.get())
         }
 
         YesNoMaybe supportDynamicLoading = isSupportDynamicLoading(classDirs)

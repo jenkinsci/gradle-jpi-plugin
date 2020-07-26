@@ -69,17 +69,17 @@ class GenerateJenkinsServerHplTaskSpec extends IntegrationSpec {
         new Manifest(file.newInputStream()) == toManifest(minimalAttributes)
 
         where:
-        inner                                        | outer                              | modifications
-        ''                                           | ''                                 | [:]
-        '''displayName = 'The Strawberry Plugin' ''' | ''                                 | ['Long-Name': 'The Strawberry Plugin']
-        '''url = 'https://example.org/123' '''       | ''                                 | ['Url': 'https://example.org/123']
-        '''compatibleSinceVersion = '2.64' '''       | ''                                 | ['Compatible-Since-Version': '2.64']
-        '''sandboxStatus = true '''                  | ''                                 | ['Sandbox-Status': 'true']
-        '''sandboxStatus = false '''                 | ''                                 | [:]
-        '''maskClasses = true '''                    | ''                                 | ['Mask-Classes': 'true']
-        '''maskClasses = false '''                   | ''                                 | ['Mask-Classes': 'false']
-        '''pluginFirstClassLoader = true '''         | ''                                 | ['PluginFirstClassLoader': 'true']
-        '''pluginFirstClassLoader = false '''        | ''                                 | [:]
+        inner                                          | outer                              | modifications
+        ''                                             | ''                                 | [:]
+        '''displayName = 'The Strawberry Plugin' '''   | ''                                 | ['Long-Name': 'The Strawberry Plugin']
+        '''url = 'https://example.org/123' '''         | ''                                 | ['Url': 'https://example.org/123']
+        '''compatibleSinceVersion = '2.64' '''         | ''                                 | ['Compatible-Since-Version': '2.64']
+        '''sandboxStatus = true '''                    | ''                                 | ['Sandbox-Status': 'true']
+        '''sandboxStatus = false '''                   | ''                                 | [:]
+        '''maskClasses = 'org.example,com.example' ''' | ''                                 | ['Mask-Classes': 'org.example,com.example']
+        '''maskClasses = '' '''                        | ''                                 | [:]
+        '''pluginFirstClassLoader = true '''           | ''                                 | ['PluginFirstClassLoader': 'true']
+        '''pluginFirstClassLoader = false '''          | ''                                 | [:]
         '''\
             developers {
                 developer {

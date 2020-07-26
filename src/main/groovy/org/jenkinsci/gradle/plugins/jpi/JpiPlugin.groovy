@@ -51,17 +51,16 @@ import org.gradle.api.tasks.compile.JavaCompile
 import org.gradle.api.tasks.testing.Test
 import org.gradle.language.base.plugins.LifecycleBasePlugin
 import org.gradle.util.GradleVersion
+import org.jenkinsci.gradle.plugins.jpi.internal.DependencyLookup
+import org.jenkinsci.gradle.plugins.jpi.internal.Providers
+import org.jenkinsci.gradle.plugins.jpi.legacy.LegacyWorkaroundsPlugin
 import org.jenkinsci.gradle.plugins.jpi.manifest.DiscoverDynamicLoadingSupportTask
 import org.jenkinsci.gradle.plugins.jpi.manifest.DiscoverPluginClassTask
-import org.jenkinsci.gradle.plugins.jpi.internal.DependencyLookup
-import org.jenkinsci.gradle.plugins.jpi.legacy.LegacyWorkaroundsPlugin
 import org.jenkinsci.gradle.plugins.jpi.manifest.GenerateManifestTask
 import org.jenkinsci.gradle.plugins.jpi.server.GenerateJenkinsServerHplTask
 import org.jenkinsci.gradle.plugins.jpi.server.InstallJenkinsServerPluginsTask
 import org.jenkinsci.gradle.plugins.jpi.server.JenkinsServerTask
 import org.jenkinsci.gradle.plugins.jpi.verification.CheckOverlappingSourcesTask
-
-import java.util.concurrent.Callable
 
 import static org.gradle.api.logging.LogLevel.INFO
 import static org.gradle.api.tasks.SourceSet.MAIN_SOURCE_SET_NAME
@@ -145,34 +144,19 @@ class JpiPlugin implements Plugin<Project> {
                 GenerateManifestTask) { GenerateManifestTask t ->
             t.pluginClassFile.set(discoverPlugin.get().outputFile)
             t.dynamicLoadingSupportFile.set(discoverDynamic.get().outputFile)
-            t.groupId.set(project.provider(new Callable<String>() {
-                @Override
-                String call() throws Exception {
-                    return gradleProject.group.toString()
-                }
-            }))
+            t.groupId.set(Providers.groupIdFrom(gradleProject))
             t.shortName.set(ext.id)
             t.longName.set(ext.displayId)
             t.url.set(ext.url)
             t.compatibleSinceVersion.set(ext.compatibleSinceVersion)
             t.sandboxStatus.set(ext.sandboxStatus)
-            t.pluginVersion.set(project.provider(new Callable<String>() {
-                @Override
-                String call() throws Exception {
-                    return gradleProject.version.toString()
-                }
-            }))
+            t.pluginVersion.set(Providers.versionFrom(gradleProject))
             t.jenkinsVersion.set(ext.jenkinsVersion)
-            t.minimumJavaVersion.set(project.provider(new Callable<String>() {
-                @Override
-                String call() throws Exception {
-                    gradleProject.convention.getPlugin(JavaPluginConvention).targetCompatibility.toString()
-                }
-            }))
+            t.minimumJavaVersion.set(Providers.minimumJavaVersionFrom(gradleProject))
             t.maskClasses.set(ext.maskClasses)
-            t.pluginDependencies.set(dependencyAnalysis.analyse().manifestPluginDependencies)
+            t.pluginDependencies.set(Providers.pluginDependenciesFrom(dependencyAnalysis, gradleProject))
             t.pluginFirstClassLoader.set(ext.pluginFirstClassLoader)
-            t.pluginDevelopers.set('')
+            t.pluginDevelopers.set(ext.developersForManifest)
             t.dependsOn(discoverPlugin.get(), discoverDynamic.get())
         }
 
@@ -282,7 +266,6 @@ class JpiPlugin implements Plugin<Project> {
     }
 
     private static configureManifest(Project project, GenerateManifestTask task) {
-        JavaPluginConvention javaPluginConvention = project.convention.getPlugin(JavaPluginConvention)
         TaskProvider<War> jpiProvider = project.tasks.named(JPI_TASK_NAME) as TaskProvider<War>
         TaskProvider<Jar> jarProvider = project.tasks.named(JavaPlugin.JAR_TASK_NAME) as TaskProvider<Jar>
 
