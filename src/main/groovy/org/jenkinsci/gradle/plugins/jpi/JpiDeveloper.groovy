@@ -20,9 +20,16 @@ import org.gradle.api.logging.Logger
 import org.gradle.util.ConfigureUtil
 
 /**
+ * This class is no longer used. Gradle 4.8 introduced a strongly-typed model
+ * for customizing the POM. JpiPomDeveloper implements that public interface
+ * and adds the expected formatting behavior.
+ *
  * Information on a single developer for the <developer> tag in the output POM.
  *
+ * @see org.jenkinsci.gradle.plugins.jpi.manifest.JpiPomDeveloper
+ * @link https://docs.gradle.org/4.8/release-notes.html#customizing-the-generated-pom
  * @author Andrew Bayer
+ * @deprecated To be removed in 1.0.0
  */
 class JpiDeveloper {
     final static LEGAL_FIELDS = ['id', 'name', 'email', 'url', 'organization', 'organizationUrl', 'timezone']

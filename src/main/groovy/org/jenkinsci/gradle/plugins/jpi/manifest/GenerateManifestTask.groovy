@@ -106,7 +106,7 @@ class GenerateManifestTask extends DefaultTask {
         manifest.mainAttributes.putValue('Plugin-Version', enrichedVersion.get())
         manifest.mainAttributes.putValue('Jenkins-Version', jenkinsVersion.get())
         manifest.mainAttributes.putValue('Minimum-Java-Version', minimumJavaVersion.get())
-        if (maskClasses.isPresent()) {
+        if (maskClasses.getOrElse('')) {
             manifest.mainAttributes.putValue('Mask-Classes', String.valueOf(maskClasses.get()))
         }
         if (pluginDependencies.isPresent()) {

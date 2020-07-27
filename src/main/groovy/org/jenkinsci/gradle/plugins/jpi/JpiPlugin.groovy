@@ -56,6 +56,7 @@ import org.jenkinsci.gradle.plugins.jpi.internal.Providers
 import org.jenkinsci.gradle.plugins.jpi.legacy.LegacyWorkaroundsPlugin
 import org.jenkinsci.gradle.plugins.jpi.manifest.DiscoverDynamicLoadingSupportTask
 import org.jenkinsci.gradle.plugins.jpi.manifest.DiscoverPluginClassTask
+import org.jenkinsci.gradle.plugins.jpi.manifest.GenerateHplTask
 import org.jenkinsci.gradle.plugins.jpi.manifest.GenerateManifestTask
 import org.jenkinsci.gradle.plugins.jpi.server.GenerateJenkinsServerHplTask
 import org.jenkinsci.gradle.plugins.jpi.server.InstallJenkinsServerPluginsTask
@@ -165,10 +166,14 @@ class JpiPlugin implements Plugin<Project> {
         }
 
         def generateHpl = gradleProject.tasks.register(GenerateJenkinsServerHplTask.TASK_NAME,
-                GenerateJenkinsServerHplTask) { GenerateJenkinsServerHplTask t ->
-            t.fileName.set(ext.shortName)
+                GenerateHplTask) { GenerateHplTask t ->
+            t.hpl.set(gradleProject.layout.buildDirectory.file("hpl/${ext.shortName}.hpl"))
+            t.mainOutput.set(Providers.mainSourceSetOutputFrom(gradleProject))
+            t.pluginLibraries.set(Providers.libraryDependenciesFrom(dependencyAnalysis, gradleProject))
+            t.manifestFile.set(generateManifest.get().manifestFile)
             t.description = 'Generate hpl (Hudson plugin link) for running locally'
             t.group = 'Jenkins Server'
+            t.dependsOn(generateManifest.get())
         }
 
         def installPlugins = gradleProject.tasks.register(InstallJenkinsServerPluginsTask.TASK_NAME,
@@ -242,11 +247,23 @@ class JpiPlugin implements Plugin<Project> {
         configureRepositories(gradleProject)
         configureJpi(gradleProject)
         configureConfigurations(gradleProject)
-        configureManifest(gradleProject, generateManifest.get())
+        def generateManifestTask = generateManifest.get()
+        configureManifest(gradleProject, generateManifestTask)
         configureLicenseInfo(gradleProject)
         configureTestDependencies(gradleProject)
         configurePublishing(gradleProject)
-        configureTestHpl(gradleProject)
+        JavaPluginConvention javaConvention = gradleProject.convention.getPlugin(JavaPluginConvention)
+        SourceSet testSourceSet = javaConvention.sourceSets.getByName(TEST_SOURCE_SET_NAME)
+        def outputDir = gradleProject.layout.buildDirectory.dir('generated-resources/test')
+        testSourceSet.output.dir(outputDir)
+        def generateTestHplTask = gradleProject.tasks.register(GenerateTestHpl.TASK_NAME, GenerateHplTask) {
+            it.manifestFile.set(generateManifestTask.manifestFile)
+            it.mainOutput.set(Providers.mainSourceSetOutputFrom(gradleProject))
+            it.pluginLibraries.set(Providers.libraryDependenciesFrom(dependencyAnalysis, gradleProject))
+            it.hpl.set(outputDir.map { it.file('the.hpl') })
+            it.dependsOn(generateManifestTask)
+        }
+        gradleProject.tasks.named(JavaPlugin.TEST_CLASSES_TASK_NAME).configure { it.dependsOn(generateTestHplTask) }
         gradleProject.afterEvaluate {
             gradleProject.setProperty('archivesBaseName', ext.shortName)
         }
@@ -571,21 +588,6 @@ class JpiPlugin implements Plugin<Project> {
                 }
             }
         }
-    }
-
-    private static configureTestHpl(Project project) {
-        JavaPluginConvention javaConvention = project.convention.getPlugin(JavaPluginConvention)
-        SourceSet testSourceSet = javaConvention.sourceSets.getByName(TEST_SOURCE_SET_NAME)
-
-        // generate test hpl manifest for the current plugin, to be used during unit test
-        def outputDir = project.layout.buildDirectory.dir('generated-resources/test')
-        testSourceSet.output.dir(outputDir)
-
-        def generateTestHplTask = project.tasks.register(GenerateTestHpl.TASK_NAME, GenerateTestHpl) {
-            it.hplDir.set(outputDir)
-        }
-
-        project.tasks.named(JavaPlugin.TEST_CLASSES_TASK_NAME).configure { it.dependsOn(generateTestHplTask) }
     }
 
     private static class JPILibraryElementsCompatibilityRule implements

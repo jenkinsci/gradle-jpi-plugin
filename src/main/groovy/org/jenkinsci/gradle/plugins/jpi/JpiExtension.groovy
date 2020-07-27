@@ -69,6 +69,7 @@ class JpiExtension implements MavenPomDeveloperSpec {
         this.developersForManifest = developerListProperty.map {
             it*.toManifestFormat().join(',')
         }
+        this.url = project.objects.property(String)
     }
 
     @Deprecated
@@ -128,7 +129,7 @@ class JpiExtension implements MavenPomDeveloperSpec {
     /**
      * URL that points to the home page of this plugin.
      */
-    String url
+    final Property<String> url
 
     /**
      * TODO: document

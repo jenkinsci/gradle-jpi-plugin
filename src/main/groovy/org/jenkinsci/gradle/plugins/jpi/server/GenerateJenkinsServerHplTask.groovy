@@ -10,6 +10,15 @@ import org.gradle.api.tasks.OutputFile
 import org.gradle.api.tasks.TaskAction
 import org.jenkinsci.gradle.plugins.jpi.JpiHplManifest
 
+/**
+ * This task is no longer wired to the 'generateJenkinsServerHpl' task. It has
+ * been replaced by GenerateHplTask, which declares all of its inputs
+ * and outputs to take advantage of Gradle's task caching.
+ *
+ * @see org.jenkinsci.gradle.plugins.jpi.manifest.GenerateHplTask
+ * @deprecated To be removed in 1.0.0
+ */
+@Deprecated
 @CompileStatic
 class GenerateJenkinsServerHplTask extends DefaultTask {
     static final String TASK_NAME = 'generateJenkinsServerHpl'

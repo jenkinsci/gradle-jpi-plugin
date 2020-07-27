@@ -39,7 +39,7 @@ class LicenseTask extends DefaultTask {
             ) {
                 'l:dependency'(
                         version: project.version, artifactId: project.name, groupId: project.group,
-                        name: jpiExtension.displayName, url: jpiExtension.url,
+                        name: jpiExtension.displayName, url: jpiExtension.url.orNull,
                 ) {
                     'l:description'(project.description)
                     jpiExtension.licenses.each { license ->
