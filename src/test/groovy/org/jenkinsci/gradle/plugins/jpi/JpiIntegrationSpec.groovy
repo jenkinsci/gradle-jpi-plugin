@@ -196,12 +196,12 @@ class JpiIntegrationSpec extends IntegrationSpec {
 
         where:
         task                                         | dependency                                    | outcome
-        'jar'                                        | ':configureManifest'                          | TaskOutcome.SUCCESS
-        'jpi'                                        | ':configureManifest'                          | TaskOutcome.SUCCESS
+        'jar'                                        | ':classes'                                    | TaskOutcome.UP_TO_DATE
+        'jpi'                                        | ':generateLicenseInfo'                        | TaskOutcome.SUCCESS
         'processTestResources'                       | ':resolveTestDependencies'                    | TaskOutcome.SUCCESS
         'compileTestJava'                            | ':insertTest'                                 | TaskOutcome.SKIPPED
-        'testClasses'                                | ':generateTestHpl'                          | TaskOutcome.SUCCESS
-        'generate-test-hpl'                          | ':generateTestHpl'                          | TaskOutcome.SUCCESS
+        'testClasses'                                | ':generateTestHpl'                            | TaskOutcome.SUCCESS
+        'generate-test-hpl'                          | ':generateTestHpl'                            | TaskOutcome.SUCCESS
         'compileJava'                                | ':localizer'                                  | TaskOutcome.SUCCESS
         'sourcesJar'                                 | ':localizer'                                  | TaskOutcome.SUCCESS
         'generateMetadataFileForMavenJpiPublication' | ':generateMetadataFileForMavenJpiPublication' | TaskOutcome.SUCCESS

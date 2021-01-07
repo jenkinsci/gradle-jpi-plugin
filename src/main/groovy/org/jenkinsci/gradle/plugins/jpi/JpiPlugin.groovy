@@ -227,28 +227,17 @@ class JpiPlugin implements Plugin<Project> {
     }
 
     private static configureManifest(Project project) {
-        JavaPluginConvention javaPluginConvention = project.convention.getPlugin(JavaPluginConvention)
         TaskProvider<War> jpiProvider = project.tasks.named(JPI_TASK_NAME) as TaskProvider<War>
         TaskProvider<Jar> jarProvider = project.tasks.named(JavaPlugin.JAR_TASK_NAME) as TaskProvider<Jar>
 
-        def configureManifest = project.tasks.register('configureManifest') {
-            it.doLast {
-                Map<String, ?> attributes = attributesToMap(new JpiManifest(project).mainAttributes)
-                jpiProvider.configure {
-                    it.manifest.attributes(attributes)
-                    it.inputs.property('manifest', attributes)
-                }
-                jarProvider.configure {
-                    it.manifest.attributes(attributes)
-                    it.inputs.property('manifest', attributes)
+        [jpiProvider, jarProvider].each { provider ->
+            provider.configure { Jar task ->
+                task.doFirst {
+                    Map<String, ?> attributes = attributesToMap(project)
+                    task.manifest.attributes(attributes)
                 }
             }
-
-            it.dependsOn(javaPluginConvention.sourceSets.getByName(MAIN_SOURCE_SET_NAME).output)
         }
-
-        jpiProvider.configure { it.dependsOn(configureManifest) }
-        jarProvider.configure { it.dependsOn(configureManifest) }
     }
 
     private configureJpi(Project project) {

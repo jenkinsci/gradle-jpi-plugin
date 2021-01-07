@@ -15,6 +15,7 @@
  */
 package org.jenkinsci.gradle.plugins.jpi
 
+import groovy.transform.Memoized
 import hudson.Extension
 import jenkins.YesNoMaybe
 import net.java.sezpoz.Index
@@ -23,7 +24,6 @@ import org.gradle.api.file.FileCollection
 import org.gradle.api.plugins.JavaPluginConvention
 import org.jenkinsci.gradle.plugins.jpi.internal.VersionCalculator
 
-import java.util.jar.Attributes
 import java.util.jar.Manifest
 
 import static java.util.jar.Attributes.Name.MANIFEST_VERSION
@@ -112,7 +112,8 @@ class JpiManifest extends Manifest {
         YesNoMaybe.YES
     }
 
-    static Map<String, ?> attributesToMap(Attributes attributes) {
-        attributes.collectEntries { k, v -> [k.toString(), v] } as Map<String, ?>
+    @Memoized
+    static Map<String, ?> attributesToMap(Project project) {
+        new JpiManifest(project).mainAttributes.collectEntries { k, v -> [k.toString(), v] } as Map<String, ?>
     }
 }
