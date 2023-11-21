@@ -22,29 +22,29 @@ import javax.inject.Inject
  *
  * @see org.kohsuke.accmod.impl.EnforcerMojo
  */
-open class CheckAccessModifierTask @Inject constructor(private val workerExecutor: WorkerExecutor) : DefaultTask() {
+abstract class CheckAccessModifierTask @Inject constructor(private val workerExecutor: WorkerExecutor) : DefaultTask() {
     companion object {
         const val NAME = "checkAccessModifier"
         const val PREFIX = "$NAME."
     }
 
-    @Classpath
-    val accessModifierClasspath: ConfigurableFileCollection = project.objects.fileCollection()
+    @get:Classpath
+    abstract val accessModifierClasspath: ConfigurableFileCollection
 
-    @Input
-    val accessModifierProperties: MapProperty<String, Any> = project.objects.mapProperty()
+    @get:Input
+    abstract val accessModifierProperties: MapProperty<String, Any>
 
-    @CompileClasspath
-    val compileClasspath: ConfigurableFileCollection = project.objects.fileCollection()
+    @get:CompileClasspath
+    abstract val compileClasspath: ConfigurableFileCollection
 
-    @InputFiles
-    val compilationDirs: ConfigurableFileCollection = project.objects.fileCollection()
+    @get:InputFiles
+    abstract val compilationDirs: ConfigurableFileCollection
 
-    @Input
-    val ignoreFailures: Property<Boolean> = project.objects.property()
+    @get:Input
+    abstract val ignoreFailures: Property<Boolean>
 
-    @OutputDirectory
-    val outputDirectory: DirectoryProperty = project.objects.directoryProperty()
+    @get:OutputDirectory
+    abstract val outputDirectory: DirectoryProperty
 
     @TaskAction
     fun check() {
