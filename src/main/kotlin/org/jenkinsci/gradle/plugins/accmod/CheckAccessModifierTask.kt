@@ -3,16 +3,21 @@ package org.jenkinsci.gradle.plugins.accmod
 import org.gradle.api.DefaultTask
 import org.gradle.api.file.ConfigurableFileCollection
 import org.gradle.api.file.DirectoryProperty
+import org.gradle.api.plugins.JavaPluginExtension
 import org.gradle.api.provider.MapProperty
 import org.gradle.api.provider.Property
 import org.gradle.api.tasks.Classpath
 import org.gradle.api.tasks.CompileClasspath
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.InputFiles
+import org.gradle.api.tasks.Nested
 import org.gradle.api.tasks.OutputDirectory
 import org.gradle.api.tasks.TaskAction
-import org.gradle.kotlin.dsl.mapProperty
-import org.gradle.kotlin.dsl.property
+import org.gradle.jvm.toolchain.JavaLanguageVersion
+import org.gradle.jvm.toolchain.JavaLauncher
+import org.gradle.jvm.toolchain.JavaToolchainService
+import org.gradle.jvm.toolchain.JvmVendorSpec
+import org.gradle.kotlin.dsl.getByType
 import org.gradle.kotlin.dsl.submit
 import org.gradle.workers.WorkerExecutor
 import javax.inject.Inject
@@ -22,7 +27,10 @@ import javax.inject.Inject
  *
  * @see org.kohsuke.accmod.impl.EnforcerMojo
  */
-abstract class CheckAccessModifierTask @Inject constructor(private val workerExecutor: WorkerExecutor) : DefaultTask() {
+abstract class CheckAccessModifierTask @Inject constructor(
+        private val workerExecutor: WorkerExecutor,
+        javaToolchainService: JavaToolchainService,
+) : DefaultTask() {
     companion object {
         const val NAME = "checkAccessModifier"
         const val PREFIX = "$NAME."
@@ -46,9 +54,29 @@ abstract class CheckAccessModifierTask @Inject constructor(private val workerExe
     @get:OutputDirectory
     abstract val outputDirectory: DirectoryProperty
 
+    @get:Nested
+    abstract val launcher: Property<JavaLauncher>
+
+    init {
+        val toolchain = project.extensions.getByType<JavaPluginExtension>().toolchain
+        val requestedVersion = toolchain.languageVersion.map { it.asInt() }.orNull
+        val defaultLauncher = if (requestedVersion == null || requestedVersion < 11) {
+            javaToolchainService.launcherFor {
+                languageVersion.set(JavaLanguageVersion.of(11))
+                vendor.set(JvmVendorSpec.ADOPTIUM)
+            }
+        } else {
+            javaToolchainService.launcherFor(toolchain)
+        }
+        launcher.convention(defaultLauncher)
+    }
+
     @TaskAction
     fun check() {
-        val q = workerExecutor.classLoaderIsolation {
+        val q = workerExecutor.processIsolation {
+            forkOptions {
+                this.executable = launcher.map { it.executablePath.toString() }.get()
+            }
             classpath.from(accessModifierClasspath)
         }
         for (compilationDir in compilationDirs) {

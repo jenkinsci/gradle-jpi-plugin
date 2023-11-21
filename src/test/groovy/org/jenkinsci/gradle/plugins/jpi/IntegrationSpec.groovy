@@ -18,6 +18,7 @@ class IntegrationSpec extends Specification {
         if (!existsRelativeToProjectDir('gradle.properties')) {
             def props = new Properties()
             props.setProperty('org.gradle.warning.mode', warningMode.name().toLowerCase(Locale.US))
+            props.setProperty('org.gradle.java.installations.auto-download', 'false')
             gradleProperties.withOutputStream {
                 props.store(it, 'IntegrationSpec default generated values')
             }
