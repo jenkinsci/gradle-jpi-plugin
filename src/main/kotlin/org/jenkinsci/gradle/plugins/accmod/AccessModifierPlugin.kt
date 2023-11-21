@@ -15,7 +15,7 @@ open class AccessModifierPlugin : Plugin<Project> {
     override fun apply(target: Project) {
         with(target) {
             apply<JavaLibraryPlugin>()
-            val library = dependencies.create("org.kohsuke:access-modifier-checker:1.27")
+            val library = dependencies.create("org.kohsuke:access-modifier-checker:1.33")
             val mavenLog = dependencies.create("org.apache.maven:maven-plugin-api:2.0.1").apply {
                 because("Requires org.apache.maven.plugin.logging.Log but missing dependency")
             }
