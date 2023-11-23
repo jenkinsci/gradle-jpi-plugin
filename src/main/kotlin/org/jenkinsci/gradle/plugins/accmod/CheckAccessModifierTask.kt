@@ -63,7 +63,6 @@ abstract class CheckAccessModifierTask @Inject constructor(
         val defaultLauncher = if (requestedVersion == null || requestedVersion < 11) {
             javaToolchainService.launcherFor {
                 languageVersion.set(JavaLanguageVersion.of(11))
-                vendor.set(JvmVendorSpec.ADOPTIUM)
             }
         } else {
             javaToolchainService.launcherFor(toolchain)
