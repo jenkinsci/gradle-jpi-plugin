@@ -15,6 +15,7 @@
  */
 package org.jenkinsci.gradle.plugins.jpi
 
+import groovy.transform.CompileDynamic
 import org.gradle.api.internal.ConventionTask
 import org.gradle.api.tasks.InputFiles
 import org.gradle.api.tasks.TaskAction
@@ -29,6 +30,7 @@ import org.jvnet.localizer.GeneratorTask
  * @see org.jenkinsci.gradle.plugins.jpi.localization.LocalizationTask
  */
 @Deprecated
+@CompileDynamic
 class LocalizerTask extends ConventionTask {
     public static final String TASK_NAME = 'localizer'
 

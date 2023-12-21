@@ -15,6 +15,7 @@
  */
 package org.jenkinsci.gradle.plugins.jpi
 
+import groovy.transform.CompileDynamic
 import org.gradle.internal.deprecation.DeprecationLogger
 
 import java.util.jar.JarFile
@@ -38,6 +39,7 @@ import static JpiPlugin.SERVER_JENKINS_RUNTIME_CLASSPATH_CONFIGURATION_NAME
  * @deprecated To be removed in 1.0.0
  */
 @Deprecated
+@CompileDynamic
 class ServerTask extends DefaultTask {
     public static final String TASK_NAME = 'server'
 

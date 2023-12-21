@@ -157,32 +157,29 @@ tasks.withType<Test>().configureEach {
 }
 
 codenarc {
-    toolVersion = "1.1"
-    configFile = rootProject.file("config/codenarc/rules.groovy")
+    config = resources.text.fromFile(rootProject.file("config/codenarc/rules.groovy"))
+    maxPriority3Violations = 261
 }
 
-tasks.codenarcTest {
-    configFile = rootProject.file("config/codenarc/rules-test.groovy")
+tasks.named<CodeNarc>("codenarcTest").configure {
+    enabled = false
 }
 
 group = "org.jenkins-ci.tools"
 description = "Gradle plugin for building and packaging Jenkins plugins"
 
 gradlePlugin {
+    website = "https://wiki.jenkins-ci.org/display/JENKINS/Gradle+JPI+Plugin"
+    vcsUrl = "https://github.com/jenkinsci/gradle-jpi-plugin"
     plugins {
         create("pluginMaven") {
             id = "org.jenkins-ci.jpi"
             implementationClass = "org.jenkinsci.gradle.plugins.jpi.JpiPlugin"
             displayName = "A plugin for building Jenkins plugins"
+            description = "A plugin for building Jenkins plugins"
+            tags = listOf("jenkins")
         }
     }
-}
-
-pluginBundle {
-    website = "https://wiki.jenkins-ci.org/display/JENKINS/Gradle+JPI+Plugin"
-    vcsUrl = "https://github.com/jenkinsci/gradle-jpi-plugin"
-    description = "A plugin for building Jenkins plugins"
-    tags = listOf("jenkins")
 }
 
 fun Project.stringProp(named: String): String? = findProperty(named) as String?

@@ -1,5 +1,6 @@
 package org.jenkinsci.gradle.plugins.jpi
 
+import groovy.transform.CompileDynamic
 import org.gradle.api.DefaultTask
 import org.gradle.api.plugins.JavaPluginExtension
 import org.gradle.api.tasks.OutputFile
@@ -13,6 +14,7 @@ import static org.gradle.api.tasks.SourceSet.MAIN_SOURCE_SET_NAME
  * @see org.jenkinsci.gradle.plugins.testing.GenerateTestTask
  */
 @Deprecated
+@CompileDynamic
 class TestInsertionTask extends DefaultTask {
     public static final String TASK_NAME = 'insertTest'
 

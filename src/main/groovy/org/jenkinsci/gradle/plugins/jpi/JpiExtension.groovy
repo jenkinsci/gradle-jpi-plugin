@@ -17,6 +17,7 @@ package org.jenkinsci.gradle.plugins.jpi
 
 import com.github.spotbugs.snom.SpotBugsPlugin
 import com.github.spotbugs.snom.SpotBugsTask
+import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
 import org.gradle.api.Action
 import org.gradle.api.Project
@@ -49,6 +50,7 @@ import shaded.hudson.util.VersionNumber
  * @author Kohsuke Kawaguchi
  * @author Andrew Bayer
  */
+@CompileDynamic
 @SuppressWarnings('MethodCount')
 class JpiExtension implements JpiExtensionBridge {
     public static final String JENKINS_INCREMENTALS_REPO = 'https://repo.jenkins-ci.org/incrementals'

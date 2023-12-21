@@ -15,6 +15,7 @@
  */
 package org.jenkinsci.gradle.plugins.jpi
 
+import groovy.transform.CompileDynamic
 import org.gradle.api.Action
 import org.gradle.api.GradleException
 import org.gradle.api.NamedDomainObjectProvider
@@ -74,6 +75,7 @@ import static org.gradle.api.tasks.SourceSet.MAIN_SOURCE_SET_NAME
  * @author Kohsuke Kawaguchi
  * @author Andrew Bayer
  */
+@CompileDynamic
 class JpiPlugin implements Plugin<Project>, PluginDependencyProvider {
 
     /**

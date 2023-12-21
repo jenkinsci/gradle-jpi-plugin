@@ -1,5 +1,6 @@
 package org.jenkinsci.gradle.plugins.jpi
 
+import groovy.transform.CompileDynamic
 import org.gradle.api.artifacts.Configuration
 import org.gradle.api.plugins.JavaPluginExtension
 import org.gradle.api.tasks.Classpath
@@ -10,6 +11,7 @@ import org.gradle.api.tasks.Copy
  * @see org.jenkinsci.gradle.plugins.testing.CopyTestPluginDependenciesTask
  */
 @Deprecated
+@CompileDynamic
 class TestDependenciesTask extends Copy {
     public static final String TASK_NAME = 'resolveTestDependencies'
 

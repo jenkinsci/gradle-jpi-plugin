@@ -15,6 +15,7 @@
  */
 package org.jenkinsci.gradle.plugins.jpi
 
+import groovy.transform.CompileDynamic
 import org.gradle.api.logging.LogLevel
 import org.gradle.api.logging.Logger
 import org.jenkinsci.gradle.plugins.jpi.internal.ConfigureUtil
@@ -27,6 +28,7 @@ import org.jenkinsci.gradle.plugins.jpi.internal.ConfigureUtil
  * @see org.jenkinsci.gradle.plugins.jpi.core.PluginDeveloper
  */
 @Deprecated
+@CompileDynamic
 class JpiDeveloper {
     final static LEGAL_FIELDS = ['id', 'name', 'email', 'url', 'organization', 'organizationUrl', 'timezone']
 

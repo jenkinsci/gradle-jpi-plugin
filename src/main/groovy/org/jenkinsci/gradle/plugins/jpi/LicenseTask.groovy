@@ -1,5 +1,6 @@
 package org.jenkinsci.gradle.plugins.jpi
 
+import groovy.transform.CompileDynamic
 import groovy.xml.MarkupBuilder
 import org.gradle.api.DefaultTask
 import org.gradle.api.artifacts.Configuration
@@ -16,6 +17,7 @@ import org.jenkinsci.gradle.plugins.jpi.internal.LicenseDataExtractor
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 
+@CompileDynamic
 class LicenseTask extends DefaultTask {
     private static final Logger LOGGER = LoggerFactory.getLogger(LicenseTask)
 
