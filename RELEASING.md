@@ -7,13 +7,19 @@ These are the instructions to release the Gradle JPI Plugin.
 Prerequisites
 -------------
 
-Ensure you have your signing credentials in `~/.gradle/gradle.properties`:
+The following Gradle properties must be set:
 
-    signing.keyId=24875D73
-    signing.secretKeyRingFile=/Users/me/.gnupg/secring.gpg
+- `gradle.publish.key` (from Gradle Plugin Portal)
+- `gradle.publish.secret` (from Gradle Plugin Portal)
+- `jenkins.username` (from Jenkins Account)
+- `jenkins.password` (from Jenkins Account)
+- `signingKeyId` (GPG Signing Key ID)
+- `signingPassword` (GPG Passphrase)
+- `signingKey` (GPG Secret Key, ASCII-armored, header/footer removed, newlines joined by `\n`)
 
-You do not need to store your private key password there, the build script will ask for it. See
-[The Signing Plugin](https://www.gradle.org/docs/current/userguide/signing_plugin.html) for details.
+They can be set using the `-P` syntax on the command line, or as `ORG_GRADLE_PROJECT_{name}` environment variables ([docs]).
+
+[docs]: https://docs.gradle.org/current/userguide/build_environment.html#sec:project_specific_properties
 
 
 Steps
@@ -29,8 +35,7 @@ For a final release, use the `final` task.
 * Ensure everything is checked in: `git commit -S -am "releasing 0.6.0"`
 * Build the code: `gradlew clean check install`
 * Test the plugin with Jenkins plugin projects using it (e.g. https://github.com/jenkinsci/job-dsl-plugin)
-* Deploy: `gradlew -Pjenkins.username=<my-username> -Pjenkins.password=<my-password> publishPluginMavenPublicationToJenkinsCommunityRepository`
-* Publish to Gradle plugin portal: `gradlew publishPlugins`
+* Deploy: `./gradlew candidate`
 * Update `CHANGELOG.md`, add the next version
 * Close all resolved issues in JIRA: https://issues.jenkins-ci.org/secure/Dashboard.jspa?selectPageId=15444
 * Send an email to jenkinsci-dev@googlegroups.com
