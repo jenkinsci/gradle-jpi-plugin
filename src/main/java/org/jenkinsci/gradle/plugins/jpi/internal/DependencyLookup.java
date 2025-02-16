@@ -63,13 +63,13 @@ public class DependencyLookup {
     }
 
     private static DependencyFactory findbugsFor(VersionNumber version, boolean beforeBomExists) {
-        String findbugs = "com.github.spotbugs:spotbugs-annotations";
         if (version.compareTo(new VersionNumber("1.618")) < 0) {
-            findbugs = "findbugs:annotations:1.0.0";
+            return new MavenDependency("findbugs:annotations:1.0.0");
         } else if (beforeBomExists) {
-            findbugs = "com.google.code.findbugs:annotations:3.0.0";
+            return new MavenDependency("com.google.code.findbugs:annotations:3.0.0");
+        } else {
+            return new MavenDependency("com.github.spotbugs:spotbugs-annotations");
         }
-        return new MavenDependency(findbugs);
     }
 
     private static DependencyFactory servletFor(VersionNumber version) {
@@ -83,13 +83,14 @@ public class DependencyLookup {
     }
 
     private static DependencyFactory testHarnessFor(VersionNumber version) {
-        String testHarness = "org.jenkins-ci.main:jenkins-test-harness:2112.ve584e0edc63b_";
-        if (version.isOlderThan(new VersionNumber("2.64"))) {
-            testHarness = "org.jenkins-ci.main:jenkins-test-harness:2.0";
-        }
         if (version.isOlderThanOrEqualTo(new VersionNumber("1.644"))) {
-            testHarness = "org.jenkins-ci.main:jenkins-test-harness:" + version;
+            return new MavenDependency("org.jenkins-ci.main:jenkins-test-harness:" + version);
+        } else if (version.isOlderThan(new VersionNumber("2.64"))) {
+            return new MavenDependency( "org.jenkins-ci.main:jenkins-test-harness:2.0");
+        } else if (version.isOlderThan(new VersionNumber("2.475"))) {
+            return new MavenDependency("org.jenkins-ci.main:jenkins-test-harness:2112.ve584e0edc63b_");
+        } else {
+            return new MavenDependency("org.jenkins-ci.main:jenkins-test-harness:2391.v9b_3e2d3351a_2");
         }
-        return new MavenDependency(testHarness);
     }
 }
