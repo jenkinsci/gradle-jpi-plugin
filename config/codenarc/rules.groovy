@@ -16,6 +16,14 @@ ruleset {
         exclude 'NoDef'
         // we don't care for now
         exclude 'VariableTypeRequired'
+
+        exclude 'CompileStatic'
+        exclude 'ImplicitClosureParameter'
+        exclude 'ImplicitReturnStatement'
+        exclude 'PublicMethodsBeforeNonPublicMethods'
+        exclude 'StaticFieldsBeforeInstanceFields'
+        exclude 'StaticMethodsBeforeInstanceMethods'
+
     }
 
     ruleset('rulesets/design.xml') {
@@ -50,6 +58,8 @@ ruleset {
 
         // we don't care for now
         exclude 'ClassJavadoc'
+        exclude 'ClassStartsWithBlankLine'
+        exclude 'ClassEndsWithBlankLine'
     }
 
     ruleset('rulesets/generic.xml')
@@ -90,7 +100,9 @@ ruleset {
         exclude 'MethodSize'
     }
 
-    ruleset('rulesets/unnecessary.xml')
+    ruleset('rulesets/unnecessary.xml') {
+        exclude 'UnnecessaryGetter'
+    }
 
     ruleset('rulesets/unused.xml')
 }

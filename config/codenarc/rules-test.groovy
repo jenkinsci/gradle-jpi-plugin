@@ -2,6 +2,7 @@ ruleset {
     ruleset('rulesets/junit.xml') {
         // Spock ...
         exclude 'JUnitPublicNonTestMethod'
+        exclude 'JUnitPublicProperty'
     }
 
     ruleset('file:config/codenarc/rules.groovy') {
