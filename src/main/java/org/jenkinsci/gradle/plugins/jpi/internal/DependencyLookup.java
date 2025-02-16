@@ -39,6 +39,7 @@ public class DependencyLookup {
             case "testCompileOnly":
                 deps.add(new MavenDependency("net.jcip:jcip-annotations:1.0"));
                 deps.add(findbugs);
+                deps.add(servlet);
                 return deps;
             case "generatedJenkinsTestImplementation":
                 deps.addAll(coreSet);

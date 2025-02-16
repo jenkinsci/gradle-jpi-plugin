@@ -81,11 +81,12 @@ class DependencyLookupSpec extends Specification {
 
         where:
         version                         | expected
-        '1.617'                         | [FINDBUGS_1, JCIP_ANNOTATIONS] as Set
-        '2.150.3'                       | [GOOGLE_FINDBUGS, JCIP_ANNOTATIONS] as Set
-        '2.222.3'                       | [SPOTBUGS, JCIP_ANNOTATIONS] as Set
-        '2.361.2-rc32710.c1a_5e8c179f6' | [SPOTBUGS, JCIP_ANNOTATIONS] as Set
-        '2.369-rc32854.076293e36922'    | [SPOTBUGS, JCIP_ANNOTATIONS] as Set
+        '1.617'                         | [FINDBUGS_1, JCIP_ANNOTATIONS, SERVLET_2_4] as Set
+        '2.150.3'                       | [GOOGLE_FINDBUGS, JCIP_ANNOTATIONS, SERVLET_3_1] as Set
+        '2.222.3'                       | [SPOTBUGS, JCIP_ANNOTATIONS, SERVLET_3_1] as Set
+        '2.361.2-rc32710.c1a_5e8c179f6' | [SPOTBUGS, JCIP_ANNOTATIONS, SERVLET_3_1] as Set
+        '2.369-rc32854.076293e36922'    | [SPOTBUGS, JCIP_ANNOTATIONS, SERVLET_3_1] as Set
+        '2.475'                         | [SPOTBUGS, JCIP_ANNOTATIONS, SERVLET_5_0] as Set
     }
 
     @Unroll
