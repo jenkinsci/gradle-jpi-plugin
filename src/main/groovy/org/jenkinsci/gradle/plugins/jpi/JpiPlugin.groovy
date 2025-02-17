@@ -51,6 +51,7 @@ import org.gradle.api.tasks.testing.Test
 import org.gradle.language.base.plugins.LifecycleBasePlugin
 import org.gradle.util.GradleVersion
 import org.jenkinsci.gradle.plugins.jpi.internal.DependenciesPlugin
+import org.jenkinsci.gradle.plugins.jpi.internal.Jdk17Plugin
 import org.jenkinsci.gradle.plugins.jpi.internal.PluginDependencyProvider
 import org.jenkinsci.gradle.plugins.jpi.legacy.LegacyWorkaroundsPlugin
 import org.jenkinsci.gradle.plugins.jpi.localization.LocalizationPlugin
@@ -128,6 +129,7 @@ class JpiPlugin implements Plugin<Project>, PluginDependencyProvider {
 
         gradleProject.plugins.apply(JavaLibraryPlugin)
         gradleProject.plugins.apply(GroovyPlugin)
+        gradleProject.plugins.apply(Jdk17Plugin)
         gradleProject.plugins.apply(kotlinPlugin('org.jenkinsci.gradle.plugins.accmod.AccessModifierPlugin'))
         gradleProject.plugins.apply(kotlinPlugin('org.jenkinsci.gradle.plugins.manifest.JenkinsManifestPlugin'))
         gradleProject.plugins.apply(kotlinPlugin('org.jenkinsci.gradle.plugins.testing.JpiTestingPlugin'))

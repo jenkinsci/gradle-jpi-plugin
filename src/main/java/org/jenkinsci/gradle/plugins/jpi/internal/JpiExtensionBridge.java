@@ -21,6 +21,7 @@ public interface JpiExtensionBridge {
     SetProperty<String> getMaskedClassesFromCore();
     ListProperty<PluginDeveloper> getPluginDevelopers();
     ListProperty<PluginLicense> getPluginLicenses();
+    ListProperty<String> getTestJvmArguments();
 
     Property<Boolean> getGenerateTests();
     Property<String> getGeneratedTestClassName();

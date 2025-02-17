@@ -83,6 +83,7 @@ class JpiExtension implements JpiExtensionBridge {
     private final SetProperty<String> maskedClassesFromCore
     private final ListProperty<PluginDeveloper> pluginDevelopers
     private final ListProperty<PluginLicense> pluginLicenses
+    private final ListProperty<String> testJvmArguments
     private final Property<String> incrementalsRepoUrl
     private final GitVersionExtension gitVersion
     private final Property<String> scmTag
@@ -113,6 +114,12 @@ class JpiExtension implements JpiExtensionBridge {
         this.maskedClassesFromCore = project.objects.setProperty(String).convention([])
         this.pluginDevelopers = project.objects.listProperty(PluginDeveloper)
         this.pluginLicenses = project.objects.listProperty(PluginLicense)
+        this.testJvmArguments = project.objects.listProperty(String)
+                .convention([
+                        '--add-opens', 'java.base/java.lang=ALL-UNNAMED',
+                        '--add-opens', 'java.base/java.io=ALL-UNNAMED',
+                        '--add-opens', 'java.base/java.util=ALL-UNNAMED',
+                ])
         this.generateTests = project.objects.property(Boolean).convention(false)
         this.requireEscapeByDefaultInJelly = project.objects.property(Boolean).convention(true)
         this.generatedTestClassName = project.objects.property(String).convention('InjectedTest')
@@ -519,6 +526,11 @@ class JpiExtension implements JpiExtensionBridge {
     @Override
     ListProperty<PluginLicense> getPluginLicenses() {
         pluginLicenses
+    }
+
+    @Override
+    ListProperty<String> getTestJvmArguments() {
+        testJvmArguments
     }
 
     GitVersionExtension getGitVersion() {
