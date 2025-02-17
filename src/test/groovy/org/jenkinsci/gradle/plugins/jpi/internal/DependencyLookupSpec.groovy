@@ -34,6 +34,24 @@ class DependencyLookupSpec extends Specification {
     }
 
     @Unroll
+    def 'should get testAnnotationProcessor dependencies for #version'(String version, Set<DependencyFactory> expected) {
+        when:
+        def actual = this.lookup.find('testAnnotationProcessor', version)
+
+        then:
+        actual == expected
+
+        where:
+        version                         | expected
+        '2.0'                           | [jenkinsCore('2.0')] as Set
+        '2.222.3'                       | [jenkinsBom('2.222.3'), jenkinsCore('2.222.3')] as Set
+        '2.361.2-rc32710.c1a_5e8c179f6' | [jenkinsBom('2.361.2-rc32710.c1a_5e8c179f6'), jenkinsCore('2.361.2-rc32710.c1a_5e8c179f6')] as Set
+        '2.369-rc32854.076293e36922'    | [jenkinsBom('2.369-rc32854.076293e36922'), jenkinsCore('2.369-rc32854.076293e36922')] as Set
+        '2.475'                         | [jenkinsBom('2.475'), jenkinsCore('2.475')] as Set
+        '2.479.2'                       | [jenkinsBom('2.479.2'), jenkinsCore('2.479.2')] as Set
+    }
+
+    @Unroll
     def 'should get compileOnly dependencies for #version'(String version, Set<DependencyFactory> expected) {
         when:
         def actual = lookup.find('compileOnly', version)

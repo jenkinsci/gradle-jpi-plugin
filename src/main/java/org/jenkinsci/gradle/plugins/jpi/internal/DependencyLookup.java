@@ -29,6 +29,9 @@ public class DependencyLookup {
                 deps.add(findbugs);
                 deps.add(servlet);
                 return deps;
+            case "testAnnotationProcessor":
+                deps.addAll(coreSet);
+                return deps;
             case "testImplementation":
                 deps.addAll(coreSet);
                 deps.add(testHarness);
