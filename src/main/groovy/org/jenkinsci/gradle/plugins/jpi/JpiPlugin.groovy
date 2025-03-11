@@ -177,6 +177,7 @@ class JpiPlugin implements Plugin<Project>, PluginDependencyProvider {
             t.upstreamManifest.set(jenkinsManifest.get().outputFile)
             t.description = 'Generate hpl (Hudson plugin link) for running locally'
             t.group = 'Jenkins Server'
+            t.dependsOn(gradleProject.tasks.getByName('processResources'))
         }
 
         def installPlugins = gradleProject.tasks.register(InstallJenkinsServerPluginsTask.TASK_NAME,
