@@ -8,6 +8,7 @@ import org.gradle.kotlin.dsl.get
 import org.gradle.kotlin.dsl.getByType
 import org.gradle.kotlin.dsl.register
 import org.jenkinsci.gradle.plugins.jpi.internal.JpiExtensionBridge
+import java.time.Duration
 
 open class JenkinsManifestPlugin : Plugin<Project> {
     override fun apply(target: Project) {
@@ -31,6 +32,7 @@ open class JenkinsManifestPlugin : Plugin<Project> {
             group = "Build"
             description = "Finds optional and required plugin dependencies"
             outputFile.set(project.layout.buildDirectory.file("jenkins-manifests/plugin-dependencies.mf"))
+            timeout.set(Duration.ofMinutes(10))
         }
 
         target.tasks.register<GenerateJenkinsManifestTask>(GenerateJenkinsManifestTask.NAME) {
