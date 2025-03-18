@@ -1,3 +1,4 @@
+import com.gradle.publish.PluginBundleExtension
 import okio.buffer
 import okio.sink
 import org.gradle.api.tasks.testing.logging.TestExceptionFormat.FULL
@@ -184,11 +185,11 @@ gradlePlugin {
     }
 }
 
-pluginBundle {
-    website = "https://wiki.jenkins-ci.org/display/JENKINS/Gradle+JPI+Plugin"
-    vcsUrl = "https://github.com/jenkinsci/gradle-jpi-plugin"
-    description = "A plugin for building Jenkins plugins"
-    tags = listOf("jenkins")
+extensions.findByType(PluginBundleExtension::class.java)?.apply {
+  website = "https://wiki.jenkins-ci.org/display/JENKINS/Gradle+JPI+Plugin"
+  vcsUrl = "https://github.com/jenkinsci/gradle-jpi-plugin"
+  description = "A plugin for building Jenkins plugins"
+  tags = listOf("jenkins")
 }
 
 fun Project.stringProp(named: String): String? = findProperty(named) as String?
