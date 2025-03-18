@@ -118,6 +118,10 @@ public abstract class JenkinsServerTask extends DefaultTask {
                     s.setMain(getExtractedMainClass().get());
                 }
                 s.args("--httpPort=" + getPort().get());
+                s.jvmArgs("--add-opens=java.base/java.lang=ALL-UNNAMED");
+                s.jvmArgs("--add-opens=java.base/java.io=ALL-UNNAMED");
+                s.jvmArgs("--add-opens=java.base/java.util=ALL-UNNAMED");
+                s.jvmArgs("--add-opens=java.base/java.util.concurrent=ALL-UNNAMED");
                 s.systemProperty("JENKINS_HOME", getJenkinsHome().get());
                 for (String prop : DEFAULTED_PROPERTIES) {
                     s.systemProperty(prop, "true");
