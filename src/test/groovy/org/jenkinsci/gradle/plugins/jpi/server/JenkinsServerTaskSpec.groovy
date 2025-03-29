@@ -56,8 +56,8 @@ class JenkinsServerTaskSpec extends IntegrationSpec {
 
         where:
         jenkinsVersion | additionalPlugin
-        '2.64'         | ''
-        '2.64'         | "id 'org.jetbrains.kotlin.jvm' version '1.6.10'"
+        '2.462.3'      | ''
+        '2.462.3'      | "id 'org.jetbrains.kotlin.jvm' version '1.6.10'"
     }
 
     private static String path(File file) {

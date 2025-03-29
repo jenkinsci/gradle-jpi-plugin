@@ -37,7 +37,7 @@ class ConfigureRepositoriesIntegrationSpec extends IntegrationSpec {
         def actual = deserializeReposFrom(result)
 
         then:
-        actual.size == 2
+        actual.size() == 2
         actual.contains('MavenRepo')
         actual.contains('jenkins')
     }
@@ -57,7 +57,7 @@ class ConfigureRepositoriesIntegrationSpec extends IntegrationSpec {
         def actual = deserializeReposFrom(result)
 
         then:
-        actual.size == 2
+        actual.size() == 2
         actual.contains('MavenRepo')
         actual.contains('jenkins')
     }
