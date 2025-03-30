@@ -21,8 +21,9 @@ class ConfigurePublishingIntegrationSpec extends IntegrationSpec {
             }
 
             tasks.register('discoverPublishingRepos') {
+                def p = project.publishing
                 doLast {
-                    def repos = project.publishing.repositories
+                    def repos = p.repositories
                         .findAll { it instanceof org.gradle.api.artifacts.repositories.MavenArtifactRepository }
                         .collect { [name: it.name, uri: it.url.toASCIIString()] }
                         .toSet()
@@ -31,6 +32,7 @@ class ConfigurePublishingIntegrationSpec extends IntegrationSpec {
             }
 
             tasks.register('discoverPublications') {
+                def d = project.projectDir
                 doLast {
                     def publications = publishing.publications.collectEntries {
                         [(it.name): [
@@ -41,10 +43,9 @@ class ConfigurePublishingIntegrationSpec extends IntegrationSpec {
                                 artifacts   : it.artifacts.collect {
                                     [classifier: it.classifier,
                                      extension : it.extension,
-                                     file      : project.projectDir.toPath().relativize(it.file.toPath()).toString()]
+                                     file      : d.toPath().relativize(it.file.toPath()).toString()]
                                 }
-                        ]
-                        ]
+                        ]]
                     }
                     println groovy.json.JsonOutput.toJson([publications: publications])
                 }
@@ -111,8 +112,8 @@ class ConfigurePublishingIntegrationSpec extends IntegrationSpec {
             plugins {
                 id 'org.jenkins-ci.jpi'
                 id "maven-publish"
-                id "nebula.source-jar" version "17.0.5"
-                id "nebula.javadoc-jar" version "17.0.5"
+                id("com.netflix.nebula.source-jar") version "21.2.0"
+                id("com.netflix.nebula.javadoc-jar") version "21.2.0"
             }
             jenkinsPlugin {
                 configurePublishing = false
@@ -127,7 +128,7 @@ class ConfigurePublishingIntegrationSpec extends IntegrationSpec {
                             artifactId = '${projectName}'
                             version = '1.0'
                             artifact jar
-                            artifact sourceJar
+                            artifact sourcesJar
                             artifact javadocJar
                         }
                     }

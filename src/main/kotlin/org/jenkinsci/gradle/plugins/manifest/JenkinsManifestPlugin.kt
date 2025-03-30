@@ -31,6 +31,9 @@ open class JenkinsManifestPlugin : Plugin<Project> {
             group = "Build"
             description = "Finds optional and required plugin dependencies"
             outputFile.set(project.layout.buildDirectory.file("jenkins-manifests/plugin-dependencies.mf"))
+            
+            // Set the plugin dependency provider at configuration time
+            pluginDependencyProvider.set(target.plugins.findPlugin("org.jenkins-ci.jpi") as? org.jenkinsci.gradle.plugins.jpi.internal.PluginDependencyProvider)
         }
 
         target.tasks.register<GenerateJenkinsManifestTask>(GenerateJenkinsManifestTask.NAME) {

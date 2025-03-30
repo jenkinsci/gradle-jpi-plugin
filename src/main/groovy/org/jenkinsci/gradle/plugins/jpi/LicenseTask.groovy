@@ -8,10 +8,14 @@ import org.gradle.api.artifacts.ModuleVersionIdentifier
 import org.gradle.api.artifacts.ResolvedArtifact
 import org.gradle.api.artifacts.component.ModuleComponentIdentifier
 import org.gradle.api.attributes.Usage
+import org.gradle.api.provider.Property
+import org.gradle.api.provider.Provider
 import org.gradle.api.tasks.Classpath
+import org.gradle.api.tasks.Internal
 import org.gradle.api.tasks.OutputDirectory
 import org.gradle.api.tasks.TaskAction
 import org.jenkinsci.gradle.plugins.jpi.internal.DependencyLicenseValidator
+import org.jenkinsci.gradle.plugins.jpi.internal.JpiExtensionBridge
 import org.jenkinsci.gradle.plugins.jpi.internal.LicenseDataExtractor
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
@@ -25,9 +29,40 @@ class LicenseTask extends DefaultTask {
     @OutputDirectory
     File outputDirectory
 
+    @Internal
+    final Property<JpiExtensionBridge> jpiExtension = project.objects.property(JpiExtensionBridge)
+
+    @Internal
+    final Property<String> projectVersion = project.objects.property(String)
+
+    @Internal
+    final Property<String> projectName = project.objects.property(String)
+
+    @Internal
+    final Property<String> projectGroup = project.objects.property(String)
+
+    @Internal
+    final Property<String> projectDescription = project.objects.property(String)
+
+    @Internal
+    final Provider<Object> configurations = project.provider { project.configurations }
+
+    @Internal
+    final Provider<Object> dependencies = project.provider { project.dependencies }
+
+    @Internal
+    final Provider<Object> objects = project.provider { project.objects }
+
+    LicenseTask() {
+        jpiExtension.set(project.extensions.getByType(JpiExtension))
+        projectVersion.set(project.provider { project.version.toString() })
+        projectName.set(project.provider { project.name })
+        projectGroup.set(project.provider { project.group.toString() })
+        projectDescription.set(project.provider { project.description ?: '' })
+    }
+
     @TaskAction
     void generateLicenseInfo() {
-        JpiExtension jpiExtension = project.extensions.getByType(JpiExtension)
         Set<ResolvedArtifact> pomArtifacts = collectPomArtifacts()
         LicenseDataExtractor extractor = new LicenseDataExtractor()
 
@@ -35,14 +70,20 @@ class LicenseTask extends DefaultTask {
             MarkupBuilder xmlMarkup = new MarkupBuilder(writer)
 
             xmlMarkup.'l:dependencies'(
-                    'xmlns:l': 'licenses', version: project.version, artifactId: project.name, groupId: project.group,
+                    'xmlns:l': 'licenses',
+                    version: projectVersion.get(),
+                    artifactId: projectName.get(),
+                    groupId: projectGroup.get(),
             ) {
                 'l:dependency'(
-                        version: project.version, artifactId: project.name, groupId: project.group,
-                        name: jpiExtension.displayName, url: jpiExtension.url,
+                        version: projectVersion.get(),
+                        artifactId: projectName.get(),
+                        groupId: projectGroup.get(),
+                        name: jpiExtension.get().humanReadableName.get(),
+                        url: jpiExtension.get().homePage.orNull?.toASCIIString(),
                 ) {
-                    'l:description'(project.description)
-                    jpiExtension.pluginLicenses.get().each { license ->
+                    'l:description'(projectDescription.get())
+                    jpiExtension.get().pluginLicenses.get().each { license ->
                         'l:license'(url: license.url.orNull, name: license.name.orNull)
                     }
                 }
@@ -70,9 +111,9 @@ class LicenseTask extends DefaultTask {
     }
 
     private Set<ResolvedArtifact> collectPomArtifacts() {
-        def detached = project.configurations
-                .detachedConfiguration(collectDependencies())
-        detached.attributes.attribute(Usage.USAGE_ATTRIBUTE, project.objects.named(Usage, Usage.JAVA_RUNTIME))
+        def deps = collectDependencies()
+        def detached = configurations.get().detachedConfiguration(deps)
+        detached.attributes.attribute(Usage.USAGE_ATTRIBUTE, objects.get().named(Usage, Usage.JAVA_RUNTIME))
         def lenient = detached.resolvedConfiguration.lenientConfiguration
         // unresolvedModuleDependencies comes back empty even with a failed pom
         // so we must do set difference between everything requested and what was resolved
@@ -91,7 +132,7 @@ class LicenseTask extends DefaultTask {
             artifact.id.componentIdentifier instanceof ModuleComponentIdentifier
         }.collect { ResolvedArtifact artifact ->
             ModuleVersionIdentifier id = artifact.moduleVersion.id
-            project.dependencies.create("${id.group}:${id.name}:${id.version}@pom")
+            dependencies.get().create("${id.group}:${id.name}:${id.version}@pom")
         }
     }
 }

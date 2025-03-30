@@ -44,7 +44,7 @@ class GeneratePluginDependenciesManifestTaskIntegrationSpec extends IntegrationS
             $BUILD_FILE
             java {
                 registerFeature('ant') {
-                    usingSourceSet(sourceSets.main)
+                    usingSourceSet(sourceSets.create('ant'))
                 }
             }
             dependencies {
@@ -65,7 +65,7 @@ class GeneratePluginDependenciesManifestTaskIntegrationSpec extends IntegrationS
             $BUILD_FILE
             java {
                 registerFeature('ant') {
-                    usingSourceSet(sourceSets.main)
+                    usingSourceSet(sourceSets.create('ant'))
                 }
             }
             dependencies {
@@ -104,7 +104,7 @@ class GeneratePluginDependenciesManifestTaskIntegrationSpec extends IntegrationS
             $BUILD_FILE
             java {
                 registerFeature('ant') {
-                    usingSourceSet(sourceSets.main)
+                    usingSourceSet(sourceSets.create('ant'))
                 }
             }
             dependencies {
@@ -125,7 +125,7 @@ class GeneratePluginDependenciesManifestTaskIntegrationSpec extends IntegrationS
             $BUILD_FILE
             java {
                 registerFeature('ant') {
-                    usingSourceSet(sourceSets.main)
+                    usingSourceSet(sourceSets.create('ant'))
                 }
             }
             dependencies {
@@ -153,7 +153,7 @@ class GeneratePluginDependenciesManifestTaskIntegrationSpec extends IntegrationS
             $BUILD_FILE
             java {
                 registerFeature('ant') {
-                    usingSourceSet(sourceSets.main)
+                    usingSourceSet(sourceSets.create('ant'))
                 }
             }
             dependencies {

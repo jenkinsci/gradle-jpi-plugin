@@ -29,7 +29,7 @@ class IntegrationSpec extends Specification {
         if (gradleVersion != GradleVersion.current()) {
             return runner.withGradleVersion(gradleVersion.version)
         }
-        runner
+        runner.withArguments('-Dorg.gradle.deprecation.trace=true')
     }
 
     static GradleVersion getGradleVersionForTest() {

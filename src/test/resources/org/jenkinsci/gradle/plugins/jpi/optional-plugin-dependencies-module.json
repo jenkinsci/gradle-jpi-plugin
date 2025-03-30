@@ -77,8 +77,8 @@
       ],
       "files": [
         {
-          "name": "test-1.0.jar",
-          "url": "test-1.0.jar",
+          "name": "test-1.0-credentials.jar",
+          "url": "test-1.0-credentials.jar",
           "size": "",
           "sha512": "",
           "sha256": "",
@@ -114,8 +114,8 @@
       ],
       "files": [
         {
-          "name": "test-1.0.jar",
-          "url": "test-1.0.jar",
+          "name": "test-1.0-credentials.jar",
+          "url": "test-1.0-credentials.jar",
           "size": "",
           "sha512": "",
           "sha256": "",

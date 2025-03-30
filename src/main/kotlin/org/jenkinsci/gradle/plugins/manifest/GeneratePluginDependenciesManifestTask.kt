@@ -4,6 +4,7 @@ import org.gradle.api.DefaultTask
 import org.gradle.api.file.ConfigurableFileCollection
 import org.gradle.api.file.FileCollection
 import org.gradle.api.file.RegularFileProperty
+import org.gradle.api.provider.Property
 import org.gradle.api.tasks.InputFiles
 import org.gradle.api.tasks.Internal
 import org.gradle.api.tasks.OutputFile
@@ -31,12 +32,14 @@ open class GeneratePluginDependenciesManifestTask : DefaultTask() {
     @OutputFile
     val outputFile: RegularFileProperty = project.objects.fileProperty()
 
+    @Internal
+    val pluginDependencyProvider: Property<PluginDependencyProvider> = project.objects.property(PluginDependencyProvider::class.java)
+
     @TaskAction
     fun generate() {
         val manifest = Manifest()
         manifest.mainAttributes[MANIFEST_VERSION] = "1.0"
-        val provider = project.plugins.findPlugin("org.jenkins-ci.jpi") as PluginDependencyProvider
-        val dependencies = provider.pluginDependencies()
+        val dependencies = pluginDependencyProvider.get().pluginDependencies()
         if (dependencies.isNotEmpty()) {
             manifest.mainAttributes.putValue("Plugin-Dependencies", dependencies)
         }

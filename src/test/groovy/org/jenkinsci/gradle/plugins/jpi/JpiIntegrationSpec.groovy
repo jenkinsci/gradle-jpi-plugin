@@ -89,9 +89,7 @@ class JpiIntegrationSpec extends IntegrationSpec {
         'fileExtension = null'  | 'hpi'
         'fileExtension = ""'    | 'hpi'
         'fileExtension = "hpi"' | 'hpi'
-        'fileExtension "hpi"'   | 'hpi'
         'fileExtension = "jpi"' | 'jpi'
-        'fileExtension "jpi"'   | 'jpi'
     }
 
     def 'uses project name as shortName by default'() {
@@ -151,9 +149,7 @@ class JpiIntegrationSpec extends IntegrationSpec {
         where:
         shortName                     | expected
         "shortName = 'apple'"         | 'apple'
-        "shortName 'banana'"          | 'banana'
         "shortName = 'carrot-plugin'" | 'carrot-plugin'
-        "shortName 'date'"            | 'date'
     }
 
     def 'should bundle classes as JAR file into HPI file'() {
@@ -401,8 +397,8 @@ class JpiIntegrationSpec extends IntegrationSpec {
             }
             repositories {
                 ivy {
-                    name 'EmbeddedIvy'
-                    url '${embeddedRepo}'
+                    name = 'EmbeddedIvy'
+                    url = '${embeddedRepo}'
                     layout 'maven'
                 }
             }

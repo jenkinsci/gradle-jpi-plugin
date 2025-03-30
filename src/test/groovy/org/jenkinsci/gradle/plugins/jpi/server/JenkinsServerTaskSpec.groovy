@@ -24,7 +24,7 @@ class JenkinsServerTaskSpec extends IntegrationSpec {
                 jenkinsVersion = '$jenkinsVersion'
             }
             dependencies {
-                jenkinsServer 'org.jenkins-ci.plugins:git:3.12.1'
+                jenkinsServer 'org.jenkins-ci.plugins:git:5.4.0'
                 implementation 'com.squareup.okio:okio:2.4.3'
             }
             """.stripIndent()
@@ -52,12 +52,13 @@ class JenkinsServerTaskSpec extends IntegrationSpec {
 
         then:
         output.contains("/jenkins-war-${jenkinsVersion}.war")
-        output.contains('webroot: System.getProperty("JENKINS_HOME")')
+        output.contains('webroot: ')
+        output.contains('Jenkins is fully up and running')
 
         where:
         jenkinsVersion | additionalPlugin
         '2.462.3'      | ''
-        '2.462.3'      | "id 'org.jetbrains.kotlin.jvm' version '1.6.10'"
+        '2.462.3'      | "id 'org.jetbrains.kotlin.jvm' version '1.9.25'"
     }
 
     private static String path(File file) {

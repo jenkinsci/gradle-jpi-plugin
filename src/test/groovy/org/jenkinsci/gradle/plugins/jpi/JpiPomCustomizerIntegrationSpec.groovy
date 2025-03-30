@@ -1,5 +1,6 @@
 package org.jenkinsci.gradle.plugins.jpi
 
+import groovy.json.JsonBuilder
 import groovy.json.JsonSlurper
 import org.xmlunit.builder.DiffBuilder
 import org.xmlunit.builder.Input
@@ -19,7 +20,7 @@ class JpiPomCustomizerIntegrationSpec extends IntegrationSpec {
                 id 'org.jenkins-ci.jpi'
             }
             group = 'org'
-            version '1.0'
+            version = '1.0'
             java {
                 sourceCompatibility = JavaVersion.VERSION_1_8
                 targetCompatibility = JavaVersion.VERSION_1_8
@@ -114,8 +115,8 @@ class JpiPomCustomizerIntegrationSpec extends IntegrationSpec {
             }
             repositories {
                 maven {
-                    name 'lorem-ipsum'
-                    url 'https://repo.lorem-ipsum.org/'
+                    name = 'lorem-ipsum'
+                    url = 'https://repo.lorem-ipsum.org/'
                 }
             }
             """.stripIndent()
@@ -155,8 +156,8 @@ class JpiPomCustomizerIntegrationSpec extends IntegrationSpec {
             }
             repositories {
                 maven {
-                    name 'lorem-ipsum'
-                    url 'https://repo.lorem-ipsum.org/'
+                    name = 'lorem-ipsum'
+                    url = 'https://repo.lorem-ipsum.org/'
                 }
             }
             """.stripIndent()
@@ -320,7 +321,7 @@ class JpiPomCustomizerIntegrationSpec extends IntegrationSpec {
             }
             java {
                 registerFeature('credentials') {
-                    usingSourceSet(sourceSets.main)
+                    usingSourceSet(sourceSets.create('credentials'))
                 }
             }
             dependencies {
@@ -390,7 +391,7 @@ class JpiPomCustomizerIntegrationSpec extends IntegrationSpec {
     private static boolean compareJson(String fileName, File actual) {
         def actualJson = removeChangingDetails(new JsonSlurper().parseText(actual.text))
         def expectedJson = new JsonSlurper().parseText(readResource(fileName))
-        assert actualJson == expectedJson
+        assert new JsonBuilder(actualJson).toPrettyString() == new JsonBuilder(expectedJson).toPrettyString()
         actualJson == expectedJson
     }
 
@@ -417,7 +418,7 @@ class JpiPomCustomizerIntegrationSpec extends IntegrationSpec {
 
     void generatePom() {
         gradleRunner()
-        .withArguments('generatePomFileForMavenJpiPublication', 'generateMetadataFileForMavenJpiPublication', '-s')
+                .withArguments('generatePomFileForMavenJpiPublication', 'generateMetadataFileForMavenJpiPublication', '-s')
                 .build()
     }
 

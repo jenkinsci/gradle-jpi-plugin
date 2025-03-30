@@ -29,9 +29,12 @@ class JenkinsVersionIntegrationSpec extends IntegrationSpec {
                 @Input
                 String config
 
+                @Internal
+                def configurations = project.configurations
+
                 @TaskAction
                 void run() {
-                    project.configurations.getByName(config).resolvedConfiguration.firstLevelModuleDependencies.each {
+                    configurations.getByName(config).resolvedConfiguration.firstLevelModuleDependencies.each {
                         println(it.module.id)
                     }
                 }
@@ -51,7 +54,7 @@ class JenkinsVersionIntegrationSpec extends IntegrationSpec {
                 jenkinsVersion = '${version}'
             }
             repositories {
-                maven { url 'https://repo.jenkins-ci.org/incrementals' }
+                maven { url = 'https://repo.jenkins-ci.org/incrementals' }
             }
             """.stripIndent()
         TestSupport.PASSING_TEST.writeTo(inProjectDir('src/test/java'))
@@ -82,7 +85,7 @@ class JenkinsVersionIntegrationSpec extends IntegrationSpec {
                 jenkinsVersion = '${version}'
             }
             repositories {
-                maven { url 'https://repo.jenkins-ci.org/incrementals' }
+                maven { url = 'https://repo.jenkins-ci.org/incrementals' }
             }
             """.stripIndent()
         def target = inProjectDir('target')

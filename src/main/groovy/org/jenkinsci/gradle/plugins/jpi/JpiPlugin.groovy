@@ -381,8 +381,8 @@ class JpiPlugin implements Plugin<Project>, PluginDependencyProvider {
                 project.repositories {
                     mavenCentral()
                     maven {
-                        name 'jenkins'
-                        url('https://repo.jenkins-ci.org/public/')
+                        name = 'jenkins'
+                        url = 'https://repo.jenkins-ci.org/public/'
                     }
                 }
             }
@@ -537,7 +537,7 @@ class JpiPlugin implements Plugin<Project>, PluginDependencyProvider {
                 PublishingExtension publishingExtension = project.extensions.getByType(PublishingExtension)
                 publishingExtension.publications {
                     mavenJpi(MavenPublication) {
-                        artifactId jpiExtension.shortName
+                        artifactId = jpiExtension.shortName
                         from(project.components.java)
 
                         new JpiPomCustomizer(project).customizePom(pom)
@@ -545,16 +545,16 @@ class JpiPlugin implements Plugin<Project>, PluginDependencyProvider {
                 }
                 publishingExtension.repositories {
                     maven {
-                        name 'jenkins'
+                        name = 'jenkins'
                         if (project.version.toString().endsWith('-SNAPSHOT')) {
-                            url jpiExtension.snapshotRepoUrl
+                            url = jpiExtension.snapshotRepoUrl
                         } else {
-                            url jpiExtension.repoUrl
+                            url = jpiExtension.repoUrl
                         }
                     }
                     maven {
-                        name 'jenkinsIncrementals'
-                        url(jpiExtension.incrementalsRepoUrl.get() ?: jpiExtension.JENKINS_INCREMENTALS_REPO)
+                        name = 'jenkinsIncrementals'
+                        url = jpiExtension.incrementalsRepoUrl.get() ?: jpiExtension.JENKINS_INCREMENTALS_REPO
                     }
                 }
 

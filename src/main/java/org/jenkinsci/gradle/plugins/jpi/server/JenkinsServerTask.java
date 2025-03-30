@@ -129,6 +129,8 @@ public abstract class JenkinsServerTask extends DefaultTask {
                 for (String prop : DEFAULTED_PROPERTIES) {
                     s.systemProperty(prop, "true");
                 }
+                // Disable CSRF protection to avoid DefaultCrumbIssuer descriptor issues
+                s.systemProperty("hudson.security.csrf.GlobalCrumbIssuerConfiguration.DISABLE_CSRF_PROTECTION", "true");
                 passThroughForBackwardsCompatibility(s);
                 s.setDebug(getDebug().get());
                 for (Action<JavaExecSpec> action : execSpecActions) {

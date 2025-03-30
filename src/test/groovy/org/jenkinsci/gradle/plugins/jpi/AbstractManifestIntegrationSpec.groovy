@@ -360,7 +360,7 @@ abstract class AbstractManifestIntegrationSpec extends IntegrationSpec {
             }
             java {
                 registerFeature('ant') {
-                    usingSourceSet(sourceSets.main)
+                    usingSourceSet(sourceSets.create('ant'))
                 }
             }
             dependencies {
@@ -383,10 +383,10 @@ abstract class AbstractManifestIntegrationSpec extends IntegrationSpec {
             }
             java {
                 registerFeature('git') {
-                    usingSourceSet(sourceSets.main)
+                    usingSourceSet(sourceSets.create('git'))
                 }
                 registerFeature('ant') {
-                    usingSourceSet(sourceSets.main)
+                    usingSourceSet(sourceSets.create('ant'))
                 }
             }
             dependencies {
@@ -410,10 +410,10 @@ abstract class AbstractManifestIntegrationSpec extends IntegrationSpec {
             }
             java {
                 registerFeature('folder') {
-                    usingSourceSet(sourceSets.main)
+                    usingSourceSet(sourceSets.create('folder'))
                 }
                 registerFeature('credentials') {
-                    usingSourceSet(sourceSets.main)
+                    usingSourceSet(sourceSets.create('credentials'))
                 }
             }
             dependencies {
@@ -603,7 +603,7 @@ abstract class AbstractManifestIntegrationSpec extends IntegrationSpec {
             }
             java {
                 registerFeature('git') {
-                    usingSourceSet(sourceSets.main)
+                    usingSourceSet(sourceSets.create('git'))
                 }
             }
             dependencies {

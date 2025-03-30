@@ -19,7 +19,7 @@ class ConfigureRepositoriesIntegrationSpec extends IntegrationSpec {
 
             tasks.create('discoverRepos') {
                 doLast {
-                    def repos = project.repositories
+                    def repos = repositories
                         .findAll { it instanceof org.gradle.api.artifacts.repositories.MavenArtifactRepository }
                         .collect { [name: it.name, uri: it.url.toASCIIString()] }
                         .toSet()
