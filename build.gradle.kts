@@ -136,7 +136,7 @@ tasks.addRule("Pattern: testGradle<ID>") {
     val taskName = this
     if (!taskName.startsWith("testGradle")) return@addRule
     val task = tasks.register(taskName)
-    for (javaVersion in listOf(11)) {
+    for (javaVersion in listOf(17)) {
         val javaSpecificTask = tasks.register<Test>("${taskName}onJava${javaVersion}") {
             val gradleVersion = taskName.substringAfter("testGradle")
             systemProperty("gradle.under.test", gradleVersion)
