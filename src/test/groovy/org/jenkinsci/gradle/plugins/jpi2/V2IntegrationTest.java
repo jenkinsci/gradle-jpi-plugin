@@ -284,6 +284,37 @@ class V2IntegrationTest {
         testServerStarts(gradleRunner, "server");
     }
 
+    @Test
+    void generatesExtensionsWithSezpoz(@TempDir File tempDir) throws IOException {
+        // given
+        var ith = new IntegrationTestHelper(tempDir);
+        initBuild(ith);
+        Files.write((getBasePluginConfig()).getBytes(StandardCharsets.UTF_8), ith.inProjectDir("build.gradle.kts"));
+        ith.mkDirInProjectDir("src/main/java/com/example/plugin");
+        Files.write(("""
+                package com.example.plugin;
+                
+                @hudson.Extension
+                public class SomeExtension {
+                    public static void init() {
+                        System.out.println("Hello from SomeExtension");
+                    }
+                }
+                """).getBytes(StandardCharsets.UTF_8), ith.inProjectDir("src/main/java/com/example/plugin/SomeExtension.java"));
+
+        GradleRunner gradleRunner = ith.gradleRunner();
+
+        // when
+        gradleRunner.withArguments("build").build();
+
+        // then
+        var extensionsList = ith.inProjectDir("build/classes/java/main/META-INF/annotations/hudson.Extension.txt");
+        assertThat(extensionsList).exists();
+
+        var lines = Files.readLines(extensionsList, StandardCharsets.UTF_8);
+        assertThat(lines).contains("com.example.plugin.SomeExtension");
+    }
+
     private static void configureModuleWithNestedDependencies(IntegrationTestHelper ith) throws IOException {
         Files.write(/* language=kotlin */ """
                 rootProject.name = "test-plugin"
@@ -427,6 +458,38 @@ class V2IntegrationTest {
 
         // when
         testServerStarts(gradleRunner, ":plugin-four:server");
+    }
+
+    @Test
+    void manifestContainsVersionWhenUsingResolution(@TempDir File tempDir) throws IOException {
+        // given
+        var ith = new IntegrationTestHelper(tempDir);
+        initBuild(ith);
+        Files.write((getBasePluginConfig() + /* language=kotlin */ """
+                configurations.configureEach {
+                    resolutionStrategy {
+                        force("org.jenkins-ci.plugins:git:5.7.0")                        
+                    }
+                }
+                dependencies {
+                    jenkinsPlugin("org.jenkins-ci.plugins:git")
+                }
+                """).getBytes(StandardCharsets.UTF_8), ith.inProjectDir("build.gradle.kts"));
+
+        GradleRunner gradleRunner = ith.gradleRunner();
+
+        // when
+        gradleRunner.withArguments("build").build();
+
+        // then
+        var manifest = ith.inProjectDir("build/jpi/META-INF/MANIFEST.MF");
+        assertThat(manifest).exists();
+
+        var manifestData = Files.readLines(manifest, StandardCharsets.UTF_8);
+        assertThat(manifestData)
+                .contains("Jenkins-Version: 2.500")
+                .contains("Plugin-Dependencies: git:5.7.0");
+
     }
 
 }
