@@ -113,11 +113,20 @@ public class V2JpiPlugin implements Plugin<Project> {
                     @Override
                     public void execute(@NotNull DependencySet dependencies) {
                         dependencies.add(project.getDependencies()
-                                .create("org.jenkins-ci.main:jenkins-war:" + project.getProperties().get(JENKINS_VERSION_PROPERTY)));
+                                .create("org.jenkins-ci.main:jenkins-war:" + getJenkinsVersion(project)));
                     }
                 });
             }
         });
+    }
+
+    private static String getJenkinsVersion(@NotNull Project project) {
+        Map<String, ?> projectProperties = project.getProperties();
+        if (projectProperties.containsKey(JENKINS_VERSION_PROPERTY)) {
+            return projectProperties.get(JENKINS_VERSION_PROPERTY).toString();
+        } else {
+            return "latest.release";
+        }
     }
 
     @NotNull
@@ -163,7 +172,7 @@ public class V2JpiPlugin implements Plugin<Project> {
                     public void execute(@NotNull DependencySet dependencies) {
                         addJarDependenciesFromJpis(project, jenkinsPlugin, dependencies);
                         dependencies.add(project.getDependencies()
-                                .create("org.jenkins-ci.main:jenkins-core:" + project.getProperties().get(JENKINS_VERSION_PROPERTY)));
+                                .create("org.jenkins-ci.main:jenkins-core:" + getJenkinsVersion(project)));
                     }
                 });
             }
@@ -233,7 +242,7 @@ public class V2JpiPlugin implements Plugin<Project> {
                 manifest.getAttributes().put("Short-Name", project.getName());
                 manifest.getAttributes().put("Long-Name", Optional.ofNullable(project.getDescription()).orElse(project.getName()));
 
-                manifest.getAttributes().put("Jenkins-Version", project.getProperties().get(JENKINS_VERSION_PROPERTY));
+                manifest.getAttributes().put("Jenkins-Version", getJenkinsVersion(project));
             }
         });
     }
