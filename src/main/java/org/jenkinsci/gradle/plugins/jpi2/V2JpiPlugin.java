@@ -40,6 +40,7 @@ public class V2JpiPlugin implements Plugin<Project> {
     public static final String JENKINS_PLUGIN_CONFIGURATION = "jenkinsPlugin";
     public static final String SERVER_JENKINS_PLUGIN_CONFIGURATION = "serverJenkinsPlugin";
     public static final String SERVER_TASK_CLASSPATH_CONFIGURATION = "serverTaskClasspath";
+    public static final String TEST_IMPLEMENTATION_CONFIGURATION = "testImplementation";
 
     public static final String EXPLODED_JPI_TASK = "explodedJpi";
     public static final String JPI_TASK = "war";
@@ -64,6 +65,9 @@ public class V2JpiPlugin implements Plugin<Project> {
         final var prepareServer = createPrepareServerTask(project, projectRoot, serverJenkinsPlugin);
         var serverTask = createServerTask(project, serverTaskClasspath, projectRoot, prepareServer);
         configureSezpoz(project);
+
+        project.getDependencies().add(TEST_IMPLEMENTATION_CONFIGURATION, project.getDependencies().create("org.jenkins-ci.main:jenkins-core:" + getJenkinsVersion(project)));
+
     }
 
     private static void configureSezpoz(@NotNull Project project) {

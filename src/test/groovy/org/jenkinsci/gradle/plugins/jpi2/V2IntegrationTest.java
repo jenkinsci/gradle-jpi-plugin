@@ -59,7 +59,7 @@ class V2IntegrationTest {
                 rootProject.name = "test-plugin"
                 """.getBytes(StandardCharsets.UTF_8), ith.inProjectDir("settings.gradle.kts"));
         Files.write(/* language=properties */ """
-                jenkins.version=2.500
+                jenkins.version=2.492.3
                 """.getBytes(StandardCharsets.UTF_8), ith.inProjectDir("gradle.properties"));
     }
 
@@ -490,6 +490,44 @@ class V2IntegrationTest {
                 .contains("Jenkins-Version: 2.500")
                 .contains("Plugin-Dependencies: git:5.7.0");
 
+    }
+
+    @Test
+    void shouldHaveTestDependencies(@TempDir File tempDir) throws IOException {
+        // given
+        var ith = new IntegrationTestHelper(tempDir);
+        initBuild(ith);
+        Files.write((getBasePluginConfig() + """
+                dependencies {
+                    testImplementation("org.jenkins-ci.main:jenkins-test-harness:2414.+")
+                }
+                """).getBytes(StandardCharsets.UTF_8), ith.inProjectDir("build.gradle.kts"));
+        ith.mkDirInProjectDir("src/test/java/com/example/plugin");
+        Files.write((/* language=java */"""
+                package com.example.plugin;
+                import org.junit.jupiter.api.Test;
+                import org.jvnet.hudson.test.JenkinsRule;
+                import org.jvnet.hudson.test.junit.jupiter.WithJenkins;
+
+                import static org.junit.jupiter.api.Assertions.*;
+                
+                @WithJenkins
+                public class PluginTest {
+                    @Test
+                    void test(JenkinsRule j) {
+                        var injector = j.jenkins.getInjector();
+                        assertNotNull(injector);
+                    }
+                }
+                """).getBytes(StandardCharsets.UTF_8), ith.inProjectDir("src/test/java/com/example/plugin/PluginTest.java"));
+
+        GradleRunner gradleRunner = ith.gradleRunner();
+
+        // when
+        var result = gradleRunner.withArguments("test").build();
+
+        // then
+        assertThat(result.getOutput()).contains("BUILD SUCCESSFUL");
     }
 
 }
