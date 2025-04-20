@@ -2,6 +2,7 @@ import okio.buffer
 import okio.sink
 import org.gradle.api.tasks.testing.logging.TestExceptionFormat.FULL
 import org.gradle.api.tasks.testing.logging.TestLogEvent
+import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 import java.nio.file.StandardOpenOption
 
 buildscript {
@@ -31,6 +32,12 @@ repositories {
 java {
     toolchain {
         languageVersion.set(JavaLanguageVersion.of(17))
+    }
+}
+
+kotlin {
+    jvmToolchain {
+        languageVersion.set(java.toolchain.languageVersion.get())
     }
 }
 
