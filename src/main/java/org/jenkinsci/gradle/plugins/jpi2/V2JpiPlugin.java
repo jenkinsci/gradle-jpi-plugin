@@ -14,7 +14,11 @@ import org.gradle.api.java.archives.Manifest;
 import org.gradle.api.plugins.GroovyBasePlugin;
 import org.gradle.api.plugins.JavaBasePlugin;
 import org.gradle.api.plugins.JavaLibraryPlugin;
+import org.gradle.api.plugins.JavaPluginExtension;
 import org.gradle.api.plugins.WarPlugin;
+import org.gradle.api.publish.PublishingExtension;
+import org.gradle.api.publish.maven.MavenPublication;
+import org.gradle.api.publish.maven.plugins.MavenPublishPlugin;
 import org.gradle.api.specs.Spec;
 import org.gradle.api.tasks.Copy;
 import org.gradle.api.tasks.JavaExec;
@@ -51,6 +55,7 @@ public class V2JpiPlugin implements Plugin<Project> {
     public void apply(@NotNull Project project) {
         project.getPlugins().apply(JavaLibraryPlugin.class);
         project.getPlugins().apply(WarPlugin.class);
+        project.getPlugins().apply(MavenPublishPlugin.class);
 
         var jenkinsPlugin = project.getConfigurations().create(JENKINS_PLUGIN_CONFIGURATION);
         var jenkinsPluginCompileOnly = createJavaPluginsCompileOnlyConfiguration(project, jenkinsPlugin);
@@ -68,6 +73,33 @@ public class V2JpiPlugin implements Plugin<Project> {
 
         project.getDependencies().add(TEST_IMPLEMENTATION_CONFIGURATION, project.getDependencies().create("org.jenkins-ci.main:jenkins-core:" + getJenkinsVersion(project)));
 
+        configurePublishing(project);
+    }
+
+    private static void configurePublishing(@NotNull Project project) {
+        var publishingExtension = project.getExtensions().getByType(PublishingExtension.class);
+        var existingPublication = !publishingExtension.getPublications().isEmpty() ? publishingExtension.getPublications().iterator().next() : null;
+        JavaPluginExtension javaPlugin = project.getExtensions().getByType(JavaPluginExtension.class);
+        javaPlugin.withJavadocJar();
+        javaPlugin.withSourcesJar();
+        if (existingPublication instanceof MavenPublication publication) {
+            configurePublication(publication, project);
+        } else {
+            publishingExtension.getPublications().create("mavenJpi", MavenPublication.class, new Action<>() {
+                @Override
+                public void execute(@NotNull MavenPublication publication) {
+                    publication.from(project.getComponents().getByName("web"));
+                    configurePublication(publication, project);
+                }
+            });
+        }
+    }
+
+    private static void configurePublication(@NotNull MavenPublication publication, @NotNull Project project) {
+        publication.artifact(project.getTasks().getByName("jar"));
+        publication.artifact(project.getTasks().getByName("sourcesJar"));
+        publication.artifact(project.getTasks().getByName("javadocJar"));
+        publication.getPom().setPackaging("jpi");
     }
 
     private static void configureSezpoz(@NotNull Project project) {

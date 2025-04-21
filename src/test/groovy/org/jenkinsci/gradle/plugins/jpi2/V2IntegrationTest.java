@@ -1,6 +1,7 @@
 package org.jenkinsci.gradle.plugins.jpi2;
 
 import com.google.common.io.Files;
+import org.apache.commons.io.FileUtils;
 import org.awaitility.Awaitility;
 import org.gradle.testkit.runner.BuildResult;
 import org.gradle.testkit.runner.GradleRunner;
@@ -26,6 +27,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 @Timeout(value = 2, unit = TimeUnit.MINUTES)
 @DisabledOnOs(value = OS.WINDOWS, disabledReason = "TempDir doesn't appear to work correctly on Windows")
 class V2IntegrationTest {
+    @NotNull
     private static String getBasePluginConfig() {
         return String.format(/* language=kotlin */ """
                 plugins {
@@ -43,6 +45,7 @@ class V2IntegrationTest {
                 """, RandomPortProvider.findFreePort());
     }
 
+    @NotNull
     private static String getBaseLibraryConfig() {
         return /* language=kotlin */ """
                 plugins {
@@ -50,6 +53,22 @@ class V2IntegrationTest {
                 }
                 repositories {
                     mavenCentral()
+                }
+                """;
+    }
+
+    @NotNull
+    private static String configurePublishing() {
+        return /* language=kotlin */ """
+                group = "com.example"
+                version = "1.0.0"
+                publishing {
+                    repositories {
+                        maven {
+                            name = "local"
+                            url = uri("build/repo")
+                        }
+                    }
                 }
                 """;
     }
@@ -528,6 +547,60 @@ class V2IntegrationTest {
 
         // then
         assertThat(result.getOutput()).contains("BUILD SUCCESSFUL");
+    }
+
+    @Test
+    void publishesJarAndJpi(@TempDir File tempDir) throws IOException, InterruptedException {
+        // given
+        var ith = new IntegrationTestHelper(tempDir);
+        initBuild(ith);
+        Files.write((getBasePluginConfig() + configurePublishing() + /* language=kotlin */ """
+                dependencies {
+                    implementation("com.github.rahulsom:nothing-java:0.2.0")
+                }
+                """).getBytes(StandardCharsets.UTF_8), ith.inProjectDir("build.gradle.kts"));
+
+        // when
+        var gradleRunner = ith.gradleRunner();
+        gradleRunner.withArguments("publish").build();
+
+        // then
+        var jpi = ith.inProjectDir("build/repo/com/example/test-plugin/1.0.0/test-plugin-1.0.0.jpi");
+        var jar = ith.inProjectDir("build/repo/com/example/test-plugin/1.0.0/test-plugin-1.0.0.jar");
+        var sourcesJar = ith.inProjectDir("build/repo/com/example/test-plugin/1.0.0/test-plugin-1.0.0-sources.jar");
+        var javadocJar = ith.inProjectDir("build/repo/com/example/test-plugin/1.0.0/test-plugin-1.0.0-javadoc.jar");
+        var pom = ith.inProjectDir("build/repo/com/example/test-plugin/1.0.0/test-plugin-1.0.0.pom");
+        var module = ith.inProjectDir("build/repo/com/example/test-plugin/1.0.0/test-plugin-1.0.0.module");
+
+        assertThat(jpi).exists();
+        assertThat(jar).exists();
+        assertThat(sourcesJar).exists();
+        assertThat(javadocJar).exists();
+        assertThat(pom).exists();
+        assertThat(module).exists();
+
+        var pomContent = FileUtils.readFileToString(pom, StandardCharsets.UTF_8);
+
+        assertThat(pomContent)
+                .contains("<groupId>com.example</groupId>")
+                .contains("<artifactId>test-plugin</artifactId>")
+                .contains("<version>1.0.0</version>")
+                .contains("<packaging>jpi</packaging>")
+        ;
+    }
+
+    @SuppressWarnings("unused") // Can be used to reproduce issues
+    private static File repro() {
+        var file = new File("/tmp/repro");
+        if (file.exists()) {
+            try {
+                FileUtils.deleteDirectory(file);
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+        }
+        file.mkdirs();
+        return file;
     }
 
 }
