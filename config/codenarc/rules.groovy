@@ -1,108 +1,125 @@
+// Custom CodeNarc ruleset for [Your Project]
+// -----------------------------
+// Licensed under the Apache License, Version 2.0
+
 ruleset {
-    ruleset('rulesets/basic.xml')
+    description '''
+    Enforces CodeNarc static analysis rules with project-specific customizations:
+    - Core language rules
+    - Conventions and style adjustments
+    - Design and dry-run exceptions
+    '''
 
-    ruleset('rulesets/braces.xml')
+    // ------------------------------------------------------------------------
+    // Define exclusion groups for maintainability
+    // ------------------------------------------------------------------------
+    def conventionExcludes = [
+        'FieldTypeRequired', 'MethodParameterTypeRequired', 'MethodReturnTypeRequired',
+        'NoDef', 'VariableTypeRequired',
+        'CompileStatic', 'ImplicitClosureParameter', 'ImplicitReturnStatement',
+        'PublicMethodsBeforeNonPublicMethods', 'StaticFieldsBeforeInstanceFields',
+        'StaticMethodsBeforeInstanceMethods'
+    ]
 
-    ruleset('rulesets/concurrency.xml')
+    def designExcludes = [
+        'Instanceof',  // sometimes needed for polymorphic checks
+        'AbstractClassWithoutAbstractMethod'
+    ]
 
+    def dryExcludes = [
+        'DuplicateListLiteral', 'DuplicateMapLiteral',
+        'DuplicateNumberLiteral', 'DuplicateStringLiteral'
+    ]
+
+    def formattingExcludes = [
+        'ClassJavadoc', 'ClassStartsWithBlankLine', 'ClassEndsWithBlankLine'
+    ]
+
+    def sizeExcludes = [
+        'AbcMetric', 'CrapMetric', 'MethodSize'
+    ]
+
+    def unnecessaryExcludes = ['UnnecessaryGetter']
+
+    // ------------------------------------------------------------------------
+    // Include standard CodeNarc rulesets
+    // ------------------------------------------------------------------------
+    ['basic', 'braces', 'concurrency', 'exceptions', 'generic',
+     'groovyism', 'imports', 'logging', 'security', 'serialization', 'unused']
+    .each { rs -> ruleset("rulesets/${rs}.xml") }
+
+    // ------------------------------------------------------------------------
+    // Convention rules with project-specific exclusions
+    // ------------------------------------------------------------------------
     ruleset('rulesets/convention.xml') {
-        // we don't care for now
-        exclude 'FieldTypeRequired'
-        // we don't care for now
-        exclude 'MethodParameterTypeRequired\t'
-        // we don't care for now
-        exclude 'MethodReturnTypeRequired'
-        // we don't care for now
-        exclude 'NoDef'
-        // we don't care for now
-        exclude 'VariableTypeRequired'
-
-        exclude 'CompileStatic'
-        exclude 'ImplicitClosureParameter'
-        exclude 'ImplicitReturnStatement'
-        exclude 'PublicMethodsBeforeNonPublicMethods'
-        exclude 'StaticFieldsBeforeInstanceFields'
-        exclude 'StaticMethodsBeforeInstanceMethods'
-
+        conventionExcludes.each { exclude it }
     }
 
+    // ------------------------------------------------------------------------
+    // Design rules
+    // ------------------------------------------------------------------------
     ruleset('rulesets/design.xml') {
-        // does not necessarily lead to better code
-        exclude 'Instanceof'
-        // needed for Worker Api
-        exclude 'AbstractClassWithoutAbstractMethod'
+        designExcludes.each { exclude it }
     }
 
+    // ------------------------------------------------------------------------
+    // DRY rules
+    // ------------------------------------------------------------------------
     ruleset('rulesets/dry.xml') {
-        // does not necessarily lead to better code
-        exclude 'DuplicateListLiteral'
-        // does not necessarily lead to better code
-        exclude 'DuplicateMapLiteral'
-        // does not necessarily lead to better code
-        exclude 'DuplicateNumberLiteral'
-        // does not necessarily lead to better code
-        exclude 'DuplicateStringLiteral'
+        dryExcludes.each { exclude it }
     }
 
-    // these rules cause compilation failure warnings
-    // ruleset('rulesets/enhanced.xml')
-
-    ruleset('rulesets/exceptions.xml')
-
+    // ------------------------------------------------------------------------
+    // Formatting rules
+    // ------------------------------------------------------------------------
     ruleset('rulesets/formatting.xml') {
         // enforce at least one space after map entry colon
         SpaceAroundMapEntryColon {
-            characterAfterColonRegex = /\s/
+            characterAfterColonRegex  = /\s/
             characterBeforeColonRegex = /./
         }
-
-        // we don't care for now
-        exclude 'ClassJavadoc'
-        exclude 'ClassStartsWithBlankLine'
-        exclude 'ClassEndsWithBlankLine'
+        formattingExcludes.each { exclude it }
     }
 
-    ruleset('rulesets/generic.xml')
-
-    ruleset('rulesets/groovyism.xml')
-
+    // ------------------------------------------------------------------------
+    // Imports ordering: static imports after other imports
+    // ------------------------------------------------------------------------
     ruleset('rulesets/imports.xml') {
-        // we order static imports after other imports because that's the default style in IDEA
         MisorderedStaticImports {
             comesBefore = false
         }
     }
 
-    ruleset('rulesets/logging.xml')
-
+    // ------------------------------------------------------------------------
+    // Naming conventions
+    // ------------------------------------------------------------------------
     ruleset('rulesets/naming.xml') {
-        // Gradle encourages violations of this rule
+        // Gradle build scripts may declare methods non-standard
         exclude 'ConfusingMethodName'
     }
 
+    // ------------------------------------------------------------------------
+    // Security
+    // ------------------------------------------------------------------------
     ruleset('rulesets/security.xml') {
-        // we don't care for the Enterprise Java Bean specification here
+        // EJB spec not relevant to this project
         exclude 'JavaIoPackageAccess'
     }
 
-    ruleset('rulesets/serialization.xml')
-
+    // ------------------------------------------------------------------------
+    // Size (complexity) rules
+    // ------------------------------------------------------------------------
     ruleset('rulesets/size.xml') {
         NestedBlockDepth {
             maxNestedBlockDepth = 6
         }
-
-        // we don't care for now
-        exclude 'AbcMetric'
-        // we have no Cobertura coverage file yet
-        exclude 'CrapMetric'
-        // we don't care for now
-        exclude 'MethodSize'
+        sizeExcludes.each { exclude it }
     }
 
+    // ------------------------------------------------------------------------
+    // Unnecessary code rules
+    // ------------------------------------------------------------------------
     ruleset('rulesets/unnecessary.xml') {
-        exclude 'UnnecessaryGetter'
+        unnecessaryExcludes.each { exclude it }
     }
-
-    ruleset('rulesets/unused.xml')
 }
