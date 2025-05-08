@@ -36,7 +36,8 @@ class ServerAction implements Action<JavaExec> {
                 "--webroot=" + projectRoot + "/build/jenkins/war",
                 "--pluginroot=" + projectRoot + "/build/jenkins/plugins",
                 "--extractedFilesFolder=" + projectRoot + "/build/jenkins/extracted",
-                "--commonLibFolder=" + projectRoot + "/work/lib"
+                "--commonLibFolder=" + projectRoot + "/work/lib",
+                "--httpPort=" + System.getProperty("server.port", "8080")
         ));
         spec.environment("JENKINS_HOME", projectRoot + "/work");
 
