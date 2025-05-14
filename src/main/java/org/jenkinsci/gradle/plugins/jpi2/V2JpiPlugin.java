@@ -91,6 +91,7 @@ public class V2JpiPlugin implements Plugin<Project> {
 
         dependencies.add("compileOnly", "org.jenkins-ci.main:jenkins-core:" + jenkinsVersion);
         dependencies.add("compileOnly", "jakarta.servlet:jakarta.servlet-api:5.0.0");
+        dependencies.add("compileOnly", "jakarta.inject:jakarta.inject-api:2.0.1");
         dependencies.add("serverTaskClasspath", "org.jenkins-ci.main:jenkins-war:" + jenkinsVersion);
 
         dependencies.add("testImplementation", "org.jenkins-ci.main:jenkins-core:" + jenkinsVersion);
