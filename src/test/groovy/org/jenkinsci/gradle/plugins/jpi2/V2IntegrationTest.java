@@ -624,7 +624,7 @@ class V2IntegrationTest {
                 }
                 dependencies {
                     implementation(platform("com.example.bom:bom:1.0.0"))
-                    api("org.jenkins-ci.plugins:git")
+                    implementation("org.jenkins-ci.plugins:git")
                 }
                 """).getBytes(StandardCharsets.UTF_8), ith.inProjectDir("build.gradle.kts"));
 
@@ -656,7 +656,7 @@ class V2IntegrationTest {
         assertThat(dependencies)
                 .extracting(Dependency::getGroupId, Dependency::getArtifactId, Dependency::getVersion, Dependency::getScope)
                 .containsExactlyInAnyOrder(
-                        new Tuple("org.jenkins-ci.plugins", "git", "5.7.0", "compile")
+                        new Tuple("org.jenkins-ci.plugins", "git", "5.7.0", "runtime")
                 );
     }
 
@@ -797,7 +797,7 @@ class V2IntegrationTest {
         initBuild(ith);
         Files.write((getBasePluginConfig() + /* language=kotlin */ """
                 dependencies {
-                    api("org.jenkins-ci.plugins:jackson2-api:2.18.3-402.v74c4eb_f122b_2")
+                    implementation("org.jenkins-ci.plugins:jackson2-api:2.18.3-402.v74c4eb_f122b_2")
                     implementation("com.github.rahulsom:nothing-java:0.2.0")
                 }
                 """).getBytes(StandardCharsets.UTF_8), ith.inProjectDir("build.gradle.kts"));
@@ -835,7 +835,7 @@ class V2IntegrationTest {
         assertThat(dependencies)
                 .extracting(Dependency::getGroupId, Dependency::getArtifactId, Dependency::getVersion, Dependency::getScope)
                 .containsExactlyInAnyOrder(
-                        new Tuple("org.jenkins-ci.plugins", "jackson2-api", "2.18.3-402.v74c4eb_f122b_2", "compile"),
+                        new Tuple("org.jenkins-ci.plugins", "jackson2-api", "2.18.3-402.v74c4eb_f122b_2", "runtime"),
                         new Tuple("com.github.rahulsom", "nothing-java", "0.2.0", "runtime")
                 );
 

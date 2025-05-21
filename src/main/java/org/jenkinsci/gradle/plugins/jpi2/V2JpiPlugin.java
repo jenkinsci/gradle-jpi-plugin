@@ -7,7 +7,7 @@ import org.gradle.api.Task;
 import org.gradle.api.artifacts.Configuration;
 import org.gradle.api.plugins.GroovyBasePlugin;
 import org.gradle.api.plugins.JavaBasePlugin;
-import org.gradle.api.plugins.JavaLibraryPlugin;
+import org.gradle.api.plugins.JavaPlugin;
 import org.gradle.api.plugins.JavaPluginExtension;
 import org.gradle.api.provider.Provider;
 import org.gradle.api.publish.PublishingExtension;
@@ -45,7 +45,7 @@ public class V2JpiPlugin implements Plugin<Project> {
 
     @Override
     public void apply(@NotNull Project project) {
-        project.getPlugins().apply(JavaLibraryPlugin.class);
+        project.getPlugins().apply(JavaPlugin.class);
         project.getPlugins().apply(MavenPublishPlugin.class);
 
         var configurations = project.getConfigurations();
