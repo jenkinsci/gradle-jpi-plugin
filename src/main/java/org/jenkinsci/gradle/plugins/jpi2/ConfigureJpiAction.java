@@ -12,7 +12,9 @@ import org.gradle.api.tasks.bundling.War;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.ArrayList;
+import java.util.List;
 import java.util.Objects;
+import java.util.stream.Collectors;
 
 import static org.jenkinsci.gradle.plugins.jpi2.ArtifactType.ARTIFACT_TYPE_ATTRIBUTE;
 
@@ -60,23 +62,19 @@ class ConfigureJpiAction implements Action<War> {
     }
 
     @NotNull
-    private ArrayList<Dependency> getDirectJarDependencies() {
-        var directJarDependencies = new ArrayList<Dependency>();
+    private List<Dependency> getDirectJarDependencies() {
 
         var requestedDependencies = configuration.getAllDependencies();
         var resolvedDependencies = configuration.getResolvedConfiguration().getFirstLevelModuleDependencies();
 
-        resolvedDependencies.forEach(dependency ->
-                dependency.getModuleArtifacts().forEach(artifact -> {
-                    if (artifact.getExtension().equals("jar")) {
-                        var requestedDependency = requestedDependencies.stream()
+        return resolvedDependencies.stream()
+                .flatMap(dependency -> dependency.getModuleArtifacts().stream()
+                        .filter(artifact -> "jar".equals(artifact.getExtension()))
+                        .flatMap(artifact -> requestedDependencies.stream()
                                 .filter(reqDep -> matches(dependency, reqDep))
-                                .findFirst();
-
-                        requestedDependency.ifPresent(directJarDependencies::add);
-                    }
-                }));
-        return directJarDependencies;
+                                .findFirst()
+                                .stream()))
+                .collect(Collectors.toCollection(ArrayList::new));
     }
 
     private boolean matches(ResolvedDependency dependency, Dependency reqDep) {
