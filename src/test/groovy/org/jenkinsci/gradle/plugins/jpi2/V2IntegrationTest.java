@@ -557,6 +557,10 @@ class V2IntegrationTest {
 
         // when
         testServerStarts(gradleRunner, ":plugin-four:server");
+
+        // then
+        var pluginThreeJpi = ith.inProjectDir("plugin-four/work/plugins/plugin-three-1.0.0.jpi"); // TODO Remove version from here
+        assertThat(pluginThreeJpi).exists();
     }
 
     @Test

@@ -19,13 +19,15 @@ import java.util.Comparator;
 class ConfigurePrepareServerAction implements Action<Sync> {
     private final TaskProvider<?> jpiTaskProvider;
     private final String projectRoot;
-    private final Configuration configuration;
+    private final Configuration defaultRuntime;
+    private final Configuration runtimeClasspath;
     private final Project project;
 
-    public ConfigurePrepareServerAction(TaskProvider<?> jpiTaskProvider, String projectRoot, Configuration configuration, Project project) {
+    public ConfigurePrepareServerAction(TaskProvider<?> jpiTaskProvider, String projectRoot, Configuration defaultRuntime, Configuration runtimeClasspath, Project project) {
         this.jpiTaskProvider = jpiTaskProvider;
         this.projectRoot = projectRoot;
-        this.configuration = configuration;
+        this.defaultRuntime = defaultRuntime;
+        this.runtimeClasspath = runtimeClasspath;
         this.project = project;
     }
 
@@ -36,7 +38,7 @@ class ConfigurePrepareServerAction implements Action<Sync> {
         sync.from(jpi.getOutputs().getFiles())
                 .into(projectRoot + "/work/plugins");
 
-        configuration.getResolvedConfiguration().getResolvedArtifacts()
+        defaultRuntime.getResolvedConfiguration().getResolvedArtifacts()
                 .stream()
                 .filter(artifact -> HpiMetadataRule.PLUGIN_PACKAGINGS.contains(artifact.getExtension()))
                 .sorted(Comparator.comparing(ResolvedArtifact::getName))
@@ -51,7 +53,7 @@ class ConfigurePrepareServerAction implements Action<Sync> {
                             }
                         }));
 
-        configuration.getResolvedConfiguration().getResolvedArtifacts()
+        runtimeClasspath.getResolvedConfiguration().getResolvedArtifacts()
                 .stream()
                 .filter(it -> it.getId().getComponentIdentifier() instanceof ProjectComponentIdentifier)
                 .sorted(Comparator.comparing(ResolvedArtifact::getName))

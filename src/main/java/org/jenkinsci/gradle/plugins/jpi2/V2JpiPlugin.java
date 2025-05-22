@@ -100,7 +100,7 @@ public class V2JpiPlugin implements Plugin<Project> {
         });
 
         final var projectRoot = project.getLayout().getProjectDirectory().getAsFile().getAbsolutePath();
-        final var prepareServer = createPrepareServerTask(project, projectRoot, defaultRuntime, jpiTask);
+        final var prepareServer = createPrepareServerTask(project, projectRoot, defaultRuntime, runtimeClasspath, jpiTask);
 
         var serverTask = project.getTasks().register("server", JavaExec.class, new ServerAction(serverTaskClasspath, projectRoot, prepareServer));
         project.getPlugins().withType(JavaBasePlugin.class, new SezpozJavaAction(project));
@@ -159,8 +159,8 @@ public class V2JpiPlugin implements Plugin<Project> {
     }
 
     @NotNull
-    private static TaskProvider<?> createPrepareServerTask(@NotNull Project project, String projectRoot, Configuration serverJenkinsPlugin, TaskProvider<?> jpiTaskProvider) {
-        return project.getTasks().register("prepareServer", Sync.class, new ConfigurePrepareServerAction(jpiTaskProvider, projectRoot, serverJenkinsPlugin, project));
+    private static TaskProvider<?> createPrepareServerTask(@NotNull Project project, String projectRoot, Configuration defaultRuntime, Configuration runtimeClasspath, TaskProvider<?> jpiTaskProvider) {
+        return project.getTasks().register("prepareServer", Sync.class, new ConfigurePrepareServerAction(jpiTaskProvider, projectRoot, defaultRuntime, runtimeClasspath, project));
     }
 
     @NotNull
