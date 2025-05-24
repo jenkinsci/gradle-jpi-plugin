@@ -119,13 +119,13 @@ public class V2JpiPlugin implements Plugin<Project> {
 
         dependencies.add("compileOnly", "org.jenkins-ci.main:jenkins-core:" + jenkinsVersion);
         dependencies.add("compileOnly", "jakarta.servlet:jakarta.servlet-api:5.0.0");
-        dependencies.add("serverTaskClasspath", "org.jenkins-ci.main:jenkins-war:" + jenkinsVersion);
+        dependencies.add(serverTaskClasspath.getName(), "org.jenkins-ci.main:jenkins-war:" + jenkinsVersion);
 
         dependencies.add("testImplementation", "org.jenkins-ci.main:jenkins-core:" + jenkinsVersion);
         dependencies.add("testImplementation", "org.jenkins-ci.main:jenkins-war:" + jenkinsVersion);
         dependencies.add("testImplementation", "org.jenkins-ci.main:jenkins-test-harness:" + testHarnessVersion);
 
-        dependencies.add("jenkinsCore", "org.jenkins-ci.main:jenkins-core:" + jenkinsVersion);
+        dependencies.add(jenkinsCore.getName(), "org.jenkins-ci.main:jenkins-core:" + jenkinsVersion);
 
         dependencies.getComponents().all(HpiMetadataRule.class);
         configurePublishing(project, jpiTask, defaultRuntime);
