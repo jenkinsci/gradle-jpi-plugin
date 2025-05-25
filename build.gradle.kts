@@ -19,6 +19,7 @@ plugins {
     `java-gradle-plugin`
     id("com.github.sghill.distribution-sha") version "0.4.0"
     id("nebula.release") version "19.0.10"
+    id("info.solidsoft.pitest") version "1.15.0"
 }
 
 repositories {
@@ -240,5 +241,18 @@ tasks.named("postRelease").configure {
     dependsOn(publishToJenkins, publishToGradle)
 }
 
-
-
+pitest {
+    targetClasses.set(listOf("org.jenkinsci.gradle.plugins.jpi2.*"))
+    targetTests.set(listOf("org.jenkinsci.gradle.plugins.jpi2.*"))
+    excludedTestClasses.set(listOf("*IntegrationTest"))
+    pitestVersion.set("1.15.8")
+    junit5PluginVersion.set("1.2.1")
+    mutators.set(listOf("DEFAULTS"))
+    outputFormats.set(listOf("XML", "HTML", "CSV"))
+    timestampedReports.set(false)
+    jvmArgs.set(listOf(
+        "--add-opens", "java.base/java.lang=ALL-UNNAMED",
+        "--add-opens", "java.base/java.util=ALL-UNNAMED",
+        "--add-opens", "java.base/java.lang.reflect=ALL-UNNAMED"
+    ))
+}
