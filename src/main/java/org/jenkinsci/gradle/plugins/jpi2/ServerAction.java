@@ -32,6 +32,7 @@ class ServerAction implements Action<JavaExec> {
         spec.classpath(serverTaskClasspath);
         spec.setStandardOutput(System.out);
         spec.setErrorOutput(System.err);
+        spec.getMainClass().set("executable.Main");
         spec.args(List.of(
                 "--webroot=" + projectRoot + "/build/jenkins/war",
                 "--pluginroot=" + projectRoot + "/build/jenkins/plugins",
