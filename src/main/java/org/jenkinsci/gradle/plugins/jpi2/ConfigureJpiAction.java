@@ -69,9 +69,11 @@ class ConfigureJpiAction implements Action<War> {
         var requestedDependencies = configuration.getAllDependencies();
         var resolvedDependencies = configuration.getResolvedConfiguration().getFirstLevelModuleDependencies();
         var jenkinsCoreModules = getAllJenkinsCoreDependencies();
+        var jpiPluginTransitives = getAllJpiPluginTransitiveDependencies();
 
         return resolvedDependencies.stream()
-                .filter(dependency -> !isJenkinsCoreDependency(dependency, jenkinsCoreModules))
+                .filter(dependency -> !isDependencyInSet(dependency, jenkinsCoreModules))
+                .filter(dependency -> !isDependencyInSet(dependency, jpiPluginTransitives))
                 .flatMap(dependency -> dependency.getModuleArtifacts().stream()
                         .filter(artifact -> "jar".equals(artifact.getExtension()))
                         .flatMap(artifact -> requestedDependencies.stream()
@@ -101,11 +103,32 @@ class ConfigureJpiAction implements Action<War> {
         }
     }
 
-    private boolean isJenkinsCoreDependency(ResolvedDependency dependency, java.util.Set<ResolvedDependency> jenkinsCoreModules) {
-        return jenkinsCoreModules.stream()
-                .anyMatch(coreModule ->
-                        Objects.equals(coreModule.getModuleGroup(), dependency.getModuleGroup()) &&
-                                Objects.equals(coreModule.getModuleName(), dependency.getModuleName()));
+    @NotNull
+    private java.util.Set<ResolvedDependency> getAllJpiPluginTransitiveDependencies() {
+        var allTransitives = new java.util.HashSet<ResolvedDependency>();
+        var resolvedDependencies = configuration.getResolvedConfiguration().getFirstLevelModuleDependencies();
+        
+        for (var dependency : resolvedDependencies) {
+            if (isJpiPluginDependency(dependency)) {
+                for (var child : dependency.getChildren()) {
+                    collectAllDependencies(child, allTransitives);
+                }
+            }
+        }
+        
+        return allTransitives;
+    }
+    
+    private boolean isJpiPluginDependency(ResolvedDependency dependency) {
+        return dependency.getModuleArtifacts().stream()
+                .anyMatch(artifact -> "jpi".equals(artifact.getExtension()) || "hpi".equals(artifact.getExtension()));
+    }
+    
+    private boolean isDependencyInSet(ResolvedDependency dependency, java.util.Set<ResolvedDependency> dependencySet) {
+        return dependencySet.stream()
+                .anyMatch(setMember ->
+                        Objects.equals(setMember.getModuleGroup(), dependency.getModuleGroup()) &&
+                                Objects.equals(setMember.getModuleName(), dependency.getModuleName()));
     }
 
     private boolean matches(ResolvedDependency dependency, Dependency reqDep) {
