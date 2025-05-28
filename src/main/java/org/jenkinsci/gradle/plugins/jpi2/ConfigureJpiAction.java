@@ -72,8 +72,8 @@ class ConfigureJpiAction implements Action<War> {
         var jpiPluginTransitives = getAllJpiPluginTransitiveDependencies();
 
         return resolvedDependencies.stream()
-                .filter(dependency -> !isDependencyInSet(dependency, jenkinsCoreModules))
-                .filter(dependency -> !isDependencyInSet(dependency, jpiPluginTransitives))
+                .filter(dependency -> isDependencyUnseen(dependency, jenkinsCoreModules))
+                .filter(dependency -> isDependencyUnseen(dependency, jpiPluginTransitives))
                 .flatMap(dependency -> dependency.getModuleArtifacts().stream()
                         .filter(artifact -> "jar".equals(artifact.getExtension()))
                         .flatMap(artifact -> requestedDependencies.stream()
@@ -124,9 +124,9 @@ class ConfigureJpiAction implements Action<War> {
                 .anyMatch(artifact -> "jpi".equals(artifact.getExtension()) || "hpi".equals(artifact.getExtension()));
     }
     
-    private boolean isDependencyInSet(ResolvedDependency dependency, java.util.Set<ResolvedDependency> dependencySet) {
+    private boolean isDependencyUnseen(ResolvedDependency dependency, java.util.Set<ResolvedDependency> dependencySet) {
         return dependencySet.stream()
-                .anyMatch(setMember ->
+                .noneMatch(setMember ->
                         Objects.equals(setMember.getModuleGroup(), dependency.getModuleGroup()) &&
                                 Objects.equals(setMember.getModuleName(), dependency.getModuleName()));
     }
