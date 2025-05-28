@@ -27,11 +27,13 @@ import static org.jenkinsci.gradle.plugins.jpi2.ArtifactType.ARTIFACT_TYPE_ATTRI
 class ConfigureJpiAction implements Action<War> {
     private final Project project;
     private final Configuration configuration;
+    private final Configuration jenkinsCore;
     private final String jenkinsVersion;
 
-    public ConfigureJpiAction(Project project, Configuration configuration, String jenkinsVersion) {
+    public ConfigureJpiAction(Project project, Configuration configuration, Configuration jenkinsCore, String jenkinsVersion) {
         this.project = project;
         this.configuration = configuration;
+        this.jenkinsCore = jenkinsCore;
         this.jenkinsVersion = jenkinsVersion;
     }
 
@@ -66,8 +68,10 @@ class ConfigureJpiAction implements Action<War> {
 
         var requestedDependencies = configuration.getAllDependencies();
         var resolvedDependencies = configuration.getResolvedConfiguration().getFirstLevelModuleDependencies();
+        var jenkinsCoreModules = getAllJenkinsCoreDependencies();
 
         return resolvedDependencies.stream()
+                .filter(dependency -> !isJenkinsCoreDependency(dependency, jenkinsCoreModules))
                 .flatMap(dependency -> dependency.getModuleArtifacts().stream()
                         .filter(artifact -> "jar".equals(artifact.getExtension()))
                         .flatMap(artifact -> requestedDependencies.stream()
@@ -75,6 +79,33 @@ class ConfigureJpiAction implements Action<War> {
                                 .findFirst()
                                 .stream()))
                 .collect(Collectors.toCollection(ArrayList::new));
+    }
+
+    @NotNull
+    private java.util.Set<ResolvedDependency> getAllJenkinsCoreDependencies() {
+        var allDependencies = new java.util.HashSet<ResolvedDependency>();
+        var firstLevelDependencies = jenkinsCore.getResolvedConfiguration().getFirstLevelModuleDependencies();
+
+        for (var dependency : firstLevelDependencies) {
+            collectAllDependencies(dependency, allDependencies);
+        }
+
+        return allDependencies;
+    }
+
+    private void collectAllDependencies(ResolvedDependency dependency, java.util.Set<ResolvedDependency> collector) {
+        if (collector.add(dependency)) {
+            for (var child : dependency.getChildren()) {
+                collectAllDependencies(child, collector);
+            }
+        }
+    }
+
+    private boolean isJenkinsCoreDependency(ResolvedDependency dependency, java.util.Set<ResolvedDependency> jenkinsCoreModules) {
+        return jenkinsCoreModules.stream()
+                .anyMatch(coreModule ->
+                        Objects.equals(coreModule.getModuleGroup(), dependency.getModuleGroup()) &&
+                                Objects.equals(coreModule.getModuleName(), dependency.getModuleName()));
     }
 
     private boolean matches(ResolvedDependency dependency, Dependency reqDep) {
