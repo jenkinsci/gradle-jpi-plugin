@@ -78,7 +78,7 @@ public class V2JpiPlugin implements Plugin<Project> {
         SourceSet main = sourceSets.getByName(SourceSet.TEST_SOURCE_SET_NAME);
         main.getResources().getSrcDirs().add(project.file("src/main/webapp"));
 
-        var jpiTask = project.getTasks().register(JPI_TASK, War.class, new ConfigureJpiAction(project, defaultRuntime, jenkinsVersion));
+        var jpiTask = project.getTasks().register(JPI_TASK, War.class, new ConfigureJpiAction(project, defaultRuntime, jenkinsCore, jenkinsVersion));
         project.getTasks().named("jar", Jar.class).configure(new Action<>() {
             @Override
             public void execute(@NotNull Jar jarTask) {

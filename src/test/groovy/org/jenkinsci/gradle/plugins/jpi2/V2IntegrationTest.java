@@ -988,6 +988,68 @@ class V2IntegrationTest {
 
         // when
         var gradleRunner = ith.gradleRunner();
+        var result = gradleRunner.withArguments("dependencies", "--configuration=defaultRuntime").build();
+
+        // then
+        assertThat(result.getOutput())
+                .contains("BUILD SUCCESSFUL")
+                .contains("com.google.inject:guice:5.1.0 -> 6.0.0");
+
+        // when
+        result = gradleRunner.withArguments("dependencies", "--configuration=compileClasspath").build();
+
+        // then
+        assertThat(result.getOutput())
+                .contains("BUILD SUCCESSFUL")
+                .contains("com.google.inject:guice:6.0.0");
+
+
+        // when
+        result = gradleRunner.withArguments("dependencies", "--configuration=runtimeClasspath").build();
+
+        // then
+        assertThat(result.getOutput())
+                .contains("BUILD SUCCESSFUL")
+                .contains("com.google.inject:guice:5.1.0 -> 6.0.0");
+
+    }
+
+    @Test
+    void skipsJenkinsCoreDependencies() throws IOException {
+        // given
+        var ith = new IntegrationTestHelper(tempDir, "8.14");
+        initBuild(ith);
+        Files.write((getBasePluginConfig() +/* language=kotlin */ """
+                dependencies {
+                    annotationProcessor("org.projectlombok:lombok:1.18.38")
+                    compileOnly("org.projectlombok:lombok:1.18.38")
+                    runtimeOnly("com.google.inject:guice:5.1.0") // This is an older version of Guice that should get upgraded
+                }
+                configurations.getByName("compileClasspath").shouldResolveConsistentlyWith(configurations.getByName("runtimeClasspath"))
+                """).getBytes(StandardCharsets.UTF_8), ith.inProjectDir("build.gradle.kts"));
+        ith.mkDirInProjectDir("src/main/java/com/example/plugin");
+        Files.write(/* language=java */ """
+                package com.example.plugin;
+                import lombok.*;
+                import hudson.Extension;
+                import jakarta.inject.Inject;
+                import hudson.model.RootAction;
+                @Extension
+                @NoArgsConstructor
+                public class PluginAction implements RootAction {
+                    private String name;
+                    @Inject
+                    public PluginAction(String name) {
+                        this.name = name;
+                    }
+                    public String getUrlName() { return "example"; }
+                    public String getDisplayName() { return "Example plugin"; }
+                    public String getIconFileName() { return null; }
+                }
+                """.getBytes(StandardCharsets.UTF_8), ith.inProjectDir("src/main/java/com/example/plugin/PluginAction.java"));
+
+        // when
+        var gradleRunner = ith.gradleRunner();
         var result = gradleRunner.withArguments("build").build();
 
         // then
@@ -1000,20 +1062,60 @@ class V2IntegrationTest {
 
         var jpiLibs = jpiLibsDir.list();
         assertThat(jpiLibs).isNotNull()
-                .containsExactlyInAnyOrder("aopalliance-1.0.jar",
-                        "jakarta.inject-api-2.0.1.jar",
-                        "guice-6.0.0.jar",
-                        "test-plugin-1.0.0.jar",
-                        "failureaccess-1.0.2.jar",
-                        "error_prone_annotations-2.36.0.jar",
-                        "checker-qual-3.43.0.jar",
-                        "listenablefuture-9999.0-empty-to-avoid-conflict-with-guava.jar",
-                        "j2objc-annotations-3.0.0.jar",
-                        "guava-33.4.0-jre.jar",
-                        "jsr305-3.0.2.jar",
-                        "javax.inject-1.jar");
+                .containsExactlyInAnyOrder("test-plugin-1.0.0.jar");
     }
 
+    @Test
+    void skipsJarDependenciesOfPluginDependencies() throws IOException {
+        // given
+        var ith = new IntegrationTestHelper(tempDir, "8.14");
+        initBuild(ith);
+        Files.write((getBasePluginConfig() +/* language=kotlin */ """
+                dependencies {
+                    annotationProcessor("org.projectlombok:lombok:1.18.38")
+                    compileOnly("org.projectlombok:lombok:1.18.38")
+                    implementation("org.jenkins-ci.plugins:jackson2-api:2.19.0-404.vb_b_0fd2fea_e10")
+                    implementation("com.fasterxml.jackson.core:jackson-databind:2.19.0") // This is a jar dependency that should not be included in the JPI
+                }
+                configurations.getByName("compileClasspath").shouldResolveConsistentlyWith(configurations.getByName("runtimeClasspath"))
+                """).getBytes(StandardCharsets.UTF_8), ith.inProjectDir("build.gradle.kts"));
+        ith.mkDirInProjectDir("src/main/java/com/example/plugin");
+        Files.write(/* language=java */ """
+                package com.example.plugin;
+                import lombok.*;
+                import hudson.Extension;
+                import jakarta.inject.Inject;
+                import hudson.model.RootAction;
+                @Extension
+                @NoArgsConstructor
+                public class PluginAction implements RootAction {
+                    private String name;
+                    @Inject
+                    public PluginAction(String name) {
+                        this.name = name;
+                    }
+                    public String getUrlName() { return "example"; }
+                    public String getDisplayName() { return "Example plugin"; }
+                    public String getIconFileName() { return null; }
+                }
+                """.getBytes(StandardCharsets.UTF_8), ith.inProjectDir("src/main/java/com/example/plugin/PluginAction.java"));
+
+        // when
+        var gradleRunner = ith.gradleRunner();
+        var result = gradleRunner.withArguments("build").build();
+
+        // then
+        assertThat(result.getOutput()).contains("BUILD SUCCESSFUL");
+
+        var explodedWar = ith.inProjectDir("build/jpi");
+
+        var jpiLibsDir = new File(explodedWar, "WEB-INF/lib");
+        assertThat(jpiLibsDir).exists();
+
+        var jpiLibs = jpiLibsDir.list();
+        assertThat(jpiLibs).isNotNull()
+                .containsExactlyInAnyOrder("test-plugin-1.0.0.jar");
+    }
 
     @Test
     void playsWellWithGitPlugin() throws IOException {
