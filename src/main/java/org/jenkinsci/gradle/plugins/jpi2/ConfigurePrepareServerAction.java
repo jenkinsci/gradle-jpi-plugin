@@ -37,7 +37,11 @@ class ConfigurePrepareServerAction implements Action<Sync> {
 
         sync.into(projectRoot + "/work/plugins");
 
-        sync.from(jpi);
+        sync.from(jpi)
+                .rename(new DropVersionTransformer(
+                        project.getName(),
+                        project.getVersion().toString()
+                ));
 
         defaultRuntime.getResolvedConfiguration().getResolvedArtifacts()
                 .stream()
@@ -66,7 +70,11 @@ class ConfigurePrepareServerAction implements Action<Sync> {
 
                         var jpiTask = dependencyProject.get().getTasks().findByName("jpi");
                         if (jpiTask != null) {
-                            sync.from(jpiTask);
+                            sync.from(jpiTask)
+                                    .rename(new DropVersionTransformer(
+                                            it.getModuleVersion().getId().getName(),
+                                            it.getModuleVersion().getId().getVersion()
+                                    ));
                         }
                     }
                 });

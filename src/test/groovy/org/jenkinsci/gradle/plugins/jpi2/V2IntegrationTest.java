@@ -303,7 +303,7 @@ class V2IntegrationTest {
                         "script-security.jpi",
                         "ssh-credentials.jpi",
                         "structs.jpi",
-                        "test-plugin-1.0.0.jpi",
+                        "test-plugin.jpi",
                         "variant.jpi",
                         "workflow-scm-step.jpi",
                         "workflow-step-api.jpi"
@@ -559,7 +559,7 @@ class V2IntegrationTest {
         testServerStarts(gradleRunner, ":plugin-four:server");
 
         // then
-        var pluginThreeJpi = ith.inProjectDir("plugin-four/work/plugins/plugin-three-1.0.0.jpi"); // TODO Remove version from here
+        var pluginThreeJpi = ith.inProjectDir("plugin-four/work/plugins/plugin-three.jpi");
         assertThat(pluginThreeJpi).exists();
     }
 
