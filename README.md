@@ -366,6 +366,62 @@ If you combine java and groovy code and both provide extensions you need to eith
 - Use joint compilation, i.e. put your java source files into the groovy source path (src/main/groovy)
 - or force Gradle to use the old layout by including something like `sourceSets.main.output.classesDir = new File(buildDir, "classes/main")` in your build.gradle as a workaround.
 
+# JPI2 Plugin (Next Generation)
+
+The JPI2 plugin (`org.jenkins-ci.jpi2`) is a modernized alternative to the original JPI plugin, designed with simpler dependency management.
+The JPI plugin (`org.jenkins-ci.jpi`) is still available, but parts of it don't work with Gradle 8+.
+
+## JPI2 Configuration
+
+Add the following to your `build.gradle.kts`.
+
+```kotlin
+plugins {
+    id("org.jenkins-ci.jpi2")
+}
+
+group = "com.example"
+version = "1.0.0"
+
+repositories {
+    mavenCentral()
+    maven {
+        name = "jenkins-releases"
+        url = uri("https://repo.jenkins-ci.org/releases/")
+    }
+}
+
+dependencies {
+    implementation("org.jenkins-ci.plugins:git:5.7.0")        // Plugin dependency
+    implementation("com.openai:openai-java:2.5.0")            // Library dependency
+}
+```
+
+## JPI2 Version Configuration
+
+Configure Jenkins and test harness versions in `gradle.properties`:
+
+```properties
+jenkins.version=2.492.3
+jenkins.testharness.version=2414.v185474555e66
+```
+
+### Server Customization
+
+The server task can be customized for different ports. The default is `8080`.
+
+```kotlin
+tasks.named<JavaExec>("server") {
+    systemProperty("server.port", "8090")
+}
+```
+
+That can also be set on the command line:
+
+```shell
+./gradlew server -Dserver.port=8090
+```
+
 ## Examples
 
 Here are some real world examples of Jenkins plugins using the Gradle JPI plugin:

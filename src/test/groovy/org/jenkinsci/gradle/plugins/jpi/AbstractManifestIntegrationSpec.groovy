@@ -340,7 +340,7 @@ abstract class AbstractManifestIntegrationSpec extends IntegrationSpec {
                 jenkinsVersion = '${TestSupport.RECENT_JENKINS_VERSION}'
             }
             dependencies {
-                api 'org.jenkinsci.plugins:git:1.1.15'
+                api 'org.jenkinsci.plugins:git:1.1.29'
                 implementation 'org.jenkins-ci.plugins:ant:1.2'
             }
             """.stripIndent()
@@ -349,7 +349,7 @@ abstract class AbstractManifestIntegrationSpec extends IntegrationSpec {
         def actual = generateManifestThroughGradle()
 
         then:
-        actual['Plugin-Dependencies'] == 'git:1.1.15,ant:1.2'
+        actual['Plugin-Dependencies'] == 'git:1.1.29,ant:1.2'
     }
 
     def 'should populate Plugin-Dependencies with expected format for sole optional dependency'() {
@@ -390,7 +390,7 @@ abstract class AbstractManifestIntegrationSpec extends IntegrationSpec {
                 }
             }
             dependencies {
-                gitApi 'org.jenkinsci.plugins:git:1.1.15'
+                gitApi 'org.jenkinsci.plugins:git:1.1.29'
                 antImplementation 'org.jenkins-ci.plugins:ant:1.2'
             }
             """.stripIndent()
@@ -399,7 +399,7 @@ abstract class AbstractManifestIntegrationSpec extends IntegrationSpec {
         def actual = generateManifestThroughGradle()
 
         then:
-        actual['Plugin-Dependencies'] == 'ant:1.2;resolution:=optional,git:1.1.15;resolution:=optional'
+        actual['Plugin-Dependencies'] == 'ant:1.2;resolution:=optional,git:1.1.29;resolution:=optional'
     }
 
     def 'should populate Plugin-Dependencies with expected ordered format for multiple dependencies'() {
@@ -418,7 +418,7 @@ abstract class AbstractManifestIntegrationSpec extends IntegrationSpec {
             }
             dependencies {
                 folderApi 'org.jenkins-ci.plugins:cloudbees-folder:4.2'
-                api 'org.jenkinsci.plugins:git:1.1.15'
+                api 'org.jenkinsci.plugins:git:1.1.29'
                 implementation 'org.jenkins-ci.plugins:ant:1.2'
                 credentialsImplementation 'org.jenkins-ci.plugins:credentials:1.9.4'
             }
@@ -431,7 +431,7 @@ abstract class AbstractManifestIntegrationSpec extends IntegrationSpec {
         actual['Plugin-Dependencies'] ==
                 'credentials:1.9.4;resolution:=optional,' +
                 'cloudbees-folder:4.2;resolution:=optional,' +
-                'git:1.1.15,' +
+                'git:1.1.29,' +
                 'ant:1.2'
     }
 
