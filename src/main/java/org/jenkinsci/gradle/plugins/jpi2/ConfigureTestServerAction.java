@@ -11,7 +11,6 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.net.ServerSocket;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Stream;
@@ -28,25 +27,13 @@ class ConfigureTestServerAction implements Action<Task> {
     );
 
     private final Project project;
+    private final PortAllocationService portAllocationService;
 
-    public ConfigureTestServerAction(Project project) {
+    public ConfigureTestServerAction(Project project, PortAllocationService portAllocationService) {
         this.project = project;
+        this.portAllocationService = portAllocationService;
     }
 
-    private static int findFreePort() {
-        try (ServerSocket socket = new ServerSocket(0)) {
-            socket.setReuseAddress(true);
-            int port = socket.getLocalPort();
-            try {
-                socket.close();
-            } catch (IOException ignored) {
-                // Ignore IOException on close()
-            }
-            return port;
-        } catch (IOException ignored) {
-        }
-        throw new IllegalStateException("Could not find a free TCP/IP port to start embedded Jetty HTTP Server on");
-    }
 
     @Override
     public void execute(@NotNull Task task) {
@@ -142,7 +129,7 @@ class ConfigureTestServerAction implements Action<Task> {
         startParameter.getProjectProperties().forEach((k, v) -> commandLine.add("-P" + k + "=" + v));
 
         commandLine.add(project == project.getRootProject() ? ":server" : project.getPath() + ":server");
-        commandLine.add("-Dserver.port=" + findFreePort());
+        commandLine.add("-Dserver.port=" + portAllocationService.findAndReserveFreePort());
         System.err.println("Command: " + commandLine);
         return commandLine;
     }

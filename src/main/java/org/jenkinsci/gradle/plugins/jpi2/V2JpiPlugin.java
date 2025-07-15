@@ -10,6 +10,7 @@ import org.gradle.api.plugins.JavaBasePlugin;
 import org.gradle.api.plugins.JavaLibraryPlugin;
 import org.gradle.api.plugins.JavaPluginExtension;
 import org.gradle.api.provider.Provider;
+import org.gradle.api.services.BuildServiceRegistry;
 import org.gradle.api.publish.PublishingExtension;
 import org.gradle.api.publish.maven.MavenPublication;
 import org.gradle.api.publish.maven.plugins.MavenPublishPlugin;
@@ -130,7 +131,11 @@ public class V2JpiPlugin implements Plugin<Project> {
         dependencies.getComponents().all(HpiMetadataRule.class);
         configurePublishing(project, jpiTask, defaultRuntime);
 
-        project.getTasks().register("testServer", new ConfigureTestServerAction(project));
+        BuildServiceRegistry buildServices = project.getGradle().getSharedServices();
+        var portAllocationService = buildServices.registerIfAbsent("portAllocation", PortAllocationService.class, spec -> {
+        });
+
+        project.getTasks().register("testServer", new ConfigureTestServerAction(project, portAllocationService.get()));
     }
 
     private static void configurePublishing(@NotNull Project project, TaskProvider<?> jpiTask, Configuration runtimeClasspath) {
