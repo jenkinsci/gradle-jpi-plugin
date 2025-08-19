@@ -12,8 +12,10 @@ import org.gradle.api.tasks.bundling.War;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 import static org.jenkinsci.gradle.plugins.jpi2.ArtifactType.ARTIFACT_TYPE_ATTRIBUTE;
@@ -59,7 +61,14 @@ class ConfigureJpiAction implements Action<War> {
         detachedConfiguration.getAttributes().attribute(ARTIFACT_TYPE_ATTRIBUTE, project.getObjects().named(ArtifactType.class, ArtifactType.PLUGIN_JAR));
         detachedConfiguration.shouldResolveConsistentlyWith(configuration);
 
-        jpi.setClasspath(detachedConfiguration);
+        // Filter out jar files that are provided by JPI plugin dependencies
+        var jpiProvidedJars = getJarArtifactsFromJpiPlugins();
+        var filteredFiles = detachedConfiguration.filter(file -> {
+            var fileName = file.getName();
+            return !jpiProvidedJars.contains(fileName);
+        });
+        
+        jpi.setClasspath(filteredFiles);
         jpi.finalizedBy(V2JpiPlugin.EXPLODED_JPI_TASK);
     }
 
@@ -84,8 +93,8 @@ class ConfigureJpiAction implements Action<War> {
     }
 
     @NotNull
-    private java.util.Set<ResolvedDependency> getAllJenkinsCoreDependencies() {
-        var allDependencies = new java.util.HashSet<ResolvedDependency>();
+    private Set<ResolvedDependency> getAllJenkinsCoreDependencies() {
+        var allDependencies = new HashSet<ResolvedDependency>();
         var firstLevelDependencies = jenkinsCore.getResolvedConfiguration().getFirstLevelModuleDependencies();
 
         for (var dependency : firstLevelDependencies) {
@@ -95,7 +104,7 @@ class ConfigureJpiAction implements Action<War> {
         return allDependencies;
     }
 
-    private void collectAllDependencies(ResolvedDependency dependency, java.util.Set<ResolvedDependency> collector) {
+    private void collectAllDependencies(ResolvedDependency dependency, Set<ResolvedDependency> collector) {
         if (collector.add(dependency)) {
             for (var child : dependency.getChildren()) {
                 collectAllDependencies(child, collector);
@@ -104,8 +113,8 @@ class ConfigureJpiAction implements Action<War> {
     }
 
     @NotNull
-    private java.util.Set<ResolvedDependency> getAllJpiPluginTransitiveDependencies() {
-        var allTransitives = new java.util.HashSet<ResolvedDependency>();
+    private Set<ResolvedDependency> getAllJpiPluginTransitiveDependencies() {
+        var allTransitives = new HashSet<ResolvedDependency>();
         var resolvedDependencies = configuration.getResolvedConfiguration().getFirstLevelModuleDependencies();
         
         for (var dependency : resolvedDependencies) {
@@ -124,11 +133,35 @@ class ConfigureJpiAction implements Action<War> {
                 .anyMatch(artifact -> "jpi".equals(artifact.getExtension()) || "hpi".equals(artifact.getExtension()));
     }
     
-    private boolean isDependencyUnseen(ResolvedDependency dependency, java.util.Set<ResolvedDependency> dependencySet) {
+    private boolean isDependencyUnseen(ResolvedDependency dependency, Set<ResolvedDependency> dependencySet) {
         return dependencySet.stream()
                 .noneMatch(setMember ->
                         Objects.equals(setMember.getModuleGroup(), dependency.getModuleGroup()) &&
                                 Objects.equals(setMember.getModuleName(), dependency.getModuleName()));
+    }
+
+    @NotNull
+    private Set<String> getJarArtifactsFromJpiPlugins() {
+        var jpiProvidedJars = new HashSet<String>();
+        var resolvedDependencies = configuration.getResolvedConfiguration().getFirstLevelModuleDependencies();
+        
+        for (var dependency : resolvedDependencies) {
+            if (isJpiPluginDependency(dependency)) {
+                // Collect all jar artifacts from this JPI plugin's transitive dependencies
+                var allTransitives = new HashSet<ResolvedDependency>();
+                for (var child : dependency.getChildren()) {
+                    collectAllDependencies(child, allTransitives);
+                }
+                
+                for (var transitive : allTransitives) {
+                    transitive.getModuleArtifacts().stream()
+                            .filter(artifact -> "jar".equals(artifact.getExtension()))
+                            .forEach(artifact -> jpiProvidedJars.add(artifact.getFile().getName()));
+                }
+            }
+        }
+        
+        return jpiProvidedJars;
     }
 
     private boolean matches(ResolvedDependency dependency, Dependency reqDep) {
