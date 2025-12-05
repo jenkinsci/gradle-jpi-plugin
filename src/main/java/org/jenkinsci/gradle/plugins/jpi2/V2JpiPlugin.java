@@ -5,6 +5,7 @@ import org.gradle.api.Plugin;
 import org.gradle.api.Project;
 import org.gradle.api.Task;
 import org.gradle.api.artifacts.Configuration;
+import org.gradle.api.file.Directory;
 import org.gradle.api.plugins.GroovyBasePlugin;
 import org.gradle.api.plugins.JavaBasePlugin;
 import org.gradle.api.plugins.JavaLibraryPlugin;
@@ -86,11 +87,12 @@ public class V2JpiPlugin implements Plugin<Project> {
                 jarTask.manifest(new ManifestAction(project, defaultRuntime, jenkinsVersion));
             }
         });
+        Provider<Directory> jpiDirectory = project.getLayout().getBuildDirectory().dir("jpi");
         project.getTasks().register(EXPLODED_JPI_TASK, Sync.class, new Action<>() {
             @Override
             public void execute(@NotNull Sync sync) {
-                sync.into(project.getLayout().getBuildDirectory().dir("jpi"));
-                sync.with((War) project.getTasks().getByName(JPI_TASK));
+                sync.into(jpiDirectory);
+                sync.with(jpiTask.get());
             }
         });
         project.getTasks().named("assemble", new Action<>() {
