@@ -32,3 +32,8 @@ junit5-vintage = { module = "org.junit.vintage:junit-vintage-engine", version.re
 localizer-maven = { module = "org.jvnet.localizer:localizer-maven-plugin", version.ref = "localizer" }
 sezpoz = { module = "net.java.sezpoz:sezpoz", version.ref = "sezpoz" }
 xmlunit = { module = "org.xmlunit:xmlunit-core", version.ref = "xmlunit" }
+
+[plugins]
+nebula-release = { id = "nebula.release", version = "19.0.10" }
+distribution-sha = { id = "com.github.sghill.distribution-sha", version = "0.4.0" }
+plugin-publish = { id = "com.gradle.plugin-publish", version = "1.2.0" }
