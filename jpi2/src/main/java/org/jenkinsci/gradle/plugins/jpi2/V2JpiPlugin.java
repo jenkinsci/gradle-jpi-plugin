@@ -127,6 +127,8 @@ public class V2JpiPlugin implements Plugin<Project> {
         dependencies.add("testImplementation", "org.jenkins-ci.main:jenkins-core:" + jenkinsVersion);
         dependencies.add("testImplementation", "org.jenkins-ci.main:jenkins-war:" + jenkinsVersion);
         dependencies.add("testImplementation", "org.jenkins-ci.main:jenkins-test-harness:" + testHarnessVersion);
+        dependencies.add("testImplementation", "org.junit.jupiter:junit-jupiter");
+        dependencies.add("testRuntimeOnly", "org.junit.platform:junit-platform-launcher");
 
         dependencies.add(jenkinsCore.getName(), "org.jenkins-ci.main:jenkins-core:" + jenkinsVersion);
 

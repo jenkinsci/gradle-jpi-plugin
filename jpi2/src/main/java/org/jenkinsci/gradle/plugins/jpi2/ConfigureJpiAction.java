@@ -7,13 +7,17 @@ import org.gradle.api.artifacts.Dependency;
 import org.gradle.api.artifacts.ModuleDependency;
 import org.gradle.api.artifacts.ProjectDependency;
 import org.gradle.api.artifacts.ResolvedDependency;
+import org.gradle.api.artifacts.component.ComponentIdentifier;
+import org.gradle.api.artifacts.component.ProjectComponentIdentifier;
 import org.gradle.api.file.CopySpec;
 import org.gradle.api.tasks.bundling.War;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -80,16 +84,38 @@ class ConfigureJpiAction implements Action<War> {
         var jenkinsCoreModules = getAllJenkinsCoreDependencies();
         var jpiPluginTransitives = getAllJpiPluginTransitiveDependencies();
 
+        var projectPathMap = buildProjectPathMap();
+
         return resolvedDependencies.stream()
                 .filter(dependency -> isDependencyUnseen(dependency, jenkinsCoreModules))
                 .filter(dependency -> isDependencyUnseen(dependency, jpiPluginTransitives))
                 .flatMap(dependency -> dependency.getModuleArtifacts().stream()
                         .filter(artifact -> "jar".equals(artifact.getExtension()))
                         .flatMap(artifact -> requestedDependencies.stream()
-                                .filter(reqDep -> matches(dependency, reqDep))
+                                .filter(reqDep -> matches(dependency, reqDep, projectPathMap))
                                 .findFirst()
                                 .stream()))
                 .collect(Collectors.toCollection(ArrayList::new));
+    }
+
+    @NotNull
+    private Map<String, String> buildProjectPathMap() {
+        var projectPathMap = new HashMap<String, String>();
+
+        configuration.getResolvedConfiguration().getResolvedArtifacts()
+                .stream()
+                .filter(it -> it.getId().getComponentIdentifier() instanceof ProjectComponentIdentifier)
+                .forEach(artifact -> {
+                    ComponentIdentifier componentIdentifier = artifact.getId().getComponentIdentifier();
+                    if (componentIdentifier instanceof ProjectComponentIdentifier p) {
+                        var moduleGroup = artifact.getModuleVersion().getId().getGroup();
+                        var moduleName = artifact.getModuleVersion().getId().getName();
+                        var key = moduleGroup + ":" + moduleName;
+                        projectPathMap.put(key, p.getProjectPath());
+                    }
+                });
+
+        return projectPathMap;
     }
 
     @NotNull
@@ -164,11 +190,19 @@ class ConfigureJpiAction implements Action<War> {
         return jpiProvidedJars;
     }
 
-    private boolean matches(ResolvedDependency dependency, Dependency reqDep) {
+    private boolean matches(ResolvedDependency dependency, Dependency reqDep, Map<String, String> projectPathMap) {
         if (reqDep instanceof ProjectDependency projectDependency) {
-            var projectPath = projectDependency.getDependencyProject().getPath();
-            var dependencyProject = project.getRootProject().getChildProjects().values().stream()
-                    .filter(it -> it.getPath().equals(projectPath)).findFirst();
+            var key = (projectDependency.getGroup() == null ? "" : projectDependency.getGroup()) +
+                      ":" + projectDependency.getName();
+            var projectPath = projectPathMap.get(key);
+
+            if (projectPath == null) {
+                return false;
+            }
+
+            var dependencyProject = project.getRootProject().getAllprojects().stream()
+                    .filter(it -> it.getPath().equals(projectPath))
+                    .findFirst();
 
             assert dependencyProject.isPresent();
 
