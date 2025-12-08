@@ -11,8 +11,8 @@ on:
 
 
 jobs:
-  build:
-    name: ${{ matrix.os }}
+  build-jpi:
+    name: jpi/${{ matrix.os }}/${{ matrix.gradle_version }}
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
@@ -27,7 +27,30 @@ jobs:
         distribution: "temurin"
         cache: "gradle"
     - name: Test ${{ matrix.gradle_version }}
-      run: ./gradlew testGradle${{ matrix.gradle_version }}
+      run: ./gradlew :jpi:testGradle${{ matrix.gradle_version }}
+    - name: Archive Test Results on Failure
+      uses: actions/upload-artifact@v4
+      if: ${{ failure() }}
+      with:
+        name: ${{ matrix.os }}-${{ matrix.gradle_version }}-test-results
+        path: build/reports/tests
+  build-jpi2:
+    name: jpi2/${{ matrix.os }}/${{ matrix.gradle_version }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+        gradle_version: ["8.14.3"]
+    steps:
+    - uses: actions/checkout@v4
+    - name: Set up JDK 17
+      uses: actions/setup-java@v4
+      with:
+        java-version: "17"
+        distribution: "temurin"
+        cache: "gradle"
+    - name: Test ${{ matrix.gradle_version }}
+      run: ./gradlew :jpi2:testGradle${{ matrix.gradle_version }}
     - name: Archive Test Results on Failure
       uses: actions/upload-artifact@v4
       if: ${{ failure() }}
