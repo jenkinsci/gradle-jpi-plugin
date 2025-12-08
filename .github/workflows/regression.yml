@@ -40,7 +40,7 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-latest, windows-latest]
-        gradle_version: ["8.14.3"]
+        gradle_version: ["8.14.3", "9.2.1"]
     steps:
     - uses: actions/checkout@v4
     - name: Set up JDK 17

@@ -75,6 +75,9 @@ class V2IntegrationTest {
                 tasks.named<JavaExec>("server") {
                     args("--httpPort=%d")
                 }
+                tasks.withType(Test::class) {
+                    useJUnitPlatform()
+                }
                 """, RandomPortProvider.findFreePort()) + getPublishingConfig();
     }
 
@@ -1232,8 +1235,7 @@ class V2IntegrationTest {
         List<String> actualList = Arrays.stream(result.getOutput().split("\n")).toList();
         Assertions.assertNotNull(expected);
         List<String> expectedList = IOUtils.readLines(expected, StandardCharsets.UTF_8);
-        assertThat(String.join("\n", actualList.subList(0, actualList.size() - 2)))
-                .isEqualTo(String.join("\n", expectedList.subList(0, expectedList.size() - 2)));
+        assertDependencyTreesMatch(actualList, expectedList);
         assertThat(result.getOutput()).contains("BUILD SUCCESSFUL");
     }
 
@@ -1260,9 +1262,20 @@ class V2IntegrationTest {
         List<String> actualList = Arrays.stream(result.getOutput().split("\n")).toList();
         Assertions.assertNotNull(expected);
         List<String> expectedList = IOUtils.readLines(expected, StandardCharsets.UTF_8);
-        assertThat(String.join("\n", actualList.subList(0, actualList.size() - 2)))
-                .isEqualTo(String.join("\n", expectedList.subList(0, expectedList.size() - 2)));
+        assertDependencyTreesMatch(actualList, expectedList);
         assertThat(result.getOutput()).contains("BUILD SUCCESSFUL");
+    }
+
+    private static void assertDependencyTreesMatch(List<String> actualList, List<String> expectedList) {
+        var actualDeps = actualList.stream()
+                .filter(line -> line.contains("---") && !line.startsWith("---"))
+                .map(String::trim)
+                .toList();
+        var expectedDeps = expectedList.stream()
+                .filter(line -> line.contains("---") && !line.startsWith("---"))
+                .map(String::trim)
+                .toList();
+        assertThat(actualDeps).containsExactlyElementsOf(expectedDeps);
     }
 
     @Test
