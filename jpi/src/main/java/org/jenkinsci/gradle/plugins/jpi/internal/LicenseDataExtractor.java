@@ -12,6 +12,9 @@ import java.io.Reader;
 import java.util.HashSet;
 import java.util.Set;
 
+/**
+ * Extracts license data from Maven POM files.
+ */
 public class LicenseDataExtractor {
     private final XmlParser parser;
     private final QName qDescription = QName.valueOf("description");
@@ -20,14 +23,26 @@ public class LicenseDataExtractor {
     private final QName qName = QName.valueOf("name");
     private final QName qUrl = QName.valueOf("url");
 
+    /**
+     * Creates a new extractor with the given XML parser.
+     *
+     * @param parser the XML parser to use
+     */
     public LicenseDataExtractor(XmlParser parser) {
         this.parser = parser;
     }
 
+    /** Creates a new extractor with a default XML parser. */
     public LicenseDataExtractor() {
         this(init());
     }
 
+    /**
+     * Extracts license data from the given reader.
+     *
+     * @param reader the reader containing POM XML
+     * @return the extracted license data
+     */
     public LicenseData extractFrom(Reader reader) {
         try {
             Node pom = parser.parse(reader);
