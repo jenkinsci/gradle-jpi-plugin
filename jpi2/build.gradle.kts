@@ -3,6 +3,7 @@ plugins {
     `maven-publish`
     signing
     alias(libs.plugins.plugin.publish)
+    alias(libs.plugins.nebula.release)
     `java-gradle-plugin`
 }
 
@@ -35,7 +36,7 @@ tasks.withType<Test>().configureEach {
 
 publishing {
     publications {
-        create<MavenPublication>("pluginV2") {
+        create<MavenPublication>("pluginMaven") {
             pom {
                 name.set("Gradle JPI Plugin V2")
                 description.set("V2 plugin for building Jenkins plugins with Gradle 8+")
@@ -125,4 +126,18 @@ tasks.addRule("Pattern: testGradle<ID>") {
             dependsOn(javaSpecificTask)
         }
     }
+}
+
+val checkPhase = tasks.named("check")
+val publishToJenkins = tasks.named("publishPluginMavenPublicationToJenkinsCommunityRepository")
+publishToJenkins.configure {
+    dependsOn(checkPhase)
+}
+val publishToGradle = tasks.named("publishPlugins")
+publishToGradle.configure {
+    dependsOn(checkPhase)
+}
+
+rootProject.tasks.named("postRelease").configure {
+    dependsOn(publishToJenkins, publishToGradle)
 }
