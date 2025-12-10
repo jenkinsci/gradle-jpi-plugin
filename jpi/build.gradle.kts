@@ -17,6 +17,7 @@ plugins {
     signing
     codenarc
     alias(libs.plugins.plugin.publish)
+    alias(libs.plugins.nebula.release)
     `java-gradle-plugin`
 }
 
@@ -204,4 +205,18 @@ tasks.register("shadeLatestVersionNumber") {
             }
         }
     }
+}
+
+val checkPhase = tasks.named("check")
+val publishToJenkins = tasks.named("publishPluginMavenPublicationToJenkinsCommunityRepository")
+publishToJenkins.configure {
+    dependsOn(checkPhase)
+}
+val publishToGradle = tasks.named("publishPlugins")
+publishToGradle.configure {
+    dependsOn(checkPhase)
+}
+
+rootProject.tasks.named("postRelease").configure {
+    dependsOn(publishToJenkins, publishToGradle)
 }
