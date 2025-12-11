@@ -11,11 +11,6 @@ The following Gradle properties must be set:
 
 - `gradle.publish.key` (from Gradle Plugin Portal)
 - `gradle.publish.secret` (from Gradle Plugin Portal)
-- `jenkins.username` (from Jenkins Account)
-- `jenkins.password` (from Jenkins Account)
-- `signingKeyId` (GPG Signing Key ID)
-- `signingPassword` (GPG Passphrase)
-- `signingKey` (GPG Secret Key, ASCII-armored, header/footer removed, newlines joined by `\n`)
 
 They can be set using the `-P` syntax on the command line, or as `ORG_GRADLE_PROJECT_{name}` environment variables ([docs]).
 
