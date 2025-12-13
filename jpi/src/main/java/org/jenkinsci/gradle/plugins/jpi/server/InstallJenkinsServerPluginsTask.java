@@ -34,22 +34,41 @@ import static org.jenkinsci.gradle.plugins.jpi.core.ArchiveExtensions.allExtensi
 import static org.jenkinsci.gradle.plugins.jpi.core.ArchiveExtensions.allPathPatterns;
 import static org.jenkinsci.gradle.plugins.jpi.core.ArchiveExtensions.nameWithJpi;
 
+/**
+ * Installs Jenkins server plugins to the plugins directory.
+ */
 public abstract class InstallJenkinsServerPluginsTask extends DefaultTask {
+    /** The name of this task. */
     public static final String TASK_NAME = "installJenkinsServerPlugins";
     private static final String PLUGINS_DIR = "plugins";
 
+    /**
+     * @return the configuration containing the plugins to install
+     */
     @Internal
     public abstract Property<Configuration> getPluginsConfiguration();
 
+    /**
+     * @return the HPL file for the current plugin
+     */
     @InputFile
     public abstract RegularFileProperty getHpl();
 
+    /**
+     * @return the Jenkins home directory
+     */
     @Input
     public abstract Property<File> getJenkinsHome();
 
+    /**
+     * @return the set of plugin file extensions to include
+     */
     @Input
     public abstract SetProperty<String> getPluginExtensions();
 
+    /**
+     * @return the plugin files to install
+     */
     @Classpath
     public FileCollection getPlugins() {
         return getPluginsConfiguration().map(new Transformer<FileCollection, Configuration>() {
@@ -70,6 +89,9 @@ public abstract class InstallJenkinsServerPluginsTask extends DefaultTask {
         }).get();
     }
 
+    /**
+     * @return a lookup map from versioned filename to normalized JPI filename
+     */
     @Internal
     public Provider<Map<String, String>> getLookup() {
         return getPluginsConfiguration().map(new Transformer<Map<String, String>, Configuration>() {
@@ -91,6 +113,9 @@ public abstract class InstallJenkinsServerPluginsTask extends DefaultTask {
         });
     }
 
+    /**
+     * @return the directory where plugins will be installed
+     */
     @OutputDirectory
     public Provider<Directory> getPluginsDir() {
         return getJenkinsHome().map(new Transformer<Directory, File>() {
@@ -102,12 +127,19 @@ public abstract class InstallJenkinsServerPluginsTask extends DefaultTask {
         });
     }
 
+    /**
+     * @return the file system operations service
+     */
     @Inject
     public abstract FileSystemOperations getFileSystemOperations();
 
+    /**
+     * @return the project layout
+     */
     @Inject
     public abstract ProjectLayout getProjectLayout();
 
+    /** Installs the plugins to the Jenkins home directory. */
     @TaskAction
     public void run() {
         Map<String, String> lookup = getLookup().get();

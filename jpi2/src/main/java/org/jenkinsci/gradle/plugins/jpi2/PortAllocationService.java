@@ -13,6 +13,12 @@ import java.net.ServerSocket;
 public abstract class PortAllocationService implements BuildService<BuildServiceParameters.None> {
     private static final int RETRY_LIMIT = 3;
 
+    /**
+     * Finds and reserves a free port for use during the build.
+     *
+     * @return a free port number
+     * @throws IllegalStateException if no free port can be found after retrying
+     */
     public int findAndReserveFreePort() {
         for (int attempt = 0; attempt < RETRY_LIMIT; attempt++) {
             int port = findFreePort(attempt);

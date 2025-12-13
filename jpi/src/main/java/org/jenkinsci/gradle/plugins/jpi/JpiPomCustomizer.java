@@ -37,10 +37,20 @@ import static org.gradle.api.artifacts.ArtifactRepositoryContainer.DEFAULT_MAVEN
 public class JpiPomCustomizer {
     private final Project project;
 
+    /**
+     * Creates a new POM customizer.
+     *
+     * @param project the project to customize the POM for
+     */
     public JpiPomCustomizer(Project project) {
         this.project = project;
     }
 
+    /**
+     * Customizes the given Maven POM with Jenkins plugin metadata.
+     *
+     * @param pom the POM to customize
+     */
     public void customizePom(MavenPom pom) {
         JpiExtensionBridge jpiExtension = project.getExtensions().getByType(JpiExtensionBridge.class);
         pom.setPackaging(jpiExtension.getExtension().get());

@@ -6,6 +6,9 @@ import org.gradle.api.Project;
 import org.gradle.api.artifacts.Configuration;
 import org.gradle.api.artifacts.ResolvableDependencies;
 
+/**
+ * Verifies that deprecated Gradle configurations are not used.
+ */
 public class UnsupportedGradleConfigurationVerifier {
     /**
      * Represented the dependencies on other Jenkins plugins.

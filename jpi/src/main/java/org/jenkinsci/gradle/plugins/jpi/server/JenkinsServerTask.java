@@ -32,7 +32,11 @@ import java.util.jar.Attributes;
 import java.util.jar.JarFile;
 import java.util.jar.Manifest;
 
+/**
+ * Runs a Jenkins server for local development and testing.
+ */
 public abstract class JenkinsServerTask extends DefaultTask {
+    /** The name of this task. */
     public static final String TASK_NAME = "server";
     private static final Logger LOGGER = LoggerFactory.getLogger(JenkinsServerTask.class);
     private static final java.util.Set<String> DEFAULTED_PROPERTIES = new HashSet<>(Arrays.asList(
@@ -43,23 +47,41 @@ public abstract class JenkinsServerTask extends DefaultTask {
     ));
     private final List<Action<JavaExecSpec>> execSpecActions = new LinkedList<>();
 
+    /**
+     * @return the configuration containing the Jenkins server runtime
+     */
     @Classpath
     public abstract Property<Configuration> getJenkinsServerRuntime();
 
+    /**
+     * @return the Jenkins home directory
+     */
     @Input
     public abstract Property<File> getJenkinsHome();
 
+    /**
+     * @return the port to start Jenkins on
+     */
     @Input
     @Option(option = "port", description = "Port to start Jenkins on (default: 8080)")
     public abstract Property<String> getPort();
 
+    /**
+     * @return whether to start Jenkins in debug mode
+     */
     @Input
     @Option(option = "debug-jvm", description = "Start Jenkins suspended and listening on debug port (default: 5005)")
     public abstract Property<Boolean> getDebug();
 
+    /**
+     * @return whether the main class property is available
+     */
     @Input
     public abstract Property<Boolean> getMainClassPropertyAvailable();
 
+    /**
+     * @return the main class extracted from the Jenkins war file
+     */
     @Internal
     public Provider<String> getExtractedMainClass() {
         return getJenkinsServerRuntime().map(new Transformer<String, Configuration>() {
@@ -97,9 +119,13 @@ public abstract class JenkinsServerTask extends DefaultTask {
         });
     }
 
+    /**
+     * @return the exec operations service
+     */
     @Inject
     public abstract ExecOperations getExecOperations();
 
+    /** Creates a new Jenkins server task. */
     public JenkinsServerTask() {
         getPort().convention("8080");
         getDebug().convention(false);
@@ -140,6 +166,11 @@ public abstract class JenkinsServerTask extends DefaultTask {
         });
     }
 
+    /**
+     * Adds an action to configure the Java exec spec.
+     *
+     * @param action the action to add
+     */
     public void execSpec(Action<JavaExecSpec> action) {
         execSpecActions.add(action);
     }

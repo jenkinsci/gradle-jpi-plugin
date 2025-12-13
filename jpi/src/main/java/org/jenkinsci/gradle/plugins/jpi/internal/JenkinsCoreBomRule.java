@@ -5,6 +5,9 @@ import org.gradle.api.artifacts.ComponentMetadataContext;
 import org.gradle.api.artifacts.ComponentMetadataDetails;
 import org.gradle.api.artifacts.ComponentMetadataRule;
 
+/**
+ * Component metadata rule that adds Jenkins BOM alignment for versions that support it.
+ */
 @CacheableRule
 public class JenkinsCoreBomRule implements ComponentMetadataRule {
     @Override

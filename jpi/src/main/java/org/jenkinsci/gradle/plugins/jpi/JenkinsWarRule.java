@@ -19,10 +19,17 @@ import javax.inject.Inject;
 
 import static org.gradle.api.attributes.LibraryElements.LIBRARY_ELEMENTS_ATTRIBUTE;
 
+/**
+ * Component metadata rule that adds a JPI variant to the Jenkins war module.
+ */
 @CacheableRule
 public abstract class JenkinsWarRule implements ComponentMetadataRule {
+    /** The Maven coordinates for the Jenkins war. */
     public static final String JENKINS_WAR_COORDINATES = "org.jenkins-ci.main:jenkins-war";
 
+    /**
+     * @return the object factory
+     */
     @Inject
     public abstract ObjectFactory getObjects();
 

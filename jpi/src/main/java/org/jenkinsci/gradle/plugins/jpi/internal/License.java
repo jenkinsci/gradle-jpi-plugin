@@ -3,19 +3,30 @@ package org.jenkinsci.gradle.plugins.jpi.internal;
 import java.util.Objects;
 import java.util.StringJoiner;
 
+/**
+ * Represents a software license with a name and URL.
+ */
 public class License {
     private final String name;
     private final String url;
 
+    /**
+     * Creates a new license.
+     *
+     * @param name the license name
+     * @param url the URL to the license text
+     */
     public License(String name, String url) {
         this.name = name;
         this.url = url;
     }
 
+    /** @return the license name */
     public String getName() {
         return name;
     }
 
+    /** @return the URL to the license text */
     public String getUrl() {
         return url;
     }

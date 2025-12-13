@@ -10,6 +10,9 @@ import org.gradle.api.tasks.testing.Test;
 import java.util.LinkedList;
 import java.util.List;
 
+/**
+ * Plugin that configures JVM arguments for JDK 17+ compatibility.
+ */
 public class Jdk17Plugin implements Plugin<Project> {
     @Override
     public void apply(Project project) {
