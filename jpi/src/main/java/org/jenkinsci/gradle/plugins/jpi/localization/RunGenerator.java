@@ -12,6 +12,9 @@ import org.slf4j.LoggerFactory;
 import java.io.File;
 import java.io.IOException;
 
+/**
+ * Work action that runs the localizer generator.
+ */
 public abstract class RunGenerator implements WorkAction<LocalizationParameters> {
 
     @Override

@@ -29,7 +29,10 @@ package jenkins;
  * @author Kohsuke Kawaguchi
  */
 public enum YesNoMaybe {
+    /** Indicates yes. */
     YES,
+    /** Indicates no. */
     NO,
+    /** Indicates maybe/unknown. */
     MAYBE
 }

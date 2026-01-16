@@ -19,6 +19,9 @@ import org.gradle.api.tasks.compile.JavaCompile;
 import static org.gradle.api.attributes.Usage.JAVA_RUNTIME;
 import static org.gradle.api.attributes.Usage.USAGE_ATTRIBUTE;
 
+/**
+ * Plugin that generates Java classes from Messages.properties files.
+ */
 public class LocalizationPlugin implements Plugin<Project> {
 
     private static final String CONFIGURATION_NAME = "localizeMessagesRuntimeClasspath";

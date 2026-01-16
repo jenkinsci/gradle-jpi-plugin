@@ -372,6 +372,11 @@ public class VersionNumber implements Comparable<VersionNumber> {
         }
     }
 
+    /**
+     * Creates a new version number from the given string.
+     *
+     * @param version the version string to parse
+     */
     public VersionNumber(String version) {
         parseVersion(version);
     }
@@ -528,18 +533,42 @@ public class VersionNumber implements Comparable<VersionNumber> {
         return canonical.hashCode();
     }
 
+    /**
+     * Checks if this version is older than the given version.
+     *
+     * @param rhs the version to compare against
+     * @return true if this version is older
+     */
     public boolean isOlderThan(VersionNumber rhs) {
         return compareTo(rhs) < 0;
     }
 
+    /**
+     * Checks if this version is newer than the given version.
+     *
+     * @param rhs the version to compare against
+     * @return true if this version is newer
+     */
     public boolean isNewerThan(VersionNumber rhs) {
         return compareTo(rhs) > 0;
     }
 
+    /**
+     * Checks if this version is older than or equal to the given version.
+     *
+     * @param rhs the version to compare against
+     * @return true if this version is older or equal
+     */
     public boolean isOlderThanOrEqualTo(VersionNumber rhs) {
         return compareTo(rhs) <= 0;
     }
 
+    /**
+     * Checks if this version is newer than or equal to the given version.
+     *
+     * @param rhs the version to compare against
+     * @return true if this version is newer or equal
+     */
     public boolean isNewerThanOrEqualTo(VersionNumber rhs) {
         return compareTo(rhs) >= 0;
     }
@@ -591,5 +620,8 @@ public class VersionNumber implements Comparable<VersionNumber> {
         return (idx - i >= 0) ? -1 : ((IntegerItem) item).value.intValue();
     }
 
+    /**
+     * Comparator that sorts version numbers in descending order.
+     */
     public static final Comparator<VersionNumber> DESCENDING = Comparator.reverseOrder();
 }

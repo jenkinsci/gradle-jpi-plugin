@@ -4,12 +4,23 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.StringJoiner;
 
+/**
+ * Contains license data extracted from a POM file.
+ */
 public class LicenseData {
     private final String name;
     private final String description;
     private final String url;
     private final Set<License> licenses;
 
+    /**
+     * Creates new license data.
+     *
+     * @param name the project name
+     * @param description the project description
+     * @param url the project URL
+     * @param licenses the set of licenses
+     */
     public LicenseData(String name, String description, String url, Set<License> licenses) {
         this.name = name;
         this.description = description;
@@ -17,18 +28,22 @@ public class LicenseData {
         this.licenses = licenses;
     }
 
+    /** @return the project name */
     public String getName() {
         return name;
     }
 
+    /** @return the project description */
     public String getDescription() {
         return description;
     }
 
+    /** @return the project URL */
     public String getUrl() {
         return url;
     }
 
+    /** @return the set of licenses */
     public Set<License> getLicenses() {
         return licenses;
     }

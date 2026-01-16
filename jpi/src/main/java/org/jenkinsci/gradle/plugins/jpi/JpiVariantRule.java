@@ -33,14 +33,21 @@ import java.util.function.Predicate;
 
 import static org.gradle.api.attributes.LibraryElements.LIBRARY_ELEMENTS_ATTRIBUTE;
 
+/**
+ * Component metadata rule that adds JPI variants to Jenkins plugin dependencies.
+ */
 @CacheableRule
 public abstract class JpiVariantRule implements ComponentMetadataRule {
     private static final Logger LOGGER = LoggerFactory.getLogger(JpiVariantRule.class);
+    /** Attribute to mark empty JPI variants. */
     public static final Attribute<Boolean> EMPTY_VARIANT = Attribute.of("empty-jpi", Boolean.class);
     private static final Attribute<String> DESUGARED_LIBRARY_ELEMENTS_ATTRIBUTE = Attribute.of(
-            LIBRARY_ELEMENTS_ATTRIBUTE.getName(), 
+            LIBRARY_ELEMENTS_ATTRIBUTE.getName(),
             String.class);
 
+    /**
+     * @return the object factory
+     */
     @Inject
     public abstract ObjectFactory getObjects();
 

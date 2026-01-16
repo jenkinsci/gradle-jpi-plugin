@@ -10,6 +10,9 @@ import org.gradle.api.tasks.TaskContainer;
 import org.jenkinsci.gradle.plugins.jpi.internal.JpiExtensionBridge;
 import shaded.hudson.util.VersionNumber;
 
+/**
+ * Plugin that applies legacy workarounds for older Jenkins versions.
+ */
 public class LegacyWorkaroundsPlugin implements Plugin<Project> {
     @Override
     public void apply(Project project) {

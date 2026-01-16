@@ -16,20 +16,28 @@ import java.io.File;
 import java.util.HashSet;
 import java.util.Set;
 
+/**
+ * Task that generates Java classes from Messages.properties files.
+ */
 public abstract class LocalizationTask extends SourceTask {
+    /** Creates a new localization task. */
     public LocalizationTask() {
         include("**/Messages.properties");
     }
 
+    /** @return the classpath containing the localizer tool */
     @InputFiles
     abstract public ConfigurableFileCollection getLocalizerClasspath();
 
+    /** @return the source root directories */
     @InputFiles
     public abstract SetProperty<File> getSourceRoots();
 
+    /** @return the output directory for generated files */
     @OutputDirectory
     public abstract Property<File> getOutputDir();
 
+    /** @return the worker executor service */
     @Inject
     abstract public WorkerExecutor getWorkerExecutor();
 

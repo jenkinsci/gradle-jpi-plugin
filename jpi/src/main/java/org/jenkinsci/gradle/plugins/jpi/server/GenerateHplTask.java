@@ -23,32 +23,60 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.jar.Manifest;
 
+/**
+ * Generates an HPL (Hudson Plugin Link) file for the Jenkins server.
+ */
 public abstract class GenerateHplTask extends DefaultTask {
+    /** The name of this task. */
     public static final String TASK_NAME = "generateJenkinsServerHpl";
-    
+
+    /**
+     * @return the file name for the generated HPL file
+     */
     @Input
     public abstract Property<String> getFileName();
 
 
-    // this approach taken from
-    // https://github.com/gradle/gradle/issues/12351#issuecomment-591408300
+    /**
+     * Returns the directory where the HPL file will be generated.
+     * <p>
+     * This approach taken from
+     * https://github.com/gradle/gradle/issues/12351#issuecomment-591408300
+     *
+     * @return the HPL directory
+     */
     @Internal
     public abstract DirectoryProperty getHplDir();
 
+    /**
+     * @return the absolute path of the HPL directory
+     */
     @Input
     public String getHplDirPath() {
         return getHplDir().getAsFile().get().getAbsolutePath();
     }
-    
+
+    /**
+     * @return the resource path for the plugin
+     */
     @Input
     public abstract Property<File> getResourcePath();
-    
+
+    /**
+     * @return the library files to include in the HPL
+     */
     @Classpath
     public abstract ConfigurableFileCollection getLibraries();
-    
+
+    /**
+     * @return the upstream manifest file to read from
+     */
     @InputFiles
     public abstract RegularFileProperty getUpstreamManifest();
-    
+
+    /**
+     * @return the generated HPL file
+     */
     @OutputFile
     public Provider<RegularFile> getHpl() {
         return getFileName().flatMap(name -> getHplDir().map(d -> d.file(name)));
