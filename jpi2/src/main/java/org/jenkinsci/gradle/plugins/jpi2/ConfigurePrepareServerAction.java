@@ -66,15 +66,15 @@ class ConfigurePrepareServerAction implements Action<Sync> {
                                 .filter(c -> c.getPath().equals(p.getProjectPath()))
                                 .findFirst();
 
-                        assert dependencyProject.isPresent();
-
-                        var jpiTask = dependencyProject.get().getTasks().findByName("jpi");
-                        if (jpiTask != null) {
-                            sync.from(jpiTask)
-                                    .rename(new DropVersionTransformer(
-                                            it.getModuleVersion().getId().getName(),
-                                            it.getModuleVersion().getId().getVersion()
-                                    ));
+                        if (dependencyProject.isPresent()) {
+                            var jpiTask = dependencyProject.get().getTasks().findByName("jpi");
+                            if (jpiTask != null) {
+                                sync.from(jpiTask)
+                                        .rename(new DropVersionTransformer(
+                                                it.getModuleVersion().getId().getName(),
+                                                it.getModuleVersion().getId().getVersion()
+                                        ));
+                            }
                         }
                     }
                 });
