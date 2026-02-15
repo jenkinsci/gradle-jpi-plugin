@@ -1,0 +1,143 @@
+package org.jenkinsci.gradle.plugins.jpi2.generated;
+
+import org.junit.jupiter.api.Test;
+
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
+import java.util.ArrayList;
+import java.util.Base64;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
+
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
+
+public class SynthesizedTestServerTest {
+    private static final List<String> FAILURE_MESSAGES = List.of(
+            "Failed Loading plugin",
+            "Jenkins stopped",
+            "java.io.IOException: Failed to load"
+    );
+
+    @Test
+    void serverStarts() throws Exception {
+        String encodedSystemProperties = System.getProperty("testServer.systemProperties", "");
+        List<String> systemProperties = List.of(encodedSystemProperties.split(","))
+                .stream()
+                .filter(it -> !it.isEmpty())
+                .map(it -> new String(Base64.getDecoder().decode(it), StandardCharsets.UTF_8))
+                .toList();
+
+        String encodedJvmArgs = System.getProperty("testServer.jvmArgs", "");
+        List<String> jvmArgs = List.of(encodedJvmArgs.split(","))
+                .stream()
+                .filter(it -> !it.isEmpty())
+                .map(it -> new String(Base64.getDecoder().decode(it), StandardCharsets.UTF_8))
+                .toList();
+        String encodedServerClasspathNames = System.getProperty("testServer.serverClasspathNames", "");
+        Set<String> requiredClasspathNames = new HashSet<>(List.of(encodedServerClasspathNames.split(","))
+                .stream()
+                .filter(it -> !it.isEmpty())
+                .map(it -> new String(Base64.getDecoder().decode(it), StandardCharsets.UTF_8))
+                .toList());
+        assertFalse(requiredClasspathNames.isEmpty(), "testServer.serverClasspathNames cannot be empty");
+        String runtimeClasspath = System.getProperty("java.class.path", "");
+        List<String> runtimeClasspathEntries = Arrays.asList(runtimeClasspath.split(java.util.regex.Pattern.quote(File.pathSeparator)));
+        List<String> serverClasspathEntries = runtimeClasspathEntries.stream()
+                .filter(it -> requiredClasspathNames.contains(new File(it).getName()))
+                .toList();
+        assertFalse(serverClasspathEntries.isEmpty(), "Unable to resolve server classpath entries in test JVM classpath");
+        String serverClasspath = String.join(File.pathSeparator, serverClasspathEntries);
+
+        int timeoutSeconds = Integer.parseInt(System.getProperty("testServer.timeoutSeconds", "120"));
+        String projectDirPath = System.getProperty("testServer.projectDir", System.getProperty("user.dir", "."));
+        String javaHome = System.getProperty("java.home");
+        int port = Integer.parseInt(System.getProperty("testServer.port", "8080"));
+        assertNotNull(javaHome, "java.home must be set");
+
+        List<String> commandLine = new ArrayList<>();
+        commandLine.add(new File(javaHome, "bin/java").getAbsolutePath());
+        commandLine.addAll(jvmArgs);
+        commandLine.addAll(systemProperties.stream().map(it -> "-D" + it).toList());
+        commandLine.add("-cp");
+        commandLine.add(serverClasspath);
+        commandLine.add("executable.Main");
+        commandLine.add("--webroot=build/jenkins/war");
+        commandLine.add("--pluginroot=build/jenkins/plugins");
+        commandLine.add("--extractedFilesFolder=build/jenkins/extracted");
+        commandLine.add("--commonLibFolder=work/lib");
+        commandLine.add("--httpPort=" + port);
+        assertFalse(commandLine.isEmpty(), "testServer command line cannot be empty");
+        System.err.println("Command: " + commandLine);
+
+        ProcessBuilder processBuilder = new ProcessBuilder(commandLine)
+                .directory(new File(projectDirPath))
+                .redirectErrorStream(true);
+        processBuilder.environment().put("JENKINS_HOME", new File(projectDirPath, "work").getAbsolutePath());
+        Process process = processBuilder.start();
+
+        AtomicBoolean timedOut = new AtomicBoolean(false);
+        Thread timerThread = new Thread(() -> {
+            try {
+                Thread.sleep(timeoutSeconds * 1000L);
+                timedOut.set(true);
+                System.err.println("Timeout reached, terminating Jenkins server");
+                process.destroy();
+            } catch (InterruptedException ignored) {
+                // Ignore
+            }
+        }, "testServer-timeout");
+        timerThread.setDaemon(true);
+        timerThread.start();
+
+        boolean foundSuccess = false;
+        try (var stdoutReader = new BufferedReader(new InputStreamReader(process.getInputStream()))) {
+            String stdout;
+            while ((stdout = stdoutReader.readLine()) != null) {
+                System.err.println("    " + stdout);
+                if (stdout.contains("Jenkins is fully up and running")) {
+                    process.destroy();
+                    foundSuccess = true;
+                    if (!process.waitFor(30, TimeUnit.SECONDS)) {
+                        process.destroyForcibly();
+                        process.waitFor(30, TimeUnit.SECONDS);
+                    }
+                    break;
+                }
+                if (FAILURE_MESSAGES.stream().anyMatch(stdout::contains)) {
+                    process.destroy();
+                    if (!process.waitFor(30, TimeUnit.SECONDS)) {
+                        process.destroyForcibly();
+                        process.waitFor(30, TimeUnit.SECONDS);
+                    }
+                    fail("Jenkins failed to start: " + stdout);
+                }
+            }
+        } finally {
+            timerThread.interrupt();
+        }
+
+        if (timedOut.get()) {
+            fail("Timed out after " + timeoutSeconds + "s waiting for Jenkins startup");
+        }
+
+        if (!process.waitFor(30, TimeUnit.SECONDS)) {
+            process.destroyForcibly();
+            process.waitFor(30, TimeUnit.SECONDS);
+        }
+        int exitCode = process.exitValue();
+        if (exitCode != 0 && !foundSuccess) {
+            fail("Jenkins failed to start with exit code " + exitCode);
+        }
+
+        assertTrue(foundSuccess, "Jenkins never reported successful startup");
+    }
+}

@@ -21,10 +21,13 @@ import org.gradle.api.tasks.SourceSetContainer;
 import org.gradle.api.tasks.Sync;
 import org.gradle.api.tasks.TaskProvider;
 import org.gradle.api.tasks.bundling.Jar;
+import org.gradle.api.tasks.testing.Test;
 import org.gradle.api.tasks.bundling.War;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.io.File;
 
 import static org.jenkinsci.gradle.plugins.jpi2.ArtifactType.ARTIFACT_TYPE_ATTRIBUTE;
 
@@ -86,8 +89,26 @@ public class V2JpiPlugin implements Plugin<Project> {
 
         JavaPluginExtension ext = project.getExtensions().getByType(JavaPluginExtension.class);
         SourceSetContainer sourceSets = ext.getSourceSets();
-        SourceSet main = sourceSets.getByName(SourceSet.TEST_SOURCE_SET_NAME);
-        main.getResources().getSrcDirs().add(project.file("src/main/webapp"));
+        SourceSet test = sourceSets.getByName(SourceSet.TEST_SOURCE_SET_NAME);
+        test.getResources().getSrcDirs().add(project.file("src/main/webapp"));
+        SourceSet testServerSourceSet = sourceSets.create("testServer");
+        testServerSourceSet.getJava().srcDir(project.getLayout().getBuildDirectory().dir("generated/testServer/java"));
+        var testServerCompileClasspath = configurations.getByName(testServerSourceSet.getCompileClasspathConfigurationName());
+        testServerCompileClasspath.shouldResolveConsistentlyWith(jenkinsCore);
+        var testServerRuntimeClasspath = configurations.getByName(testServerSourceSet.getRuntimeClasspathConfigurationName());
+        testServerRuntimeClasspath.shouldResolveConsistentlyWith(jenkinsCore);
+        testServerRuntimeClasspath.getAttributes().attribute(
+                ARTIFACT_TYPE_ATTRIBUTE,
+                project.getObjects().named(ArtifactType.class, ArtifactType.PLUGIN_JAR)
+        );
+        var testServerImplementation = configurations.getByName(testServerSourceSet.getImplementationConfigurationName());
+        testServerImplementation.extendsFrom(configurations.getByName("testImplementation"));
+        var testServerCompileOnly = configurations.getByName(testServerSourceSet.getCompileOnlyConfigurationName());
+        testServerCompileOnly.extendsFrom(configurations.getByName("testCompileOnly"));
+        var testServerRuntimeOnly = configurations.getByName(testServerSourceSet.getRuntimeOnlyConfigurationName());
+        testServerRuntimeOnly.extendsFrom(configurations.getByName("testRuntimeOnly"));
+        testServerRuntimeOnly.extendsFrom(serverTaskClasspath);
+
 
         var jpiTask = project.getTasks().register(JPI_TASK, War.class, new ConfigureJpiAction(project, defaultRuntime, jenkinsCore, jenkinsVersion));
         project.getTasks().named("jar", Jar.class).configure(new Action<>() {
@@ -148,7 +169,23 @@ public class V2JpiPlugin implements Plugin<Project> {
         var portAllocationService = buildServices.registerIfAbsent("portAllocation", PortAllocationService.class, spec -> {
         });
 
-        project.getTasks().register("testServer", new ConfigureTestServerAction(project, portAllocationService.get()));
+        File generatedTestSource = project.getLayout().getBuildDirectory()
+                .file("generated/testServer/java/org/jenkinsci/gradle/plugins/jpi2/generated/SynthesizedTestServerTest.java")
+                .get().getAsFile();
+        var synthesizeTestServerSource = project.getTasks()
+                .register("synthesizeTestServerSource", new ConfigureSynthesizeTestServerSourceAction(generatedTestSource));
+        project.getTasks().named(testServerSourceSet.getCompileJavaTaskName(), new Action<>() {
+            @Override
+            public void execute(@NotNull Task task) {
+                task.dependsOn(synthesizeTestServerSource);
+            }
+        });
+
+        project.getTasks().register(
+                "testServer",
+                Test.class,
+                new ConfigureTestServerAction(project, portAllocationService.get(), testServerSourceSet, prepareServer, serverTask)
+        );
     }
 
     private static void configurePublishing(@NotNull Project project, TaskProvider<?> jpiTask, Configuration runtimeClasspath) {

@@ -58,6 +58,6 @@ class SimpleBuildIntegrationTest extends V2IntegrationTestBase {
         GradleRunner gradleRunner = ith.gradleRunner();
 
         // when
-        testServerStarts(gradleRunner, "server");
+        testServerStarts(gradleRunner, "testServer");
     }
 }

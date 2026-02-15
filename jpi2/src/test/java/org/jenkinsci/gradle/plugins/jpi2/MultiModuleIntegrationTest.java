@@ -86,7 +86,7 @@ class MultiModuleIntegrationTest extends V2IntegrationTestBase {
         GradleRunner gradleRunner = ith.gradleRunner();
 
         // when
-        testServerStarts(gradleRunner, ":plugin-four:server");
+        testServerStarts(gradleRunner, ":plugin-four:testServer");
 
         // then
         var pluginThreeJpi = ith.inProjectDir("plugin-four/work/plugins/plugin-three.jpi");
