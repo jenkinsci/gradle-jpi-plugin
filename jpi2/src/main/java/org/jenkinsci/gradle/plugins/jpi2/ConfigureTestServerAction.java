@@ -112,6 +112,10 @@ class ConfigureTestServerAction implements Action<Task> {
 
         List<String> commandLine = new ArrayList<>();
         commandLine.add(gradleExecutable);
+        startParameter.getAllInitScripts().forEach(initScript -> {
+            commandLine.add("--init-script");
+            commandLine.add(initScript.getAbsolutePath());
+        });
 
         commandLine.addAll(startParameter.getIncludedBuilds().stream()
                 .flatMap(it -> Stream.of("--include-build", it.getPath()))

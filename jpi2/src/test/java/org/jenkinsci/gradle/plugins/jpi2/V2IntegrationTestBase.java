@@ -10,6 +10,7 @@ import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.condition.DisabledOnOs;
 import org.junit.jupiter.api.condition.OS;
+import org.junit.jupiter.api.io.CleanupMode;
 import org.junit.jupiter.api.io.TempDir;
 
 import java.io.File;
@@ -28,7 +29,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 @DisabledOnOs(value = OS.WINDOWS, disabledReason = "TempDir doesn't appear to work correctly on Windows")
 abstract class V2IntegrationTestBase {
 
-    @TempDir
+    @TempDir(cleanup = CleanupMode.NEVER)
     File tempDir;
 
     @NotNull
