@@ -12,6 +12,8 @@ description = "V2 Gradle plugin for building Jenkins plugins with Gradle 8+"
 dependencies {
     implementation(gradleApi())
     compileOnly("org.jetbrains:annotations:24.0.1")
+    compileOnly(libs.accessmodifier.checker)
+    compileOnly("org.apache.maven:maven-plugin-api:2.0.1")
 
     // Test dependencies
     testImplementation(testFixtures(project(":core")))
