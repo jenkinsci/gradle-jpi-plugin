@@ -60,6 +60,6 @@ class OssLibraryDependencyIntegrationTest extends V2IntegrationTestBase {
         GradleRunner gradleRunner = ith.gradleRunner();
 
         // when
-        testServerStarts(gradleRunner, "server");
+        testServerStarts(gradleRunner, "testServer");
     }
 }

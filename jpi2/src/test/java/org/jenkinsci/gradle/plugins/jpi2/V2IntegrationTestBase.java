@@ -2,7 +2,6 @@ package org.jenkinsci.gradle.plugins.jpi2;
 
 import com.google.common.io.Files;
 import org.apache.commons.io.FileUtils;
-import org.awaitility.Awaitility;
 import org.gradle.testkit.runner.BuildResult;
 import org.gradle.testkit.runner.GradleRunner;
 import org.jenkinsci.gradle.plugins.jpi.IntegrationTestHelper;
@@ -14,13 +13,9 @@ import org.junit.jupiter.api.io.TempDir;
 
 import java.io.File;
 import java.io.IOException;
-import java.io.StringWriter;
-import java.io.Writer;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
-import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicReference;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -95,70 +90,9 @@ abstract class V2IntegrationTestBase {
                 """.getBytes(StandardCharsets.UTF_8), ith.inProjectDir("settings.gradle.kts"));
     }
 
-    static class TapWriter extends Writer {
-        private final Writer writer1;
-        private final Writer writer2;
-
-        public TapWriter(Writer writer1, Writer writer2) {
-            this.writer1 = writer1;
-            this.writer2 = writer2;
-        }
-
-        @Override
-        public void write(@NotNull char[] bytes, int off, int len) throws IOException {
-            writer1.write(bytes, off, len);
-            writer2.write(bytes, off, len);
-        }
-
-        @Override
-        public void flush() throws IOException {
-            writer1.flush();
-            writer2.flush();
-        }
-
-        @Override
-        public void close() throws IOException {
-            writer1.close();
-            writer2.close();
-        }
-    }
-
-    static void testServerStarts(GradleRunner gradleRunner, String... task) throws InterruptedException {
-        var stdout1 = new StringWriter();
-        var stdout2 = new StringWriter();
-        var stdout = new TapWriter(stdout1, stdout2);
-        var stderr1 = new StringWriter();
-        var stderr2 = new StringWriter();
-        var stderr = new TapWriter(stderr1, stderr2);
-        var serverThread = Executors.newSingleThreadExecutor();
-        final AtomicReference<BuildResult> buildResult = new AtomicReference<>();
-        serverThread.submit(() -> buildResult.set(gradleRunner.withArguments(task)
-                .forwardStdError(stderr)
-                .forwardStdOutput(stdout)
-                .build()));
-        Awaitility.await()
-                .atMost(3, TimeUnit.MINUTES)
-                .pollInterval(5, TimeUnit.SECONDS)
-                .conditionEvaluationListener(condition -> {
-                    if (condition.getRemainingTimeInMS() <= 0 || condition.isSatisfied()) {
-                        serverThread.shutdownNow();
-                    }
-                })
-                .until(() -> {
-                    System.err.print(stderr1);
-                    stderr1.getBuffer().setLength(0);
-                    System.err.print(stdout1);
-                    stdout1.getBuffer().setLength(0);
-                    return stderr2.toString().contains("Jenkins is fully up and running")
-                           || stderr2.toString().contains("BUILD FAILED")
-                           || stderr2.toString().contains("BUILD SUCCESSFUL");
-                });
-
-        serverThread.shutdown();
-        boolean terminatedSafely = serverThread.awaitTermination(1, TimeUnit.MINUTES);
-        assertThat(terminatedSafely).isTrue();
-        assertThat(buildResult.get()).isNull();
-        assertThat(stderr2.toString()).contains("Jenkins is fully up and running");
+    static void testServerStarts(GradleRunner gradleRunner, String... task) {
+        BuildResult buildResult = gradleRunner.withArguments(task).build();
+        assertThat(buildResult.getOutput()).contains("Jenkins is fully up and running");
     }
 
     static void configureSimpleBuild(IntegrationTestHelper ith) throws IOException {

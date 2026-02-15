@@ -1,136 +1,89 @@
 package org.jenkinsci.gradle.plugins.jpi2;
 
 import org.gradle.api.Action;
-import org.gradle.api.GradleException;
 import org.gradle.api.Project;
 import org.gradle.api.Task;
-import org.gradle.api.invocation.Gradle;
+import org.gradle.api.tasks.SourceSet;
+import org.gradle.api.tasks.TaskProvider;
+import org.gradle.api.tasks.JavaExec;
+import org.gradle.api.tasks.testing.Test;
 import org.jetbrains.annotations.NotNull;
 
-import java.io.BufferedReader;
 import java.io.File;
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.util.ArrayList;
+import java.nio.charset.StandardCharsets;
+import java.util.Base64;
 import java.util.List;
-import java.util.stream.Stream;
+import java.util.Map;
+import java.util.stream.StreamSupport;
+import java.util.stream.Collectors;
 
 @SuppressWarnings({
         "Convert2Lambda", // Gradle doesn't like lambdas
 })
-class ConfigureTestServerAction implements Action<Task> {
-
-    private static final List<String> FAILURE_MESSAGES = List.of(
-            "Failed Loading plugin",
-            "Jenkins stopped",
-            "java.io.IOException: Failed to load"
-    );
+class ConfigureTestServerAction implements Action<Test> {
 
     private final Project project;
     private final PortAllocationService portAllocationService;
+    private final SourceSet testServerSourceSet;
+    private final TaskProvider<?> prepareServerTask;
+    private final TaskProvider<JavaExec> serverTask;
 
-    public ConfigureTestServerAction(Project project, PortAllocationService portAllocationService) {
+    public ConfigureTestServerAction(
+            Project project,
+            PortAllocationService portAllocationService,
+            SourceSet testServerSourceSet,
+            TaskProvider<?> prepareServerTask,
+            TaskProvider<JavaExec> serverTask
+    ) {
         this.project = project;
         this.portAllocationService = portAllocationService;
+        this.testServerSourceSet = testServerSourceSet;
+        this.prepareServerTask = prepareServerTask;
+        this.serverTask = serverTask;
     }
 
 
     @Override
-    public void execute(@NotNull Task task) {
+    public void execute(@NotNull Test task) {
         task.setGroup("verification");
-        task.setDescription("Launch Jenkins server and terminate after success or first error");
-        task.doLast(new Action<>() {
-
+        task.setDescription("Launch Jenkins server via a synthesized JUnit 5 test");
+        task.useJUnitPlatform();
+        task.setTestClassesDirs(testServerSourceSet.getOutput().getClassesDirs());
+        task.setClasspath(testServerSourceSet.getRuntimeClasspath());
+        task.getFilter().includeTestsMatching("org.jenkinsci.gradle.plugins.jpi2.generated.SynthesizedTestServerTest");
+        task.getOutputs().upToDateWhen(element -> false);
+        task.getTestLogging().setShowStandardStreams(true);
+        task.dependsOn(prepareServerTask);
+        task.getInputs().files(prepareServerTask);
+        task.doFirst(new Action<>() {
             @Override
-            public void execute(@NotNull Task task) {
-                List<String> commandLine = getCommandLine();
-                var timeoutSystemProperty = System.getProperty("testServer.timeoutSeconds", "120");
-                var timeout = Integer.parseInt(timeoutSystemProperty);
-
-                try {
-                    var process = launchProcess(commandLine);
-
-                    var timerThread = new Thread(() -> {
-                        try {
-                            Thread.sleep(timeout * 1000L);
-                        } catch (InterruptedException e) {
-                            // Ignore
-                        }
-                        System.err.println("Timeout reached, terminating Jenkins server");
-                        process.destroy();
-                    });
-
-                    timerThread.start();
-
-                    BufferedReader stdoutReader = new BufferedReader(new InputStreamReader(process.getInputStream()));
-                    boolean foundSuccess = isProcessSuccessful(stdoutReader, process);
-
-                    if (process.waitFor() != 0) {
-                        if (!foundSuccess) {
-                            throw new GradleException("Jenkins failed to start with exit code " + process.exitValue());
-                        }
-                    }
-                } catch (IOException e) {
-                    throw new GradleException("IO Exception", e);
-                } catch (InterruptedException e) {
-                    throw new GradleException("Process interrupted", e);
-                }
-
+            public void execute(@NotNull Task ignored) {
+                task.systemProperty("testServer.projectDir", project.getProjectDir().getAbsolutePath());
+                task.systemProperty("testServer.port", String.valueOf(portAllocationService.findAndReserveFreePort()));
+                task.systemProperty("testServer.timeoutSeconds", System.getProperty("testServer.timeoutSeconds", "120"));
+                task.systemProperty("testServer.jvmArgs", encodeStrings(serverTask.get().getJvmArgs() == null ? List.of() : serverTask.get().getJvmArgs()));
+                task.systemProperty("testServer.systemProperties", encodeSystemProperties(serverTask.get().getSystemProperties()));
+                task.systemProperty("testServer.serverClasspathNames", encodeStrings(
+                        StreamSupport.stream(serverTask.get().getClasspath().spliterator(), false)
+                                .map(File::getName)
+                                .toList()
+                ));
             }
         });
     }
 
     @NotNull
-    private Process launchProcess(List<String> commandLine) throws IOException {
-        return new ProcessBuilder(commandLine).directory(project.getRootDir()).redirectErrorStream(true).start();
-    }
-
-    private static boolean isProcessSuccessful(BufferedReader stdoutReader, Process process) throws IOException, InterruptedException {
-        String stdout;
-
-        while ((stdout = stdoutReader.readLine()) != null) {
-            System.err.println("    " + stdout);
-            if (stdout.contains("Jenkins is fully up and running")) {
-                process.destroy();
-                return true;
-            }
-            if (FAILURE_MESSAGES.stream().anyMatch(stdout::contains)) {
-                process.destroy();
-                process.waitFor();
-                throw new GradleException("Jenkins failed to start: " + stdout);
-            }
-        }
-        return false;
+    private static String encodeSystemProperties(@NotNull Map<String, ?> systemProperties) {
+        return systemProperties.entrySet().stream()
+                .map(it -> it.getKey() + "=" + String.valueOf(it.getValue()))
+                .map(it -> Base64.getEncoder().encodeToString(it.getBytes(StandardCharsets.UTF_8)))
+                .collect(Collectors.joining(","));
     }
 
     @NotNull
-    private List<String> getCommandLine() {
-        Gradle gradle = project.getGradle();
-        var startParameter = gradle.getStartParameter();
-        var gradleHome = gradle.getGradleHomeDir();
-        var gradleExecutable = gradleHome != null ? new File(gradleHome, "bin/gradle").getAbsolutePath() : "gradle";
-
-        List<String> commandLine = new ArrayList<>();
-        commandLine.add(gradleExecutable);
-
-        commandLine.addAll(startParameter.getIncludedBuilds().stream()
-                .flatMap(it -> Stream.of("--include-build", it.getPath()))
-                .toList());
-        if (startParameter.isOffline()) commandLine.add("--offline");
-        if (startParameter.isBuildCacheEnabled()) commandLine.add("--build-cache");
-        if (startParameter.isRefreshDependencies()) commandLine.add("--refresh-dependencies");
-        if (startParameter.isContinueOnFailure()) commandLine.add("--continue");
-        if (startParameter.isParallelProjectExecutionEnabled()) commandLine.add("--parallel");
-        if (startParameter.isProfile()) commandLine.add("--profile");
-        if (startParameter.isRerunTasks()) commandLine.add("--rerun-tasks");
-        if (startParameter.isDryRun()) commandLine.add("--dry-run");
-
-        startParameter.getSystemPropertiesArgs().forEach((k, v) -> commandLine.add("-D" + k + "=" + v));
-        startParameter.getProjectProperties().forEach((k, v) -> commandLine.add("-P" + k + "=" + v));
-
-        commandLine.add(project == project.getRootProject() ? ":server" : project.getPath() + ":server");
-        commandLine.add("-Dserver.port=" + portAllocationService.findAndReserveFreePort());
-        System.err.println("Command: " + commandLine);
-        return commandLine;
+    private static String encodeStrings(@NotNull List<String> strings) {
+        return strings.stream()
+                .map(it -> Base64.getEncoder().encodeToString(it.getBytes(StandardCharsets.UTF_8)))
+                .collect(Collectors.joining(","));
     }
 }

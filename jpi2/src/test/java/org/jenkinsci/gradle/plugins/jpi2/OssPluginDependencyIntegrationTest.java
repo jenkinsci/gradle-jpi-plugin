@@ -60,7 +60,7 @@ class OssPluginDependencyIntegrationTest extends V2IntegrationTestBase {
         GradleRunner gradleRunner = ith.gradleRunner();
 
         // when
-        testServerStarts(gradleRunner, "server");
+        testServerStarts(gradleRunner, "testServer");
 
         // the selected plugin
         var pluginsDir = ith.inProjectDir("work/plugins");
