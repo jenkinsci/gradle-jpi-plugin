@@ -1,10 +1,12 @@
 package org.jenkinsci.gradle.plugins.jpi.localization
 
+import com.gradle.develocity.testing.annotations.LocalOnly
 import org.gradle.testkit.runner.TaskOutcome
 import org.jenkinsci.gradle.plugins.jpi.IntegrationSpec
 import org.jenkinsci.gradle.plugins.jpi.TestSupport
 import spock.lang.Unroll
 
+@LocalOnly
 class LocalizationTaskIntegrationSpec extends IntegrationSpec {
     static final String TASK_NAME = 'localizeMessages'
 

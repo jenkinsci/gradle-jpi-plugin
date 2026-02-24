@@ -1,5 +1,6 @@
 package org.jenkinsci.gradle.plugins.manifest
 
+import com.gradle.develocity.testing.annotations.LocalOnly
 import com.squareup.javapoet.AnnotationSpec
 import com.squareup.javapoet.JavaFile
 import com.squareup.javapoet.TypeSpec
@@ -17,6 +18,7 @@ import java.util.jar.Manifest
 
 import static java.util.jar.Attributes.Name.MANIFEST_VERSION
 
+@LocalOnly
 class GenerateSupportDynamicLoadingManifestTaskIntegrationSpec extends IntegrationSpec {
     private final String projectName = TestDataGenerator.generateName()
     private final String taskPath = ':' + GenerateSupportDynamicLoadingManifestTask.NAME
