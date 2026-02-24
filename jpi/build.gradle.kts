@@ -6,7 +6,7 @@ import java.nio.file.StandardOpenOption
 
 buildscript {
     dependencies {
-        classpath("com.squareup.okhttp3:okhttp:4.10.0")
+        classpath(libs.okhttp)
     }
 }
 
@@ -38,18 +38,18 @@ dependencies {
     compileOnly(libs.junit4) {
         because("used for GenerateTest")
     }
-    compileOnly("org.apache.maven:maven-plugin-api:3.9.9")
+    compileOnly(libs.maven.plugin.api)
 
     // JPI-specific dependencies
     compileOnly(libs.localizer.maven)
-    implementation("com.github.spotbugs.snom:spotbugs-gradle-plugin:5.0.13")
+    implementation(libs.spotbugs.gradle)
     implementation(libs.commons.io)
     implementation(localGroovy())
     implementation(libs.jgit)
 
     // Test dependencies
     testImplementation(testFixtures(project(":core")))
-    testImplementation("org.spockframework:spock-core:2.1-groovy-3.0")
+    testImplementation(libs.spock.core)
     testImplementation(libs.xmlunit)
     testImplementation(libs.commons.text)
     testImplementation(libs.accessmodifier.checker)
@@ -61,7 +61,7 @@ dependencies {
     testImplementation(libs.junit5.api)
     testImplementation(libs.assertj.core)
     testImplementation(libs.awaitility)
-    testImplementation("org.apache.maven:maven-model:3.9.9")
+    testImplementation(libs.maven.model)
     testRuntimeOnly(libs.junit5.jupiter)
     testRuntimeOnly(libs.junit5.vintage)
     testCompileOnly(libs.junit4) {

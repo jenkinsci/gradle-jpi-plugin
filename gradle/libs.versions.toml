@@ -4,14 +4,20 @@ assertj = "3.21.0"
 awaitility = "4.3.0"
 commons-io = "2.15.1"
 commons-text = "1.10.0"
+guava = "31.1-jre"
 javapoet = "1.13.0"
 jenkins = "2.401.3"
 jenkins-test-harness = "2112.ve584e0edc63b_"
+jetbrains-annotations = "24.0.1"
 jgit = "5.13.1.202206130422-r"
 junit4 = "4.13"
 junit5 = "5.12.2"
 localizer = "1.31"
+maven = "3.9.9"
+okhttp = "4.10.0"
 sezpoz = "1.13"
+spock = "2.1-groovy-3.0"
+spotbugs-gradle = "5.0.13"
 xmlunit = "2.8.3"
 
 [libraries]
@@ -20,9 +26,11 @@ assertj-core = { module = "org.assertj:assertj-core", version.ref = "assertj" }
 awaitility = { module = "org.awaitility:awaitility", version.ref = "awaitility" }
 commons-io = { module = "commons-io:commons-io", version.ref = "commons-io" }
 commons-text = { module = "org.apache.commons:commons-text", version.ref = "commons-text" }
+guava = { module = "com.google.guava:guava", version.ref = "guava" }
 javapoet = { module = "com.squareup:javapoet", version.ref = "javapoet" }
 jenkins-core = { module = "org.jenkins-ci.main:jenkins-core", version.ref = "jenkins" }
 jenkins-test-harness = { module = "org.jenkins-ci.main:jenkins-test-harness", version.ref = "jenkins-test-harness" }
+jetbrains-annotations = { module = "org.jetbrains:annotations", version.ref = "jetbrains-annotations" }
 jgit = { module = "org.eclipse.jgit:org.eclipse.jgit", version.ref = "jgit" }
 junit4 = { module = "junit:junit", version.ref = "junit4" }
 junit5-api = { module = "org.junit.jupiter:junit-jupiter-api", version.ref = "junit5" }
@@ -30,7 +38,12 @@ junit5-bom = { module = "org.junit:junit-bom", version.ref = "junit5" }
 junit5-jupiter = { module = "org.junit.jupiter:junit-jupiter-engine", version.ref = "junit5" }
 junit5-vintage = { module = "org.junit.vintage:junit-vintage-engine", version.ref = "junit5" }
 localizer-maven = { module = "org.jvnet.localizer:localizer-maven-plugin", version.ref = "localizer" }
+maven-model = { module = "org.apache.maven:maven-model", version.ref = "maven" }
+maven-plugin-api = { module = "org.apache.maven:maven-plugin-api", version.ref = "maven" }
+okhttp = { module = "com.squareup.okhttp3:okhttp", version.ref = "okhttp" }
 sezpoz = { module = "net.java.sezpoz:sezpoz", version.ref = "sezpoz" }
+spock-core = { module = "org.spockframework:spock-core", version.ref = "spock" }
+spotbugs-gradle = { module = "com.github.spotbugs.snom:spotbugs-gradle-plugin", version.ref = "spotbugs-gradle" }
 xmlunit = { module = "org.xmlunit:xmlunit-core", version.ref = "xmlunit" }
 
 [plugins]
