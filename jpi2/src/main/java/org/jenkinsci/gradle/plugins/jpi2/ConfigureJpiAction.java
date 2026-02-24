@@ -34,19 +34,19 @@ class ConfigureJpiAction implements Action<War> {
     private final Project project;
     private final Configuration configuration;
     private final Configuration jenkinsCore;
-    private final String jenkinsVersion;
+    private final JenkinsPluginExtension extension;
 
-    public ConfigureJpiAction(Project project, Configuration configuration, Configuration jenkinsCore, String jenkinsVersion) {
+    public ConfigureJpiAction(Project project, Configuration configuration, Configuration jenkinsCore, JenkinsPluginExtension extension) {
         this.project = project;
         this.configuration = configuration;
         this.jenkinsCore = jenkinsCore;
-        this.jenkinsVersion = jenkinsVersion;
+        this.extension = extension;
     }
 
     @Override
     public void execute(@NotNull War jpi) {
         jpi.getArchiveExtension().set("jpi");
-        jpi.manifest(new ManifestAction(project, configuration, jenkinsVersion));
+        jpi.manifest(new ManifestAction(project, configuration, extension));
         jpi.from(project.getTasks().named("jar"), new Action<>() {
             @Override
             public void execute(@NotNull CopySpec copySpec) {

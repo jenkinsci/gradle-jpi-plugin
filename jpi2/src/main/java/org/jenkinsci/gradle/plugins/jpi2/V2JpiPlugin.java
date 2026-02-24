@@ -63,12 +63,17 @@ public class V2JpiPlugin implements Plugin<Project> {
         project.getPlugins().apply(JavaLibraryPlugin.class);
         project.getPlugins().apply(MavenPublishPlugin.class);
 
+        var extension = project.getExtensions().create("jenkinsPlugin", JenkinsPluginExtension.class, project);
+
         var configurations = project.getConfigurations();
         var dependencies = project.getDependencies();
 
         var serverTaskClasspath = createServerTaskClasspathConfiguration(project);
-        String jenkinsVersion = getVersionFromProperties(project, JENKINS_VERSION_PROPERTY, DEFAULT_JENKINS_VERSION);
-        String testHarnessVersion = getVersionFromProperties(project, TEST_HARNESS_VERSION_PROPERTY, DEFAULT_TEST_HARNESS_VERSION);
+        var jenkinsVersion = extension.getJenkinsVersion();
+        var testHarnessVersion = extension.getTestHarnessVersion();
+        var jenkinsCoreCoordinate = jenkinsVersion.map(version -> "org.jenkins-ci.main:jenkins-core:" + version);
+        var jenkinsWarCoordinate = jenkinsVersion.map(version -> "org.jenkins-ci.main:jenkins-war:" + version);
+        var jenkinsTestHarnessCoordinate = testHarnessVersion.map(version -> "org.jenkins-ci.main:jenkins-test-harness:" + version);
 
         var jenkinsCore = configurations.create("jenkinsCore");
 
@@ -103,7 +108,7 @@ public class V2JpiPlugin implements Plugin<Project> {
         SourceSet main = sourceSets.getByName(SourceSet.TEST_SOURCE_SET_NAME);
         main.getResources().getSrcDirs().add(project.file("src/main/webapp"));
 
-        var jpiTask = project.getTasks().register(JPI_TASK, War.class, new ConfigureJpiAction(project, defaultRuntime, jenkinsCore, jenkinsVersion));
+        var jpiTask = project.getTasks().register(JPI_TASK, War.class, new ConfigureJpiAction(project, defaultRuntime, jenkinsCore, extension));
         jpiTask.configure(new Action<>() {
             @Override
             public void execute(@NotNull War war) {
@@ -114,7 +119,7 @@ public class V2JpiPlugin implements Plugin<Project> {
         project.getTasks().named("jar", Jar.class).configure(new Action<>() {
             @Override
             public void execute(@NotNull Jar jarTask) {
-                jarTask.manifest(new ManifestAction(project, defaultRuntime, jenkinsVersion));
+                jarTask.manifest(new ManifestAction(project, defaultRuntime, extension));
             }
         });
         Provider<Directory> jpiDirectory = project.getLayout().getBuildDirectory().dir("jpi");
@@ -147,21 +152,21 @@ public class V2JpiPlugin implements Plugin<Project> {
         var lastAnnotationProcessor = project.getConfigurations().create("lastAnnotationProcessor");
         lastAnnotationProcessor.setVisible(false);
         project.getDependencies().add("lastAnnotationProcessor", "net.java.sezpoz:sezpoz:1.13");
-        project.getDependencies().add("lastAnnotationProcessor", "org.jenkins-ci.main:jenkins-core:" + jenkinsVersion);
+        project.getDependencies().add("lastAnnotationProcessor", jenkinsCoreCoordinate);
         project.getConfigurations().getByName("annotationProcessor").extendsFrom(lastAnnotationProcessor);
         lastAnnotationProcessor.shouldResolveConsistentlyWith(jenkinsCore);
 
-        dependencies.add("compileOnly", "org.jenkins-ci.main:jenkins-core:" + jenkinsVersion);
+        dependencies.add("compileOnly", jenkinsCoreCoordinate);
         dependencies.add("compileOnly", "jakarta.servlet:jakarta.servlet-api:5.0.0");
-        dependencies.add(serverTaskClasspath.getName(), "org.jenkins-ci.main:jenkins-war:" + jenkinsVersion);
+        dependencies.add(serverTaskClasspath.getName(), jenkinsWarCoordinate);
 
-        dependencies.add("testImplementation", "org.jenkins-ci.main:jenkins-core:" + jenkinsVersion);
-        dependencies.add("testImplementation", "org.jenkins-ci.main:jenkins-war:" + jenkinsVersion);
-        dependencies.add("testImplementation", "org.jenkins-ci.main:jenkins-test-harness:" + testHarnessVersion);
+        dependencies.add("testImplementation", jenkinsCoreCoordinate);
+        dependencies.add("testImplementation", jenkinsWarCoordinate);
+        dependencies.add("testImplementation", jenkinsTestHarnessCoordinate);
         dependencies.add("testImplementation", "org.junit.jupiter:junit-jupiter");
         dependencies.add("testRuntimeOnly", "org.junit.platform:junit-platform-launcher");
 
-        dependencies.add(jenkinsCore.getName(), "org.jenkins-ci.main:jenkins-core:" + jenkinsVersion);
+        dependencies.add(jenkinsCore.getName(), jenkinsCoreCoordinate);
 
         dependencies.getComponents().all(HpiMetadataRule.class);
         configurePublishing(project, jpiTask, defaultRuntime);

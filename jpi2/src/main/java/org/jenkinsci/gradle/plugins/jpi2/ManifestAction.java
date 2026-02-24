@@ -10,7 +10,6 @@ import org.gradle.jvm.toolchain.JavaLanguageVersion;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.Objects;
-import java.util.Optional;
 
 /**
  * Action to update the JAR manifest with plugin dependencies and other attributes required in a Jenkins Plugin.
@@ -19,12 +18,12 @@ class ManifestAction implements Action<Manifest> {
     public static final int DEFAULT_MINIMUM_JAVA_VERSION = 17;
     private final Project project;
     private final Configuration configuration;
-    private final String jenkinsVersion;
+    private final JenkinsPluginExtension extension;
 
-    public ManifestAction(Project project, Configuration configuration, String jenkinsVersion) {
+    public ManifestAction(Project project, Configuration configuration, JenkinsPluginExtension extension) {
         this.project = project;
         this.configuration = configuration;
-        this.jenkinsVersion = jenkinsVersion;
+        this.extension = extension;
     }
 
     @Override
@@ -50,15 +49,15 @@ class ManifestAction implements Action<Manifest> {
             attributes.put("Plugin-Dependencies", String.join(",", pluginDependencies));
         }
         attributes.put("Plugin-Version", project.getVersion());
-        attributes.put("Short-Name", project.getName());
-        attributes.put("Extension-Name", project.getName());
+        attributes.put("Short-Name", extension.getPluginId().get());
+        attributes.put("Extension-Name", extension.getPluginId().get());
         attributes.put("Group-Id", project.getGroup());
         var ext = project.getExtensions().getByType(JavaPluginExtension.class);
         attributes.put("Minimum-Java-Version", ext.getToolchain().getLanguageVersion()
                 .getOrElse(JavaLanguageVersion.of(DEFAULT_MINIMUM_JAVA_VERSION))
                 .toString());
-        attributes.put("Long-Name", Optional.ofNullable(project.getDescription()).orElse(project.getName()));
+        attributes.put("Long-Name", extension.getDisplayName().get());
 
-        attributes.put("Jenkins-Version", jenkinsVersion);
+        attributes.put("Jenkins-Version", extension.getJenkinsVersion());
     }
 }
