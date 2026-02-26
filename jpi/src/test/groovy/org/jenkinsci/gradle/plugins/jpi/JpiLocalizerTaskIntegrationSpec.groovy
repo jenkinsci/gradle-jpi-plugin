@@ -1,5 +1,6 @@
 package org.jenkinsci.gradle.plugins.jpi
 
+import com.gradle.develocity.testing.annotations.LocalOnly
 import org.gradle.testkit.runner.TaskOutcome
 import spock.lang.Unroll
 
@@ -8,6 +9,7 @@ import spock.lang.Unroll
  * @deprecated To be removed in 1.0.0
  */
 @Deprecated
+@LocalOnly
 class JpiLocalizerTaskIntegrationSpec extends IntegrationSpec {
     static final LEGACY_TASK = 'localizer'
     static final LEGACY_TASK_PATH = ':' + LEGACY_TASK

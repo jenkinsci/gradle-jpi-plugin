@@ -67,6 +67,7 @@ dependencies {
     testCompileOnly(libs.junit4) {
         because("used for generated tests with javapoet")
     }
+    testCompileOnly(libs.develocity.testing.annotations)
 }
 
 publishing {

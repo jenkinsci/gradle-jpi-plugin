@@ -4,6 +4,7 @@ assertj = "3.21.0"
 awaitility = "4.3.0"
 commons-io = "2.15.1"
 commons-text = "1.10.0"
+develocity-testing-annotations = "2.0.1"
 guava = "31.1-jre"
 javapoet = "1.13.0"
 jenkins = "2.401.3"
@@ -26,6 +27,7 @@ assertj-core = { module = "org.assertj:assertj-core", version.ref = "assertj" }
 awaitility = { module = "org.awaitility:awaitility", version.ref = "awaitility" }
 commons-io = { module = "commons-io:commons-io", version.ref = "commons-io" }
 commons-text = { module = "org.apache.commons:commons-text", version.ref = "commons-text" }
+develocity-testing-annotations = { module = "com.gradle:develocity-testing-annotations", version.ref = "develocity-testing-annotations" }
 guava = { module = "com.google.guava:guava", version.ref = "guava" }
 javapoet = { module = "com.squareup:javapoet", version.ref = "javapoet" }
 jenkins-core = { module = "org.jenkins-ci.main:jenkins-core", version.ref = "jenkins" }

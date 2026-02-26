@@ -1,5 +1,6 @@
 package org.jenkinsci.gradle.plugins.testing
 
+import com.gradle.develocity.testing.annotations.LocalOnly
 import groovy.text.SimpleTemplateEngine
 import org.gradle.testkit.runner.TaskOutcome
 import org.jenkinsci.gradle.plugins.jpi.IntegrationSpec
@@ -16,6 +17,7 @@ import static org.jenkinsci.gradle.plugins.jpi.TestSupport.LOG4J_API_2_13_0
 import static org.jenkinsci.gradle.plugins.jpi.TestSupport.LOG4J_API_2_14_0
 import static org.jenkinsci.gradle.plugins.jpi.TestSupport.q
 
+@LocalOnly
 class CopyGeneratedJenkinsTestPluginDependenciesTaskIntegrationSpec extends IntegrationSpec {
     private final String projectName = TestDataGenerator.generateName()
     private final String taskPath = ':copyGeneratedJenkinsTestPluginDependencies'
