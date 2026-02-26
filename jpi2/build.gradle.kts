@@ -11,21 +11,21 @@ description = "V2 Gradle plugin for building Jenkins plugins with Gradle 8+"
 
 dependencies {
     implementation(gradleApi())
-    compileOnly("org.jetbrains:annotations:24.0.1")
+    compileOnly(libs.jetbrains.annotations)
     compileOnly(libs.accessmodifier.checker)
-    compileOnly("org.apache.maven:maven-plugin-api:2.0.1")
+    compileOnly(libs.maven.plugin.api)
 
     // Test dependencies
     testImplementation(testFixtures(project(":core")))
-    testImplementation("org.spockframework:spock-core:2.1-groovy-3.0")
+    testImplementation(libs.spock.core)
     testImplementation(platform(libs.junit5.bom))
     testImplementation(libs.junit5.api)
     testImplementation(libs.assertj.core)
     testImplementation(libs.awaitility)
     testImplementation(libs.commons.io)
-    testImplementation("org.apache.maven:maven-model:3.9.9")
-    testImplementation("com.google.guava:guava:31.1-jre")
-    testCompileOnly("org.jetbrains:annotations:24.0.1")
+    testImplementation(libs.maven.model)
+    testImplementation(libs.guava)
+    testCompileOnly(libs.jetbrains.annotations)
     testRuntimeOnly(libs.junit5.jupiter)
 }
 
