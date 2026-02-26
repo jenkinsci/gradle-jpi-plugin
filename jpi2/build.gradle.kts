@@ -5,6 +5,7 @@ plugins {
     alias(libs.plugins.plugin.publish)
     alias(libs.plugins.nebula.release)
     `java-gradle-plugin`
+    `kotlin-dsl`
 }
 
 description = "V2 Gradle plugin for building Jenkins plugins with Gradle 8+"
