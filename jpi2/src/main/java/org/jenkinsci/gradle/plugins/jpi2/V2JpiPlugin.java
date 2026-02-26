@@ -8,6 +8,7 @@ import org.gradle.api.artifacts.Configuration;
 import org.gradle.api.attributes.Usage;
 import org.gradle.api.file.Directory;
 import org.gradle.api.plugins.GroovyBasePlugin;
+import org.gradle.api.plugins.BasePlugin;
 import org.gradle.api.plugins.JavaBasePlugin;
 import org.gradle.api.plugins.JavaLibraryPlugin;
 import org.gradle.api.plugins.JavaPluginExtension;
@@ -84,6 +85,16 @@ public class V2JpiPlugin implements Plugin<Project> {
         defaultRuntime.shouldResolveConsistentlyWith(jenkinsCore);
         defaultRuntime.getAttributes().attribute(ARTIFACT_TYPE_ATTRIBUTE, project.getObjects().named(ArtifactType.class, ArtifactType.DEFAULT));
 
+        var licenseTask = project.getTasks().register(GenerateLicenseInfoTask.NAME, GenerateLicenseInfoTask.class, new Action<>() {
+            @Override
+            public void execute(@NotNull GenerateLicenseInfoTask task) {
+                task.setGroup(BasePlugin.BUILD_GROUP);
+                task.setDescription("Generates license information.");
+                task.getOutputDirectory().set(project.getLayout().getBuildDirectory().dir("licenses"));
+                task.setLibraryConfiguration(defaultRuntime);
+            }
+        });
+
         var testCompileClasspath = configurations.getByName("testCompileClasspath");
         testCompileClasspath.shouldResolveConsistentlyWith(jenkinsCore);
 
@@ -93,6 +104,13 @@ public class V2JpiPlugin implements Plugin<Project> {
         main.getResources().getSrcDirs().add(project.file("src/main/webapp"));
 
         var jpiTask = project.getTasks().register(JPI_TASK, War.class, new ConfigureJpiAction(project, defaultRuntime, jenkinsCore, jenkinsVersion));
+        jpiTask.configure(new Action<>() {
+            @Override
+            public void execute(@NotNull War war) {
+                war.dependsOn(licenseTask);
+                war.getWebInf().from(licenseTask.flatMap(GenerateLicenseInfoTask::getOutputDirectory));
+            }
+        });
         project.getTasks().named("jar", Jar.class).configure(new Action<>() {
             @Override
             public void execute(@NotNull Jar jarTask) {
