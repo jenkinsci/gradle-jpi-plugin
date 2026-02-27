@@ -391,6 +391,22 @@ repositories {
     }
 }
 
+jenkinsPlugin {
+    // version of Jenkins core this plugin depends on (default: 2.492.3)
+    // can also be set via the gradle property 'jenkins.version'
+    jenkinsVersion.set("2.492.3")
+
+    // version of Jenkins test harness (default: 2414.v185474555e66)
+    // can also be set via the gradle property 'jenkins.testharness.version'
+    testHarnessVersion.set("2414.v185474555e66")
+
+    // ID of the plugin, defaults to the project name
+    pluginId.set("my-plugin")
+
+    // human-readable name of the plugin, defaults to the project description or project name
+    displayName.set("My Plugin")
+}
+
 dependencies {
     implementation("org.jenkins-ci.plugins:git:5.7.0")        // Plugin dependency
     implementation("com.openai:openai-java:2.5.0")            // Library dependency
@@ -399,12 +415,14 @@ dependencies {
 
 ## JPI2 Version Configuration
 
-Configure Jenkins and test harness versions in `gradle.properties`:
+Jenkins and test harness versions can be set in the `jenkinsPlugin` extension (as shown above) or via `gradle.properties`:
 
 ```properties
 jenkins.version=2.492.3
 jenkins.testharness.version=2414.v185474555e66
 ```
+
+The `gradle.properties` values serve as defaults; explicit values in the `jenkinsPlugin` block take precedence.
 
 ### Server Customization
 
