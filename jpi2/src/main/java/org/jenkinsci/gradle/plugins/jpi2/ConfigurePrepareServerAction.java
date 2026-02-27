@@ -2,7 +2,6 @@ package org.jenkinsci.gradle.plugins.jpi2;
 
 import org.gradle.api.Action;
 import org.gradle.api.Project;
-import org.gradle.api.Transformer;
 import org.gradle.api.artifacts.Configuration;
 import org.gradle.api.artifacts.ResolvedArtifact;
 import org.gradle.api.artifacts.component.ComponentIdentifier;
@@ -80,21 +79,4 @@ class ConfigurePrepareServerAction implements Action<Sync> {
                 });
     }
 
-    private static class DropVersionTransformer implements Transformer<String, String> {
-        private final String name;
-        private final String version;
-
-        public DropVersionTransformer(String name, String version) {
-            this.name = name;
-            this.version = version;
-        }
-
-        @NotNull
-        @Override
-        public String transform(@NotNull String s) {
-            return s.replace(name + "-" + version, name) // remove version from filename
-                    .replace(".hpi", ".jpi") // change extension to jpi to prevent warnings
-                    ;
-        }
-    }
 }
