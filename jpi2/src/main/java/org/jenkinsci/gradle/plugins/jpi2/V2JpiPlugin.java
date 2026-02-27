@@ -48,16 +48,6 @@ public class V2JpiPlugin implements Plugin<Project> {
     /** Task name for creating the JPI archive. */
     public static final String JPI_TASK = "jpi";
 
-    /** Gradle property name for specifying the Jenkins core version. */
-    public static final String JENKINS_VERSION_PROPERTY = "jenkins.version";
-    /** Default Jenkins core version used when not specified. */
-    public static final String DEFAULT_JENKINS_VERSION = "2.492.3";
-
-    /** Gradle property name for specifying the Jenkins test harness version. */
-    public static final String TEST_HARNESS_VERSION_PROPERTY = "jenkins.testharness.version";
-    /** Default Jenkins test harness version used when not specified. */
-    public static final String DEFAULT_TEST_HARNESS_VERSION = "2414.v185474555e66";
-
     @Override
     public void apply(@NotNull Project project) {
         project.getPlugins().apply(JavaLibraryPlugin.class);
