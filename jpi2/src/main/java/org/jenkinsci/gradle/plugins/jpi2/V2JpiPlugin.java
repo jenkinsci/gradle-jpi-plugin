@@ -25,6 +25,8 @@ import org.gradle.api.tasks.TaskProvider;
 import org.gradle.api.tasks.bundling.Jar;
 import org.gradle.api.tasks.bundling.War;
 import org.jenkinsci.gradle.plugins.jpi2.accmod.CheckAccessModifierTask;
+import groovy.namespace.QName;
+import groovy.util.Node;
 import org.jenkinsci.gradle.plugins.jpi2.accmod.PrefixedPropertiesProvider;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
@@ -159,7 +161,7 @@ public class V2JpiPlugin implements Plugin<Project> {
         dependencies.add(jenkinsCore.getName(), jenkinsCoreCoordinate);
 
         dependencies.getComponents().all(HpiMetadataRule.class);
-        configurePublishing(project, jpiTask, defaultRuntime);
+        configurePublishing(project, jpiTask, defaultRuntime, extension);
 
         BuildServiceRegistry buildServices = project.getGradle().getSharedServices();
         var portAllocationService = buildServices.registerIfAbsent("portAllocation", PortAllocationService.class, spec -> {
@@ -204,29 +206,40 @@ public class V2JpiPlugin implements Plugin<Project> {
         project.getTasks().named("check", task -> task.dependsOn(checkAccessModifier));
     }
 
-    private static void configurePublishing(@NotNull Project project, TaskProvider<?> jpiTask, Configuration runtimeClasspath) {
+    private static void configurePublishing(@NotNull Project project, TaskProvider<?> jpiTask, Configuration runtimeClasspath, JenkinsPluginExtension extension) {
         var publishingExtension = project.getExtensions().getByType(PublishingExtension.class);
         var existingPublication = !publishingExtension.getPublications().isEmpty() ? publishingExtension.getPublications().iterator().next() : null;
         var javaPlugin = project.getExtensions().getByType(JavaPluginExtension.class);
         javaPlugin.withJavadocJar();
         javaPlugin.withSourcesJar();
         if (existingPublication instanceof MavenPublication publication) {
-            configurePublication(publication, jpiTask, runtimeClasspath, project);
+            configurePublication(publication, jpiTask, runtimeClasspath, project, extension);
         } else {
             publishingExtension.getPublications().create("mavenJpi", MavenPublication.class, new Action<>() {
                 @Override
                 public void execute(@NotNull MavenPublication publication) {
                     publication.from(project.getComponents().getByName("java"));
-                    configurePublication(publication, jpiTask, runtimeClasspath, project);
+                    configurePublication(publication, jpiTask, runtimeClasspath, project, extension);
                 }
             });
         }
     }
 
-    private static void configurePublication(@NotNull MavenPublication publication, TaskProvider<?> jpiTask, Configuration runtimeClasspath, Project project) {
+    private static void configurePublication(@NotNull MavenPublication publication, TaskProvider<?> jpiTask, Configuration runtimeClasspath, Project project, JenkinsPluginExtension extension) {
         publication.artifact(jpiTask);
-        publication.getPom().setPackaging("jpi");
+        publication.getPom().setPackaging(extension.getArchiveExtension().get());
         publication.getPom().withXml(new PomBuilder(runtimeClasspath, project));
+        publication.getPom().withXml(xml -> {
+            var node = (Node) xml.asNode();
+            var pomNs = "http://maven.apache.org/POM/4.0.0";
+            var packagingList = node.getAt(new QName(pomNs, "packaging"));
+            var packaging = extension.getArchiveExtension().get();
+            if (!packagingList.isEmpty()) {
+                ((Node) packagingList.get(0)).setValue(packaging);
+            } else {
+                node.appendNode(new QName(pomNs, "packaging"), packaging);
+            }
+        });
     }
 
     @NotNull

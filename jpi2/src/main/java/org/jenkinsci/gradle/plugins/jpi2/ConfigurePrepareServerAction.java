@@ -33,13 +33,16 @@ class ConfigurePrepareServerAction implements Action<Sync> {
     @Override
     public void execute(@NotNull Sync sync) {
         var jpi = jpiTaskProvider.get();
+        var extension = project.getExtensions().getByType(JenkinsPluginExtension.class);
+        var targetExtension = extension.getArchiveExtension().get();
 
         sync.into(projectRoot + "/work/plugins");
 
         sync.from(jpi)
                 .rename(new DropVersionTransformer(
                         project.getName(),
-                        project.getVersion().toString()
+                        project.getVersion().toString(),
+                        targetExtension
                 ));
 
         defaultRuntime.getResolvedConfiguration().getResolvedArtifacts()
@@ -50,7 +53,8 @@ class ConfigurePrepareServerAction implements Action<Sync> {
                         sync.from(artifact.getFile())
                                 .rename(new DropVersionTransformer(
                                         artifact.getModuleVersion().getId().getName(),
-                                        artifact.getModuleVersion().getId().getVersion()
+                                        artifact.getModuleVersion().getId().getVersion(),
+                                        targetExtension
                                 ))
                 );
 
@@ -71,7 +75,8 @@ class ConfigurePrepareServerAction implements Action<Sync> {
                                 sync.from(jpiTask)
                                         .rename(new DropVersionTransformer(
                                                 it.getModuleVersion().getId().getName(),
-                                                it.getModuleVersion().getId().getVersion()
+                                                it.getModuleVersion().getId().getVersion(),
+                                                targetExtension
                                         ));
                             }
                         }
