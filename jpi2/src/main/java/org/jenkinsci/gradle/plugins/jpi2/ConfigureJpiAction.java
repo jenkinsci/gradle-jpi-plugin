@@ -45,7 +45,7 @@ class ConfigureJpiAction implements Action<War> {
 
     @Override
     public void execute(@NotNull War jpi) {
-        jpi.getArchiveExtension().set("jpi");
+        jpi.getArchiveExtension().set(extension.getArchiveExtension());
         jpi.manifest(new ManifestAction(project, configuration, extension));
         jpi.from(project.getTasks().named("jar"), new Action<>() {
             @Override
