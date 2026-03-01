@@ -1,10 +1,14 @@
 package org.jenkinsci.gradle.plugins.jpi2
 
 import org.gradle.api.Project
+import org.gradle.api.Task
+import org.gradle.api.provider.Provider
 import org.gradle.api.provider.Property
+import org.gradle.api.plugins.ExtensionAware
+import org.gradle.api.tasks.TaskProvider
 import javax.inject.Inject
 
-abstract class JenkinsPluginExtension @Inject constructor(project: Project) {
+abstract class JenkinsPluginExtension @Inject constructor(private val project: Project) {
 
     companion object {
         const val JENKINS_VERSION_PROPERTY = "jenkins.version"
@@ -60,4 +64,50 @@ abstract class JenkinsPluginExtension @Inject constructor(project: Project) {
         .convention(
             project.providers.provider { project.description ?: project.name }
         )
+
+    /**
+     * Source of the plugin version: [VersionSource.PROJECT] (default), [VersionSource.FIXED], or [VersionSource.GIT].
+     * When [VersionSource.FIXED], [fixedVersion] is used. When [VersionSource.GIT], a version is computed from Git
+     * (see [gitVersion] and the `generateGitVersion` task).
+     */
+    val versionSource: Property<VersionSource> = project.objects.property(VersionSource::class.java)
+        .convention(VersionSource.PROJECT)
+
+    /**
+     * Fixed version string used when [versionSource] is [VersionSource.FIXED].
+     */
+    val fixedVersion: Property<String> = project.objects.property(String::class.java)
+
+    /**
+     * Configuration for Git-based version generation. Used when [versionSource] is [VersionSource.GIT].
+     */
+    val gitVersion: GitVersionExtension
+        get() = (this as ExtensionAware).extensions.getByType(GitVersionExtension::class.java)
+
+    /**
+     * Provider for the effective plugin version based on [versionSource].
+     * Resolved when the version is first needed (e.g. when building the JPI or generating the manifest).
+     * When [VersionSource.GIT], the provider depends on [generateGitVersionTask], so that task runs first.
+     *
+     * @param generateGitVersionTask The registered `generateGitVersion` task, or null if not using GIT.
+     */
+    fun getEffectiveVersion(generateGitVersionTask: TaskProvider<out Task>?): Provider<String> {
+        return project.providers.provider { versionSource.get() }.flatMap { source ->
+            when (source) {
+                VersionSource.PROJECT -> project.providers.provider { project.version.toString() }
+                VersionSource.FIXED -> fixedVersion
+                VersionSource.GIT -> {
+                    if (generateGitVersionTask != null) {
+                        generateGitVersionTask.flatMap {
+                            project.providers.fileContents(gitVersion.outputFile)
+                                .asText
+                                .map { text -> text.lines().first().trim() }
+                        }
+                    } else {
+                        project.providers.provider { project.version.toString() }
+                    }
+                }
+            }
+        }
+    }
 }

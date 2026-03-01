@@ -1,5 +1,7 @@
 package org.jenkinsci.gradle.plugins.jpi2;
 
+import groovy.namespace.QName;
+import groovy.util.Node;
 import org.gradle.api.Action;
 import org.gradle.api.Plugin;
 import org.gradle.api.Project;
@@ -7,16 +9,17 @@ import org.gradle.api.Task;
 import org.gradle.api.artifacts.Configuration;
 import org.gradle.api.attributes.Usage;
 import org.gradle.api.file.Directory;
-import org.gradle.api.plugins.GroovyBasePlugin;
 import org.gradle.api.plugins.BasePlugin;
+import org.gradle.api.plugins.ExtensionAware;
+import org.gradle.api.plugins.GroovyBasePlugin;
 import org.gradle.api.plugins.JavaBasePlugin;
 import org.gradle.api.plugins.JavaLibraryPlugin;
 import org.gradle.api.plugins.JavaPluginExtension;
 import org.gradle.api.provider.Provider;
-import org.gradle.api.services.BuildServiceRegistry;
 import org.gradle.api.publish.PublishingExtension;
 import org.gradle.api.publish.maven.MavenPublication;
 import org.gradle.api.publish.maven.plugins.MavenPublishPlugin;
+import org.gradle.api.services.BuildServiceRegistry;
 import org.gradle.api.tasks.JavaExec;
 import org.gradle.api.tasks.SourceSet;
 import org.gradle.api.tasks.SourceSetContainer;
@@ -25,8 +28,6 @@ import org.gradle.api.tasks.TaskProvider;
 import org.gradle.api.tasks.bundling.Jar;
 import org.gradle.api.tasks.bundling.War;
 import org.jenkinsci.gradle.plugins.jpi2.accmod.CheckAccessModifierTask;
-import groovy.namespace.QName;
-import groovy.util.Node;
 import org.jenkinsci.gradle.plugins.jpi2.accmod.PrefixedPropertiesProvider;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
@@ -56,6 +57,46 @@ public class V2JpiPlugin implements Plugin<Project> {
         project.getPlugins().apply(MavenPublishPlugin.class);
 
         var extension = project.getExtensions().create("jenkinsPlugin", JenkinsPluginExtension.class, project);
+        ((ExtensionAware) extension).getExtensions().create("gitVersion", GitVersionExtension.class,
+                project.getObjects(), project.getLayout(), project.getProviders());
+
+        var generateGitVersion = project.getTasks().register(GenerateGitVersionTask.TASK_NAME, GenerateGitVersionTask.class, new Action<>() {
+            @Override
+            public void execute(@NotNull GenerateGitVersionTask task) {
+                task.setGroup(BasePlugin.BUILD_GROUP);
+                task.setDescription("Generates a version string from the Git repository (depth + abbreviated hash).");
+                var gitVersion = extension.getGitVersion();
+                task.getGitRoot().set(gitVersion.getGitRoot());
+                task.getOutputFile().set(gitVersion.getOutputFile());
+                task.getVersionFormat().set(gitVersion.getVersionFormat());
+                task.getVersionPrefix().set(gitVersion.getVersionPrefix());
+                task.getAbbrevLength().set(gitVersion.getAbbrevLength());
+                task.getAllowDirty().set(gitVersion.getAllowDirty());
+            }
+        });
+
+        project.afterEvaluate(p -> {
+            if (extension.getVersionSource().get() != VersionSource.PROJECT) {
+                var effectiveVersion = extension.getEffectiveVersion(generateGitVersion);
+                p.setVersion(effectiveVersion);
+                p.getTasks().named(JPI_TASK, War.class).configure(war -> war.getArchiveVersion().set(effectiveVersion));
+                var publishing = p.getExtensions().getByType(PublishingExtension.class);
+                var resolveVersion = p.getTasks().register("resolvePluginVersion", task -> {
+                    task.doFirst(t -> {
+                        String v = effectiveVersion.get();
+                        publishing.getPublications().withType(MavenPublication.class).configureEach(pub -> pub.setVersion(v));
+                    });
+                });
+                if (extension.getVersionSource().get() == VersionSource.GIT) {
+                    resolveVersion.configure(t -> t.dependsOn(generateGitVersion));
+                }
+                p.getTasks().named("generatePomFileForMavenJpiPublication").configure(t -> t.dependsOn(resolveVersion));
+                p.getTasks().named("generateMetadataFileForMavenJpiPublication").configure(t -> t.dependsOn(resolveVersion));
+            }
+            if (extension.getVersionSource().get() == VersionSource.GIT) {
+                p.getTasks().named(JPI_TASK).configure(t -> t.dependsOn(generateGitVersion));
+            }
+        });
 
         var configurations = project.getConfigurations();
         var dependencies = project.getDependencies();
@@ -230,7 +271,7 @@ public class V2JpiPlugin implements Plugin<Project> {
         publication.getPom().setPackaging(extension.getArchiveExtension().get());
         publication.getPom().withXml(new PomBuilder(runtimeClasspath, project));
         publication.getPom().withXml(xml -> {
-            var node = (Node) xml.asNode();
+            var node = xml.asNode();
             var pomNs = "http://maven.apache.org/POM/4.0.0";
             var packagingList = node.getAt(new QName(pomNs, "packaging"));
             var packaging = extension.getArchiveExtension().get();
