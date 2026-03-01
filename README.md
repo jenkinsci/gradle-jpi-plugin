@@ -424,6 +424,59 @@ jenkins.testharness.version=2414.v185474555e66
 
 The `gradle.properties` values serve as defaults; explicit values in the `jenkinsPlugin` block take precedence.
 
+### Plugin version source
+
+By default, the plugin uses the Gradle project version (`project.version`) for the JPI artifact, manifest, and publishing. You can choose a fixed version or a Git-derived version (similar to the JPI plugin's `generateGitVersion` task).
+
+**Use the project version (default):**
+
+```kotlin
+// No configuration needed; project.version is used
+version = "1.0.0"
+```
+
+**Use a fixed version:**
+
+```kotlin
+jenkinsPlugin {
+    versionSource.set(org.jenkinsci.gradle.plugins.jpi2.VersionSource.FIXED)
+    fixedVersion.set("2.0.0")
+}
+```
+
+You can also set the fixed version from a [Provider](https://docs.gradle.org/current/javadoc/org/gradle/api/provider/Provider.html) for dynamic or lazy configuration:
+
+```kotlin
+jenkinsPlugin {
+    versionSource.set(org.jenkinsci.gradle.plugins.jpi2.VersionSource.FIXED)
+    fixedVersion.set(providers.provider { "2.0.0-beta" })
+}
+```
+
+**Use a version from Git (commit depth + abbreviated hash):**
+
+[JEP-229](https://github.com/jenkinsci/jep/blob/master/jep/229/README.adoc#version-format) describes version format requirements. The plugin registers a `generateGitVersion` task that writes a version file (first line = version string, second line = full hash). When `versionSource` is `GIT`, the `jpi` task depends on `generateGitVersion` and the generated version is used for the artifact and manifest.
+
+```kotlin
+jenkinsPlugin {
+    versionSource.set(org.jenkinsci.gradle.plugins.jpi2.VersionSource.GIT)
+    gitVersion {
+        // Optional: format string (default: "%d.%s" for depth.hash)
+        versionFormat.set("%d.%s")
+        // Optional: prefix (e.g. "rc-")
+        // versionPrefix.set("rc-")
+        // Optional: allow uncommitted changes (default: false)
+        allowDirty.set(true)
+        // Optional: abbreviated hash length (default: 12)
+        // abbrevLength.set(10)
+        // Optional: output file (default: build/generated/version/version.txt)
+        // outputFile.set(layout.buildDirectory.file("my-version.txt"))
+    }
+}
+```
+
+You can also run `generateGitVersion` manually and use the first line of the output file (e.g. with `-Pversion=...`). Gradle properties `gitVersionFormat`, `gitVersionPrefix`, and `gitVersionFile` can override the corresponding `gitVersion` settings.
+
 ### Server Customization
 
 The server task can be customized for different ports. The default is `8080`.
