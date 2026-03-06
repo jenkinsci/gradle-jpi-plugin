@@ -100,7 +100,7 @@ public class V2JpiPlugin implements Plugin<Project> {
 
         JavaPluginExtension ext = project.getExtensions().getByType(JavaPluginExtension.class);
         SourceSetContainer sourceSets = ext.getSourceSets();
-        SourceSet main = sourceSets.getByName(SourceSet.TEST_SOURCE_SET_NAME);
+        SourceSet main = sourceSets.getByName(SourceSet.MAIN_SOURCE_SET_NAME);
         main.getResources().getSrcDirs().add(project.file("src/main/webapp"));
 
         var jpiTask = project.getTasks().register(JPI_TASK, War.class, new ConfigureJpiAction(project, defaultRuntime, jenkinsCore, extension));
