@@ -405,6 +405,42 @@ jenkinsPlugin {
 
     // human-readable name of the plugin, defaults to the project description or project name
     displayName.set("My Plugin")
+
+    // URL for the plugin's home page; written to the `Url` manifest attribute and POM <url>
+    homePage.set(uri("https://github.com/jenkinsci/my-plugin"))
+
+    // earliest version of this plugin that is binary-compatible with the current version
+    // written to the `Compatible-Since-Version` manifest attribute
+    compatibleSinceVersion.set("1.1.0")
+
+    // use the plugin class loader before the core class loader (default: false)
+    // written to the `PluginFirstClassLoader` manifest attribute
+    pluginFirstClassLoader.set(true)
+
+    // class prefixes to hide from Jenkins core
+    // written to the `Mask-Classes` manifest attribute as a space-separated list
+    maskClasses.add("groovy.grape")
+    maskClasses.add("org.apache.commons.codec")
+
+    // the developers section corresponds to the POM <developers> section
+    // and the `Plugin-Developers` manifest attribute
+    developers {
+        developer {
+            id.set("rahulsom")
+            name.set("Rahul Somasunderam")
+            email.set("rahulsom@noreply.github.com")
+        }
+    }
+
+    // the licenses section corresponds to the POM <licenses> section
+    licenses {
+        license {
+            name.set("Apache License, Version 2.0")
+            url.set("https://www.apache.org/licenses/LICENSE-2.0.txt")
+            distribution.set("repo")
+            comments.set("A business-friendly OSS license")
+        }
+    }
 }
 
 dependencies {

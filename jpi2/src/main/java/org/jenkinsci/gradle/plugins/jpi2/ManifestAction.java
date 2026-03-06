@@ -10,6 +10,7 @@ import org.gradle.jvm.toolchain.JavaLanguageVersion;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.Objects;
+import java.util.stream.Collectors;
 
 /**
  * Action to update the JAR manifest with plugin dependencies and other attributes required in a Jenkins Plugin.
@@ -60,5 +61,35 @@ class ManifestAction implements Action<Manifest> {
         attributes.put("Long-Name", extension.getDisplayName().get());
 
         attributes.put("Jenkins-Version", extension.getJenkinsVersion());
+
+        var homePageUri = extension.getHomePage().getOrNull();
+        if (homePageUri != null) {
+            attributes.put("Url", homePageUri.toASCIIString());
+        }
+
+        var compatibleSinceVersion = extension.getCompatibleSinceVersion().getOrNull();
+        if (compatibleSinceVersion != null) {
+            attributes.put("Compatible-Since-Version", compatibleSinceVersion);
+        }
+
+        if (extension.getPluginFirstClassLoader().get()) {
+            attributes.put("PluginFirstClassLoader", "true");
+        }
+
+        var maskClasses = extension.getMaskClasses().get();
+        if (!maskClasses.isEmpty()) {
+            attributes.put("Mask-Classes", String.join(" ", maskClasses));
+        }
+
+        var developers = extension.getPluginDevelopers().get();
+        if (!developers.isEmpty()) {
+            var formatted = developers.stream()
+                    .map(dev -> String.join(":",
+                            dev.getName().getOrElse(""),
+                            dev.getId().getOrElse(""),
+                            dev.getEmail().getOrElse("")))
+                    .collect(Collectors.joining(","));
+            attributes.put("Plugin-Developers", formatted);
+        }
     }
 }

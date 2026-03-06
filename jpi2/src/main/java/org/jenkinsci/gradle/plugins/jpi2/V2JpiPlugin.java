@@ -1,7 +1,5 @@
 package org.jenkinsci.gradle.plugins.jpi2;
 
-import groovy.namespace.QName;
-import groovy.util.Node;
 import org.gradle.api.Action;
 import org.gradle.api.Plugin;
 import org.gradle.api.Project;
@@ -32,6 +30,8 @@ import org.jenkinsci.gradle.plugins.jpi2.accmod.PrefixedPropertiesProvider;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.net.URI;
 
 import static org.jenkinsci.gradle.plugins.jpi2.ArtifactType.ARTIFACT_TYPE_ATTRIBUTE;
 
@@ -249,18 +249,10 @@ public class V2JpiPlugin implements Plugin<Project> {
     private static void configurePublication(@NotNull MavenPublication publication, TaskProvider<?> jpiTask, Configuration runtimeClasspath, Project project, JenkinsPluginExtension extension) {
         publication.artifact(jpiTask);
         publication.getPom().setPackaging(extension.getArchiveExtension().get());
-        publication.getPom().withXml(new PomBuilder(runtimeClasspath, project));
-        publication.getPom().withXml(xml -> {
-            var node = xml.asNode();
-            var pomNs = "http://maven.apache.org/POM/4.0.0";
-            var packagingList = node.getAt(new QName(pomNs, "packaging"));
-            var packaging = extension.getArchiveExtension().get();
-            if (!packagingList.isEmpty()) {
-                ((Node) packagingList.get(0)).setValue(packaging);
-            } else {
-                node.appendNode(new QName(pomNs, "packaging"), packaging);
-            }
-        });
+        publication.getPom().getName().set(extension.getDisplayName());
+        publication.getPom().getUrl().set(extension.getHomePage().map(URI::toASCIIString));
+        publication.getPom().getDescription().set(project.provider(project::getDescription));
+        publication.getPom().withXml(new PomBuilder(runtimeClasspath, project, extension));
     }
 
     @NotNull
