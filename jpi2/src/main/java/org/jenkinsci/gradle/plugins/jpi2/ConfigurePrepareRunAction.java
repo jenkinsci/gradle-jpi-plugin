@@ -3,6 +3,7 @@ package org.jenkinsci.gradle.plugins.jpi2;
 import org.gradle.api.Action;
 import org.gradle.api.artifacts.Configuration;
 import org.gradle.api.artifacts.ResolvedArtifact;
+import org.gradle.api.provider.Provider;
 import org.gradle.api.tasks.Sync;
 import org.gradle.api.tasks.TaskProvider;
 import org.jetbrains.annotations.NotNull;
@@ -16,11 +17,14 @@ class ConfigurePrepareRunAction implements Action<Sync> {
     private final TaskProvider<GenerateHplTask> hplTaskProvider;
     private final String projectRoot;
     private final Configuration defaultRuntime;
+    private final Provider<String> targetExtension;
 
-    ConfigurePrepareRunAction(TaskProvider<GenerateHplTask> hplTaskProvider, String projectRoot, Configuration defaultRuntime) {
+    ConfigurePrepareRunAction(TaskProvider<GenerateHplTask> hplTaskProvider, String projectRoot, Configuration defaultRuntime,
+                              Provider<String> targetExtension) {
         this.hplTaskProvider = hplTaskProvider;
         this.projectRoot = projectRoot;
         this.defaultRuntime = defaultRuntime;
+        this.targetExtension = targetExtension;
     }
 
     @Override
@@ -37,7 +41,7 @@ class ConfigurePrepareRunAction implements Action<Sync> {
                                 .rename(new DropVersionTransformer(
                                         artifact.getModuleVersion().getId().getName(),
                                         artifact.getModuleVersion().getId().getVersion(),
-                                        artifact.getExtension()
+                                        targetExtension.get()
                                 ))
                 );
     }

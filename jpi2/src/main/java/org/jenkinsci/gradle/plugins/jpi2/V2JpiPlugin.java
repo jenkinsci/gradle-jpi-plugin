@@ -188,14 +188,17 @@ public class V2JpiPlugin implements Plugin<Project> {
         });
 
         final var projectRoot = project.getLayout().getProjectDirectory().getAsFile().getAbsolutePath();
-        final var prepareServer = createPrepareServerTask(project, projectRoot, defaultRuntime, jpiTask);
-        final var prepareRun = createPrepareRunTask(project, projectRoot, defaultRuntime, generateHpl);
+        var runtimePluginExtension = project.provider(() -> extension.getNormalizePluginArchiveExtensionsForServer().get()
+                ? JenkinsPluginExtension.DEFAULT_ARCHIVE_EXTENSION
+                : extension.getArchiveExtension().get());
+        final var prepareServer = createPrepareServerTask(project, projectRoot, defaultRuntime, jpiTask, runtimePluginExtension);
+        final var prepareRun = createPrepareRunTask(project, projectRoot, defaultRuntime, generateHpl, runtimePluginExtension);
 
         project.getGradle().projectsEvaluated(gradle -> {
             var projectByPath = project.getRootProject().getAllprojects().stream()
                     .collect(Collectors.toMap(Project::getPath, it -> it));
             var projectDependencies = getProjectDependencies(runtimeClasspath, projectByPath);
-            configureProjectDependencyJpis(prepareServer, getProjectDependencyJpis(projectDependencies, extension.getArchiveExtension().get()));
+            configureProjectDependencyJpis(prepareServer, getProjectDependencyJpis(projectDependencies, runtimePluginExtension.get()));
             configureProjectDependencyTasks(prepareRun, getProjectDependencyTasks(projectDependencies, GenerateHplTask.TASK_NAME));
         });
 
@@ -364,24 +367,25 @@ public class V2JpiPlugin implements Plugin<Project> {
 
     @NotNull
     private static TaskProvider<Sync> createPrepareServerTask(@NotNull Project project, String projectRoot, Configuration defaultRuntime,
-                                                              TaskProvider<?> jpiTaskProvider) {
+                                                              TaskProvider<?> jpiTaskProvider, Provider<String> targetExtension) {
         return project.getTasks().register("prepareServer", Sync.class, new ConfigurePrepareServerAction(
                 jpiTaskProvider,
                 projectRoot,
                 defaultRuntime,
                 project.provider(project::getName),
                 project.provider(() -> project.getVersion().toString()),
-                project.getExtensions().getByType(JenkinsPluginExtension.class).getArchiveExtension()
+                targetExtension
         ));
     }
 
     @NotNull
     private static TaskProvider<Sync> createPrepareRunTask(@NotNull Project project, String projectRoot, Configuration defaultRuntime,
-                                                           TaskProvider<GenerateHplTask> hplTaskProvider) {
+                                                           TaskProvider<GenerateHplTask> hplTaskProvider, Provider<String> targetExtension) {
         return project.getTasks().register("prepareRun", Sync.class, new ConfigurePrepareRunAction(
                 hplTaskProvider,
                 projectRoot,
-                defaultRuntime
+                defaultRuntime,
+                targetExtension
         ));
     }
 

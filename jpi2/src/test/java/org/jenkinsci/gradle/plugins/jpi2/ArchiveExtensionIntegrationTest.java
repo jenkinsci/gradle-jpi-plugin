@@ -82,7 +82,7 @@ class ArchiveExtensionIntegrationTest extends V2IntegrationTestBase {
     }
 
     @Test
-    void prepareServerWithHpiExtensionProducesHpiInWorkPlugins() throws IOException {
+    void prepareServerWithHpiExtensionProducesHpiInWorkPluginsByDefault() throws IOException {
         // given
         var ith = new IntegrationTestHelper(tempDir, "8.14");
         initBuild(ith);
@@ -100,6 +100,75 @@ class ArchiveExtensionIntegrationTest extends V2IntegrationTestBase {
         var jpi = ith.inProjectDir("work/plugins/test-plugin.jpi");
         assertThat(hpi).exists();
         assertThat(jpi).doesNotExist();
+    }
+
+    @Test
+    void prepareServerCanNormalizeHpiExtensionToJpiInWorkPlugins() throws IOException {
+        // given
+        var ith = new IntegrationTestHelper(tempDir, "8.14");
+        initBuild(ith);
+        Files.write((getBasePluginConfig() + /* language=kotlin */ """
+                jenkinsPlugin {
+                    archiveExtension.set("hpi")
+                    normalizePluginArchiveExtensionsForServer.set(true)
+                }
+                """).getBytes(StandardCharsets.UTF_8), ith.inProjectDir("build.gradle.kts"));
+
+        // when
+        ith.gradleRunner().withArguments("prepareServer").build();
+
+        // then
+        var hpi = ith.inProjectDir("work/plugins/test-plugin.hpi");
+        var jpi = ith.inProjectDir("work/plugins/test-plugin.jpi");
+        assertThat(hpi).doesNotExist();
+        assertThat(jpi).exists();
+    }
+
+    @Test
+    void prepareRunWithHpiExtensionPreservesPluginExtensionsByDefault() throws IOException {
+        // given
+        var ith = new IntegrationTestHelper(tempDir, "8.14");
+        initBuild(ith);
+        Files.write((getBasePluginConfig() + /* language=kotlin */ """
+                jenkinsPlugin {
+                    archiveExtension.set("hpi")
+                }
+                dependencies {
+                    implementation("org.jenkins-ci.plugins:git:5.7.0")
+                }
+                """).getBytes(StandardCharsets.UTF_8), ith.inProjectDir("build.gradle.kts"));
+
+        // when
+        ith.gradleRunner().withArguments("prepareRun").build();
+
+        // then
+        assertThat(ith.inProjectDir("work/plugins/test-plugin.hpl")).exists();
+        assertThat(ith.inProjectDir("work/plugins/git.hpi")).exists();
+        assertThat(ith.inProjectDir("work/plugins/git.jpi")).doesNotExist();
+    }
+
+    @Test
+    void prepareRunCanNormalizeHpiExtensionToJpiInWorkPlugins() throws IOException {
+        // given
+        var ith = new IntegrationTestHelper(tempDir, "8.14");
+        initBuild(ith);
+        Files.write((getBasePluginConfig() + /* language=kotlin */ """
+                jenkinsPlugin {
+                    archiveExtension.set("hpi")
+                    normalizePluginArchiveExtensionsForServer.set(true)
+                }
+                dependencies {
+                    implementation("org.jenkins-ci.plugins:git:5.7.0")
+                }
+                """).getBytes(StandardCharsets.UTF_8), ith.inProjectDir("build.gradle.kts"));
+
+        // when
+        ith.gradleRunner().withArguments("prepareRun").build();
+
+        // then
+        assertThat(ith.inProjectDir("work/plugins/test-plugin.hpl")).exists();
+        assertThat(ith.inProjectDir("work/plugins/git.hpi")).doesNotExist();
+        assertThat(ith.inProjectDir("work/plugins/git.jpi")).exists();
     }
 
     @Test

@@ -33,6 +33,15 @@ abstract class JenkinsPluginExtension @Inject constructor(private val project: P
         .convention(DEFAULT_ARCHIVE_EXTENSION)
 
     /**
+     * When true, local run tasks normalize plugin archives copied into `work/plugins` to use the standard `.jpi`
+     * extension, even if the built archive uses `.hpi`.
+     *
+     * Defaults to `false` so local run setup preserves the configured archive extension unless explicitly enabled.
+     */
+    val normalizePluginArchiveExtensionsForServer: Property<Boolean> = project.objects.property(Boolean::class.java)
+        .convention(false)
+
+    /**
      * The version of Jenkins core to compile and run against.
      * Can be set via the [JENKINS_VERSION_PROPERTY] Gradle property.
      * Defaults to [DEFAULT_JENKINS_VERSION].

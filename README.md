@@ -405,6 +405,14 @@ jenkinsPlugin {
     // can also be set via the gradle property 'jenkins.localizer.version'
     localizerVersion.set("1.31")
 
+    // plugin archive extension used for the built artifact (default: "jpi")
+    archiveExtension.set("jpi")
+
+    // when true, local run tasks rewrite plugin filenames in work/plugins to use .jpi
+    // this affects both server/prepareServer and hplRun/prepareRun
+    // defaults to false so local run setup preserves the configured archive extension
+    normalizePluginArchiveExtensionsForServer.set(false)
+
     // ID of the plugin, defaults to the project name
     pluginId.set("my-plugin")
 
