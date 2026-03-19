@@ -14,6 +14,9 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.Comparator;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -81,11 +84,13 @@ public abstract class TestServerTask extends DefaultTask {
 
     @TaskAction
     public void runTestServer() {
-        var commandLine = getCommandLine();
         var timeoutSystemProperty = System.getProperty("testServer.timeoutSeconds", "120");
         var timeout = Integer.parseInt(timeoutSystemProperty);
+        Path workDir = null;
 
         try {
+            workDir = createWorkDirectory();
+            var commandLine = getCommandLine(workDir);
             var process = launchProcess(commandLine);
 
             var timerThread = new Thread(() -> {
@@ -112,6 +117,8 @@ public abstract class TestServerTask extends DefaultTask {
             throw new GradleException("IO Exception", e);
         } catch (InterruptedException e) {
             throw new GradleException("Process interrupted", e);
+        } finally {
+            cleanupWorkDirectory(workDir);
         }
     }
 
@@ -139,7 +146,32 @@ public abstract class TestServerTask extends DefaultTask {
     }
 
     @NotNull
-    private List<String> getCommandLine() {
+    private Path createWorkDirectory() throws IOException {
+        Files.createDirectories(getTemporaryDir().toPath());
+        return Files.createTempDirectory(getTemporaryDir().toPath(), "jenkins-work-");
+    }
+
+    private void cleanupWorkDirectory(Path workDir) {
+        if (workDir == null || Boolean.getBoolean(WorkDirectorySettings.PRESERVE_TEST_WORK_DIR_SYSTEM_PROPERTY)) {
+            return;
+        }
+
+        try (var paths = Files.walk(workDir)) {
+            paths.sorted(Comparator.reverseOrder())
+                    .forEach(path -> {
+                        try {
+                            Files.deleteIfExists(path);
+                        } catch (IOException e) {
+                            throw new GradleException("Failed to delete temporary Jenkins work directory " + workDir, e);
+                        }
+                    });
+        } catch (IOException e) {
+            throw new GradleException("Failed to clean temporary Jenkins work directory " + workDir, e);
+        }
+    }
+
+    @NotNull
+    private List<String> getCommandLine(@NotNull Path workDir) {
         List<String> commandLine = new ArrayList<>();
         commandLine.add(getGradleExecutable().get());
         commandLine.add("-Dorg.gradle.java.home=" + getJavaHome().get());
@@ -163,11 +195,16 @@ public abstract class TestServerTask extends DefaultTask {
         if (getRerunTasks().get()) commandLine.add("--rerun-tasks");
         if (getDryRun().get()) commandLine.add("--dry-run");
 
-        getSystemProperties().get().forEach((k, v) -> commandLine.add("-D" + k + "=" + v));
+        getSystemProperties().get().forEach((k, v) -> {
+            if (!k.equals(WorkDirectorySettings.SYSTEM_PROPERTY)) {
+                commandLine.add("-D" + k + "=" + v);
+            }
+        });
         getProjectProperties().get().forEach((k, v) -> commandLine.add("-P" + k + "=" + v));
 
         commandLine.add(getServerTaskPath().get());
         commandLine.add("-Dserver.port=" + getPortAllocationService().get().findAndReserveFreePort());
+        commandLine.add("-D" + WorkDirectorySettings.SYSTEM_PROPERTY + "=" + workDir.toAbsolutePath());
         System.err.println("Command: " + commandLine);
         return commandLine;
     }

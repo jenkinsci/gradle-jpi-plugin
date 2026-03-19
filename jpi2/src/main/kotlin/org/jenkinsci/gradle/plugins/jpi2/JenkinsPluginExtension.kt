@@ -2,6 +2,7 @@ package org.jenkinsci.gradle.plugins.jpi2
 
 import org.gradle.api.Action
 import org.gradle.api.Project
+import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.provider.ListProperty
 import org.gradle.api.provider.Provider
 import org.gradle.api.provider.Property
@@ -31,6 +32,13 @@ abstract class JenkinsPluginExtension @Inject constructor(private val project: P
      */
     val archiveExtension: Property<String> = project.objects.property(String::class.java)
         .convention(DEFAULT_ARCHIVE_EXTENSION)
+
+    /**
+     * The Jenkins work directory used by `server` and `hplRun`.
+     * Defaults to `${projectDir}/work`.
+     */
+    val workDir: DirectoryProperty = project.objects.directoryProperty()
+        .convention(project.layout.projectDirectory.dir("work"))
 
     /**
      * The version of Jenkins core to compile and run against.

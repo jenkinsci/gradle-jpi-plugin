@@ -15,17 +15,17 @@ import java.util.Comparator;
  */
 class ConfigurePrepareServerAction implements Action<Sync> {
     private final TaskProvider<?> jpiTaskProvider;
-    private final String projectRoot;
+    private final Provider<String> workDir;
     private final Configuration defaultRuntime;
     private final Provider<String> projectName;
     private final Provider<String> projectVersion;
     private final Provider<String> targetExtension;
 
-    public ConfigurePrepareServerAction(TaskProvider<?> jpiTaskProvider, String projectRoot, Configuration defaultRuntime,
+    public ConfigurePrepareServerAction(TaskProvider<?> jpiTaskProvider, Provider<String> workDir, Configuration defaultRuntime,
                                        Provider<String> projectName, Provider<String> projectVersion,
                                        Provider<String> targetExtension) {
         this.jpiTaskProvider = jpiTaskProvider;
-        this.projectRoot = projectRoot;
+        this.workDir = workDir;
         this.defaultRuntime = defaultRuntime;
         this.projectName = projectName;
         this.projectVersion = projectVersion;
@@ -35,8 +35,7 @@ class ConfigurePrepareServerAction implements Action<Sync> {
     @Override
     public void execute(@NotNull Sync sync) {
         var jpi = jpiTaskProvider.get();
-
-        sync.into(projectRoot + "/work/plugins");
+        sync.into(workDir.map(it -> it + "/plugins"));
 
         sync.from(jpi)
                 .rename(new DropVersionTransformer(

@@ -86,9 +86,13 @@ Handle these concerns directly in your build instead of expecting them on `jenki
 - `configurePublishing` is no longer needed because `jpi2` always configures Maven publication wiring.
 - `repoUrl`, `snapshotRepoUrl`, and `incrementalsRepoUrl` do not have direct `jpi2` extension equivalents.
 - `gitHubUrl` and `scmTag` do not have direct `jpi2` extension equivalents.
-- `workDir` is not a `jpi2` extension property.
 - `disabledTestInjection` does not have a `jpi2` replacement on the extension.
 - `enableSpotBugs()`, `enableCheckstyle()`, and `enableJacoco()` are not built into `jpi2`.
+
+`workDir` is available on the `jpi2` extension and defaults to `${projectDir}/work`.
+That value is used by both `server` and `hplRun`.
+If you need a one-off override, pass `-Djpi2.workDir=...`.
+The system property takes precedence over `jenkinsPlugin.workDir`.
 
 If you need custom publishing metadata, configure the generated `MavenPublication` directly.
 
@@ -128,6 +132,17 @@ For the Jenkins HTTP port, set the `server.port` system property instead of usin
 ```shell
 ./gradlew server -Dserver.port=8090
 ```
+
+For the Jenkins work directory, use the extension for the steady-state default.
+
+```kotlin
+jenkinsPlugin {
+    workDir = layout.projectDirectory.dir("custom-work")
+}
+```
+
+`testServer` and `testHplRun` use temporary work directories automatically so they can run safely in parallel.
+Set `jpi2.preserveTestWorkDir=true` when you want to keep those directories for debugging.
 
 ## 6. Decide how plugin versions should be produced
 

@@ -94,6 +94,7 @@ The plugin will package plain Java libraries into the plugin archive and treat J
 - `./gradlew jpi` builds the plugin archive.
 - `./gradlew server` starts Jenkins with the built plugin installed.
 - `./gradlew hplRun` starts Jenkins with the current project wired in through HPL files for faster local iteration.
+- `./gradlew testServer` verifies that the installed-plugin launch boots successfully and then shuts down.
 - `./gradlew testHplRun` verifies that the HPL-based launch boots successfully and then shuts down.
 - `./gradlew localizeMessages` generates Java sources from `Messages.properties` files under `src/main/resources`.
 - `./gradlew generateGitVersion` writes a Git-derived version file for builds that use `versionSource.set(VersionSource.GIT)`.
@@ -149,6 +150,25 @@ tasks.named<JavaExec>("server") {
     systemProperty("server.port", "8090")
 }
 ```
+
+Both `server` and `hplRun` use `${projectDir}/work` by default.
+Set `jenkinsPlugin.workDir` to move that directory for normal development.
+Set `jpi2.workDir` as a system property when you need a one-off override.
+The system property takes precedence over the extension.
+
+```kotlin
+jenkinsPlugin {
+    workDir = layout.projectDirectory.dir("custom-work")
+}
+```
+
+```shell
+./gradlew hplRun -Djpi2.workDir=/tmp/jenkins-dev
+```
+
+`testServer` and `testHplRun` always launch Jenkins with a temporary work directory so they can run safely in parallel.
+Those temporary directories are deleted after the task finishes.
+Set `jpi2.preserveTestWorkDir=true` if you want to keep them for debugging.
 
 ## Migration And Legacy Docs
 
