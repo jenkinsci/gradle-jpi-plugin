@@ -3,6 +3,7 @@ package org.jenkinsci.gradle.plugins.jpi2;
 import org.gradle.api.Action;
 import org.gradle.api.Task;
 import org.gradle.api.artifacts.Configuration;
+import org.gradle.api.provider.Provider;
 import org.gradle.api.specs.Spec;
 import org.gradle.api.tasks.JavaExec;
 import org.gradle.api.tasks.TaskProvider;
@@ -19,11 +20,13 @@ import java.util.List;
 class ServerAction implements Action<JavaExec> {
     private final Configuration serverTaskClasspath;
     private final String projectRoot;
+    private final Provider<String> workDir;
     private final TaskProvider<?> prepareServer;
 
-    public ServerAction(Configuration serverTaskClasspath, String projectRoot, TaskProvider<?> prepareServer) {
+    public ServerAction(Configuration serverTaskClasspath, String projectRoot, Provider<String> workDir, TaskProvider<?> prepareServer) {
         this.serverTaskClasspath = serverTaskClasspath;
         this.projectRoot = projectRoot;
+        this.workDir = workDir;
         this.prepareServer = prepareServer;
     }
 
@@ -37,10 +40,16 @@ class ServerAction implements Action<JavaExec> {
                 "--webroot=" + projectRoot + "/build/jenkins/war",
                 "--pluginroot=" + projectRoot + "/build/jenkins/plugins",
                 "--extractedFilesFolder=" + projectRoot + "/build/jenkins/extracted",
-                "--commonLibFolder=" + projectRoot + "/work/lib",
+                "--commonLibFolder=" + workDir.get() + "/lib",
                 "--httpPort=" + System.getProperty("server.port", "8080")
         ));
-        spec.environment("JENKINS_HOME", projectRoot + "/work");
+        spec.environment("JENKINS_HOME", workDir.get());
+        spec.doFirst(task -> {
+            spec.setArgs(spec.getArgs().stream()
+                    .map(arg -> arg.startsWith("--commonLibFolder=") ? "--commonLibFolder=" + workDir.get() + "/lib" : arg)
+                    .toList());
+            spec.environment("JENKINS_HOME", workDir.get());
+        });
 
         spec.dependsOn(prepareServer);
 

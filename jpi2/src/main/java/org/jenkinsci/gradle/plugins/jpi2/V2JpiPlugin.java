@@ -188,8 +188,9 @@ public class V2JpiPlugin implements Plugin<Project> {
         });
 
         final var projectRoot = project.getLayout().getProjectDirectory().getAsFile().getAbsolutePath();
-        final var prepareServer = createPrepareServerTask(project, projectRoot, defaultRuntime, jpiTask);
-        final var prepareRun = createPrepareRunTask(project, projectRoot, defaultRuntime, generateHpl);
+        final var workDir = WorkDirectorySettings.getWorkDir(project, extension, projectRoot);
+        final var prepareServer = createPrepareServerTask(project, workDir, defaultRuntime, jpiTask);
+        final var prepareRun = createPrepareRunTask(project, workDir, defaultRuntime, generateHpl);
 
         project.getGradle().projectsEvaluated(gradle -> {
             var projectByPath = project.getRootProject().getAllprojects().stream()
@@ -199,8 +200,8 @@ public class V2JpiPlugin implements Plugin<Project> {
             configureProjectDependencyTasks(prepareRun, getProjectDependencyTasks(projectDependencies, GenerateHplTask.TASK_NAME));
         });
 
-        project.getTasks().register("server", JavaExec.class, new ServerAction(serverTaskClasspath, projectRoot, prepareServer));
-        project.getTasks().register("hplRun", JavaExec.class, new ServerAction(serverTaskClasspath, projectRoot, prepareRun));
+        project.getTasks().register("server", JavaExec.class, new ServerAction(serverTaskClasspath, projectRoot, workDir, prepareServer));
+        project.getTasks().register("hplRun", JavaExec.class, new ServerAction(serverTaskClasspath, projectRoot, workDir, prepareRun));
         project.getPlugins().withType(JavaBasePlugin.class, new SezpozJavaAction(project));
         project.getPlugins().withType(GroovyBasePlugin.class, new SezpozGroovyAction(project));
         configureAccessModifier(project);
@@ -363,11 +364,11 @@ public class V2JpiPlugin implements Plugin<Project> {
     }
 
     @NotNull
-    private static TaskProvider<Sync> createPrepareServerTask(@NotNull Project project, String projectRoot, Configuration defaultRuntime,
+    private static TaskProvider<Sync> createPrepareServerTask(@NotNull Project project, Provider<String> workDir, Configuration defaultRuntime,
                                                               TaskProvider<?> jpiTaskProvider) {
         return project.getTasks().register("prepareServer", Sync.class, new ConfigurePrepareServerAction(
                 jpiTaskProvider,
-                projectRoot,
+                workDir,
                 defaultRuntime,
                 project.provider(project::getName),
                 project.provider(() -> project.getVersion().toString()),
@@ -376,11 +377,11 @@ public class V2JpiPlugin implements Plugin<Project> {
     }
 
     @NotNull
-    private static TaskProvider<Sync> createPrepareRunTask(@NotNull Project project, String projectRoot, Configuration defaultRuntime,
+    private static TaskProvider<Sync> createPrepareRunTask(@NotNull Project project, Provider<String> workDir, Configuration defaultRuntime,
                                                            TaskProvider<GenerateHplTask> hplTaskProvider) {
         return project.getTasks().register("prepareRun", Sync.class, new ConfigurePrepareRunAction(
                 hplTaskProvider,
-                projectRoot,
+                workDir,
                 defaultRuntime
         ));
     }

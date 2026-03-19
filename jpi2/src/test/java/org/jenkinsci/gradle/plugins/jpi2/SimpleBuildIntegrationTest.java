@@ -8,6 +8,8 @@ import org.junit.jupiter.api.condition.OS;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.StandardOpenOption;
 import java.util.jar.Manifest;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -93,6 +95,36 @@ class SimpleBuildIntegrationTest extends V2IntegrationTestBase {
 
         // then
         assertThat(ith.inProjectDir("work/plugins/test-plugin.hpl")).exists();
+    }
+
+    @Test
+    void simpleGradleBuildShouldRespectWorkDirectoryOverrideForRun() throws IOException, InterruptedException {
+        var ith = new IntegrationTestHelper(tempDir, "8.14");
+        configureSimpleBuild(ith);
+
+        var customWorkDir = Files.createDirectory(tempDir.toPath().resolve("custom-work"));
+
+        testServerStarts(ith.gradleRunner(), "-D" + WorkDirectorySettings.SYSTEM_PROPERTY + "=" + customWorkDir, "hplRun");
+
+        assertThat(customWorkDir.resolve("plugins/test-plugin.hpl")).exists();
+        assertThat(ith.inProjectDir("work/plugins/test-plugin.hpl")).doesNotExist();
+    }
+
+    @Test
+    void simpleGradleBuildShouldRespectExtensionWorkDirectoryForRun() throws IOException, InterruptedException {
+        var ith = new IntegrationTestHelper(tempDir, "8.14");
+        configureSimpleBuild(ith);
+
+        Files.writeString(ith.inProjectDir("build.gradle.kts").toPath(), /* language=kotlin */ """
+                jenkinsPlugin {
+                    workDir = layout.projectDirectory.dir("custom-work")
+                }
+                """, StandardOpenOption.APPEND);
+
+        testServerStarts(ith.gradleRunner(), "hplRun");
+
+        assertThat(ith.inProjectDir("custom-work/plugins/test-plugin.hpl")).exists();
+        assertThat(ith.inProjectDir("work/plugins/test-plugin.hpl")).doesNotExist();
     }
 
     @Test

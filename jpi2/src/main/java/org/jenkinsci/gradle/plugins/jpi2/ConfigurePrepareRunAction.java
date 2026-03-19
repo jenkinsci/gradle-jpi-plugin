@@ -3,6 +3,7 @@ package org.jenkinsci.gradle.plugins.jpi2;
 import org.gradle.api.Action;
 import org.gradle.api.artifacts.Configuration;
 import org.gradle.api.artifacts.ResolvedArtifact;
+import org.gradle.api.provider.Provider;
 import org.gradle.api.tasks.Sync;
 import org.gradle.api.tasks.TaskProvider;
 import org.jetbrains.annotations.NotNull;
@@ -14,18 +15,20 @@ import java.util.Comparator;
  */
 class ConfigurePrepareRunAction implements Action<Sync> {
     private final TaskProvider<GenerateHplTask> hplTaskProvider;
-    private final String projectRoot;
+    private final Provider<String> workDir;
     private final Configuration defaultRuntime;
 
-    ConfigurePrepareRunAction(TaskProvider<GenerateHplTask> hplTaskProvider, String projectRoot, Configuration defaultRuntime) {
+    ConfigurePrepareRunAction(TaskProvider<GenerateHplTask> hplTaskProvider,
+                              Provider<String> workDir,
+                              Configuration defaultRuntime) {
         this.hplTaskProvider = hplTaskProvider;
-        this.projectRoot = projectRoot;
+        this.workDir = workDir;
         this.defaultRuntime = defaultRuntime;
     }
 
     @Override
     public void execute(@NotNull Sync sync) {
-        sync.into(projectRoot + "/work/plugins");
+        sync.into(workDir.map(it -> it + "/plugins"));
         sync.from(hplTaskProvider);
 
         defaultRuntime.getResolvedConfiguration().getResolvedArtifacts()
