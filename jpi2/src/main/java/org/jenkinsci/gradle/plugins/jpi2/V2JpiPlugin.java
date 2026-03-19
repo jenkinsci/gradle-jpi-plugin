@@ -123,6 +123,17 @@ public class V2JpiPlugin implements Plugin<Project> {
         SourceSet main = sourceSets.getByName(SourceSet.MAIN_SOURCE_SET_NAME);
         main.getResources().getSrcDirs().add(project.file("src/main/webapp"));
         project.getPlugins().apply(LocalizationPlugin.class);
+        var checkOverlappingSources = project.getTasks().register(
+                CheckOverlappingSourcesTask.NAME,
+                CheckOverlappingSourcesTask.class,
+                task -> {
+                    task.setGroup("Verification");
+                    task.setDescription("Checks for overlapping generated Jenkins metadata across main source outputs.");
+                    task.getClassesDirs().from(main.getOutput().getClassesDirs());
+                    task.getOutputFile().set(project.getLayout().getBuildDirectory().file("check-overlap/discovered.txt"));
+                    task.dependsOn(project.getTasks().named("classes"));
+                });
+        project.getTasks().named("check", task -> task.dependsOn(checkOverlappingSources));
 
         var optionalManifest = project.getTasks().register(
                 GenerateOptionalJenkinsManifestTask.NAME,
