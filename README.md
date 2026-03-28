@@ -7,8 +7,16 @@
 [regression-workflow]: https://github.com/jenkinsci/gradle-jpi-plugin/actions?query=workflow%3ARegression
 
 This repository contains two Gradle plugins for building Jenkins plugins.
-`org.jenkins-ci.jpi2` is the recommended plugin for modern Gradle builds and is the primary focus of this README.
-`org.jenkins-ci.jpi` remains available for older Gradle builds, and its documentation now lives in [docs/legacy-jpi.md](docs/legacy-jpi.md).
+
+- `org.jenkins-ci.jpi2` is the recommended plugin for modern Gradle builds and is the primary focus of this README.
+
+- `org.jenkins-ci.jpi` remains available for older Gradle builds, and its documentation now lives in [docs/legacy-jpi.md](docs/legacy-jpi.md).
+  It worked with Gradle 8.13.x and below.
+  The last meaningful update to the legacy plugin was in 2025-02 in [v0.53.1](https://github.com/jenkinsci/gradle-jpi-plugin/releases/tag/v0.53.1).
+  It was still being built until 2026-04, because we built both plugins in one build.
+  As of [v0.58.0](https://github.com/jenkinsci/gradle-jpi-plugin/releases/tag/v0.53.1), the legacy plugin is no longer built or published, but the source code is still available in the repository.
+  This allows us to modernize the gradle version used to build the plugin.
+
 If you are moving an existing build forward, start with [docs/migrating-to-jpi2.md](docs/migrating-to-jpi2.md).
 
 ## Choosing a plugin
