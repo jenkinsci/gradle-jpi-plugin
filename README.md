@@ -49,6 +49,7 @@ repositories {
 `jenkinsPublic()` adds the Jenkins public repository (`https://repo.jenkins-ci.org/public/`).
 `jenkinsIncrementals()` adds the Jenkins incrementals repository (`https://repo.jenkins-ci.org/incrementals/`).
 `jenkinsSnapshots()` adds the Jenkins snapshots repository (`https://repo.jenkins-ci.org/snapshots/`).
+These same shortcuts are available inside `publishing { repositories { } }` for configuring publish targets.
 
 jenkinsPlugin {
     jenkinsVersion.set("2.492.3")
@@ -134,6 +135,59 @@ jenkinsPlugin {
     }
 }
 ```
+
+### Publishing to Jenkins
+
+`jpi2` provides a `publishToJenkins()` shortcut for the `publishing { repositories { } }` block.
+It automatically selects the correct repository based on the project version:
+
+- Release versions publish to `https://repo.jenkins-ci.org/releases/`.
+- `-SNAPSHOT` versions publish to `https://repo.jenkins-ci.org/snapshots/`.
+- Incrementals versions (matching `-rc<N>.<hash>`) publish to `https://repo.jenkins-ci.org/incrementals/`.
+
+The repository uses Gradle `PasswordCredentials`.
+Set `jenkinsPublishUsername` and `jenkinsPublishPassword` in `~/.gradle/gradle.properties` or as environment variables (`ORG_GRADLE_PROJECT_jenkinsPublishUsername` and `ORG_GRADLE_PROJECT_jenkinsPublishPassword`).
+
+```kotlin
+import org.jenkinsci.gradle.plugins.jpi2.publishToJenkins
+
+publishing {
+    repositories {
+        publishToJenkins()
+    }
+}
+```
+
+In Groovy DSL, the import is not needed.
+
+```groovy
+publishing {
+    repositories {
+        publishToJenkins()
+    }
+}
+```
+
+### Publishing to a custom repository
+
+To publish to a private or internal Maven repository, configure it directly in `publishing { repositories { } }` using standard Gradle APIs.
+
+```kotlin
+publishing {
+    repositories {
+        maven {
+            name = "internal"
+            url = uri("https://maven.example.com/releases")
+            credentials {
+                username = providers.gradleProperty("internalUsername").get()
+                password = providers.gradleProperty("internalPassword").get()
+            }
+        }
+    }
+}
+```
+
+See the [Gradle publishing documentation](https://docs.gradle.org/current/userguide/publishing_maven.html#publishing_maven:repositories) for the full set of options including HTTP header credentials, AWS S3 repositories, and conditional repository selection.
 
 ### Running Jenkins locally
 

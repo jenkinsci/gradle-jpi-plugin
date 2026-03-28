@@ -76,7 +76,7 @@ class PublishingIntegrationTest extends V2IntegrationTestBase {
                 .extracting(Repository::getId, Repository::getUrl)
                 .containsExactlyInAnyOrder(
                         new Tuple("MavenRepo", "https://repo.maven.apache.org/maven2/"),
-                        new Tuple("jenkins-public", "https://repo.jenkins-ci.org/public/")
+                        new Tuple("jenkinsPublic", "https://repo.jenkins-ci.org/public/")
                 );
         var explodedWar = ith.inProjectDir("build/jpi");
 
@@ -167,8 +167,155 @@ class PublishingIntegrationTest extends V2IntegrationTestBase {
                 .extracting(Repository::getId, Repository::getUrl)
                 .containsExactlyInAnyOrder(
                         new Tuple("MavenRepo", "https://repo.maven.apache.org/maven2/"),
-                        new Tuple("jenkins-public", "https://repo.jenkins-ci.org/public/")
+                        new Tuple("jenkinsPublic", "https://repo.jenkins-ci.org/public/")
                 );
+    }
+
+    private static final String PUBLISH_TO_JENKINS_IMPORT = """
+            import org.jenkinsci.gradle.plugins.jpi2.publishToJenkins
+
+            """;
+
+    private static final String JENKINS_PUBLISH_USERNAME = "-PjenkinsPublishUsername=test";
+    private static final String JENKINS_PUBLISH_PASSWORD = "-PjenkinsPublishPassword=test";
+
+    @Test
+    void publishToJenkinsSelectsReleasesForReleaseVersion() throws IOException {
+        // given
+        var ith = new IntegrationTestHelper(tempDir, "8.14");
+        initBuild(ith);
+        com.google.common.io.Files.write((PUBLISH_TO_JENKINS_IMPORT + getBasePluginConfig() + /* language=kotlin */ """
+                publishing {
+                    repositories {
+                        publishToJenkins()
+                    }
+                }
+                """).getBytes(StandardCharsets.UTF_8), ith.inProjectDir("build.gradle.kts"));
+
+        // when
+        var result = ith.gradleRunner().withArguments(
+                "publish", "--dry-run", JENKINS_PUBLISH_USERNAME, JENKINS_PUBLISH_PASSWORD).build();
+
+        // then
+        assertThat(result.getOutput()).contains("publishMavenJpiPublicationToJenkinsPublishRepository");
+    }
+
+    @Test
+    void publishToJenkinsSelectsSnapshotsForSnapshotVersion() throws IOException {
+        // given
+        var ith = new IntegrationTestHelper(tempDir, "8.14");
+        initBuild(ith);
+        com.google.common.io.Files.write((PUBLISH_TO_JENKINS_IMPORT + String.format(/* language=kotlin */ """
+                plugins {
+                    id("org.jenkins-ci.jpi2")
+                }
+                repositories {
+                    mavenCentral()
+                    jenkinsPublic()
+                }
+                tasks.named<JavaExec>("server") {
+                    args("--httpPort=%d")
+                }
+                tasks.named<JavaExec>("hplRun") {
+                    args("--httpPort=%d")
+                }
+                group = "com.example"
+                version = "1.0.0-SNAPSHOT"
+                publishing {
+                    repositories {
+                        publishToJenkins()
+                        maven {
+                            name = "local"
+                            url = uri("${rootDir}/build/repo")
+                        }
+                    }
+                }
+                """, RandomPortProvider.findFreePort(), RandomPortProvider.findFreePort()))
+                .getBytes(StandardCharsets.UTF_8), ith.inProjectDir("build.gradle.kts"));
+
+        // when
+        var result = ith.gradleRunner().withArguments(
+                "publishMavenJpiPublicationToJenkinsPublishRepository", "--dry-run",
+                JENKINS_PUBLISH_USERNAME, JENKINS_PUBLISH_PASSWORD).build();
+
+        // then
+        assertThat(result.getOutput()).contains("publishMavenJpiPublicationToJenkinsPublishRepository");
+    }
+
+    @Test
+    void publishToJenkinsSelectsIncrementalsForRcVersion() throws IOException {
+        // given
+        var ith = new IntegrationTestHelper(tempDir, "8.14");
+        initBuild(ith);
+        com.google.common.io.Files.write((PUBLISH_TO_JENKINS_IMPORT + String.format(/* language=kotlin */ """
+                plugins {
+                    id("org.jenkins-ci.jpi2")
+                }
+                repositories {
+                    mavenCentral()
+                    jenkinsPublic()
+                }
+                tasks.named<JavaExec>("server") {
+                    args("--httpPort=%d")
+                }
+                tasks.named<JavaExec>("hplRun") {
+                    args("--httpPort=%d")
+                }
+                group = "com.example"
+                version = "1.0-rc1234.abc123"
+                publishing {
+                    repositories {
+                        publishToJenkins()
+                        maven {
+                            name = "local"
+                            url = uri("${rootDir}/build/repo")
+                        }
+                    }
+                }
+                """, RandomPortProvider.findFreePort(), RandomPortProvider.findFreePort()))
+                .getBytes(StandardCharsets.UTF_8), ith.inProjectDir("build.gradle.kts"));
+
+        // when
+        var result = ith.gradleRunner().withArguments(
+                "publishMavenJpiPublicationToJenkinsPublishRepository", "--dry-run",
+                JENKINS_PUBLISH_USERNAME, JENKINS_PUBLISH_PASSWORD).build();
+
+        // then
+        assertThat(result.getOutput()).contains("publishMavenJpiPublicationToJenkinsPublishRepository");
+    }
+
+    @Test
+    void publishToJenkinsWorksInGroovyDsl() throws IOException {
+        // given
+        var ith = new IntegrationTestHelper(tempDir, "8.14");
+        initBuild(ith);
+        com.google.common.io.Files.write(/* language=groovy */ """
+                plugins {
+                    id "org.jenkins-ci.jpi2"
+                }
+                repositories {
+                    mavenCentral()
+                    jenkinsPublic()
+                }
+                group = "com.example"
+                version = "1.0.0"
+                publishing {
+                    repositories {
+                        publishToJenkins()
+                        maven {
+                            name = "local"
+                            url = uri("${rootDir}/build/repo")
+                        }
+                    }
+                }
+                """.getBytes(StandardCharsets.UTF_8), ith.inProjectDir("build.gradle"));
+
+        // when
+        var result = ith.gradleRunner().withArguments(
+                "publish", "--dry-run", JENKINS_PUBLISH_USERNAME, JENKINS_PUBLISH_PASSWORD).build();
+
+        // then
+        assertThat(result.getOutput()).contains("publishMavenJpiPublicationToJenkinsPublishRepository");
     }
 
     @Test

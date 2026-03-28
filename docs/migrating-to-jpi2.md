@@ -40,6 +40,8 @@ repositories {
 `jenkinsPublic()` is the shorthand for the Jenkins public repository.
 `jenkinsIncrementals()` is the shorthand for the Jenkins incrementals repository.
 `jenkinsSnapshots()` is the shorthand for the Jenkins snapshots repository.
+These same shortcuts are available inside `publishing { repositories { } }`.
+`publishToJenkins()` is a convenience shortcut that automatically selects the right publishing repository based on the project version.
 
 ## 3. Update the `jenkinsPlugin` block
 
@@ -85,7 +87,9 @@ Handle these concerns directly in your build instead of expecting them on `jenki
 
 - `configureRepositories` is no longer needed because repositories are declared explicitly in `repositories { ... }`.
 - `configurePublishing` is no longer needed because `jpi2` always configures Maven publication wiring.
-- `repoUrl`, `snapshotRepoUrl`, and `incrementalsRepoUrl` do not have direct `jpi2` extension equivalents.
+- `repoUrl`, `snapshotRepoUrl`, and `incrementalsRepoUrl` are replaced by the `publishToJenkins()` shortcut in `publishing { repositories { } }`.
+  It selects the correct repository URL based on the project version and uses Gradle `PasswordCredentials` for authentication.
+  See the README for details.
 - `gitHubUrl` and `scmTag` do not have direct `jpi2` extension equivalents.
 - `disabledTestInjection` does not have a `jpi2` replacement on the extension.
 - `enableSpotBugs()`, `enableCheckstyle()`, and `enableJacoco()` are not built into `jpi2`.
@@ -94,6 +98,25 @@ Handle these concerns directly in your build instead of expecting them on `jenki
 That value is used by both `server` and `hplRun`.
 If you need a one-off override, pass `-Pjpi2.workDir=...`.
 The Gradle property takes precedence over `jenkinsPlugin.workDir`.
+
+If you were using custom `repoUrl` or `snapshotRepoUrl` values to publish to a private repository, configure it directly in `publishing { repositories { } }`.
+
+```kotlin
+publishing {
+    repositories {
+        maven {
+            name = "internal"
+            url = uri("https://maven.example.com/releases")
+            credentials {
+                username = providers.gradleProperty("internalUsername").get()
+                password = providers.gradleProperty("internalPassword").get()
+            }
+        }
+    }
+}
+```
+
+See the [Gradle publishing documentation](https://docs.gradle.org/current/userguide/publishing_maven.html#publishing_maven:repositories) for the full set of repository options.
 
 If you need custom publishing metadata, configure the generated `MavenPublication` directly.
 
