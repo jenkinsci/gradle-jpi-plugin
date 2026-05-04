@@ -6,10 +6,18 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.concurrent.Callable;
 
+/**
+ * Extracts Gradle project properties that share a common prefix and strips that prefix,
+ * making them available as a plain map to the access-modifier checker.
+ */
 public class PrefixedPropertiesProvider implements Callable<Map<String, Object>> {
     private final Project project;
     private final String prefix;
 
+    /**
+     * @param project the Gradle project whose properties are scanned
+     * @param prefix  only properties with this prefix are included; the prefix is stripped from the keys
+     */
     public PrefixedPropertiesProvider(Project project, String prefix) {
         this.project = project;
         this.prefix = prefix;

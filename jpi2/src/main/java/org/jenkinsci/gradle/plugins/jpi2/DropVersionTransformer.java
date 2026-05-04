@@ -11,6 +11,11 @@ public class DropVersionTransformer implements Transformer<String, String> {
     private final String version;
     private final String targetExtension;
 
+    /**
+     * @param name            artifact name without version (e.g. {@code git})
+     * @param version         artifact version to strip from the filename
+     * @param targetExtension archive extension to normalise to (e.g. {@code jpi} or {@code hpi})
+     */
     public DropVersionTransformer(String name, String version, String targetExtension) {
         this.name = name;
         this.version = version;

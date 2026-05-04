@@ -47,6 +47,7 @@ public abstract class LocalizationTask extends SourceTask {
     @Inject
     public abstract WorkerExecutor getWorkerExecutor();
 
+    /** Submits one localizer work item per {@code Messages.properties} file, resolved relative to the configured source roots. */
     @TaskAction
     public void generate() {
         WorkQueue workQueue = getWorkerExecutor().classLoaderIsolation(spec ->

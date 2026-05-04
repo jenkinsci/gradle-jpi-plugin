@@ -14,9 +14,14 @@ import java.nio.file.Files;
 import java.util.List;
 import java.util.Properties;
 
+/**
+ * Work action that runs {@code kohsuke.accmod.Checker} against a compiled class directory
+ * to enforce {@code @Restricted} access-modifier rules.
+ */
 public abstract class CheckAccess implements WorkAction<CheckAccessParameters> {
     private static final Logger LOGGER = LoggerFactory.getLogger(CheckAccess.class);
 
+    /** Required by Gradle's worker injection infrastructure. */
     @Inject
     public CheckAccess() {
     }

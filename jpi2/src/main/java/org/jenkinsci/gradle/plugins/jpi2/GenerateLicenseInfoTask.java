@@ -38,33 +38,42 @@ import java.util.Set;
  * Generates {@code licenses.xml} for libraries bundled into the plugin package.
  */
 public abstract class GenerateLicenseInfoTask extends DefaultTask {
+    /** Standard name under which this task is registered. */
     public static final String NAME = "generateLicenseInfo";
     private static final String LICENSE_NAMESPACE = "licenses";
 
+    /** @return directory where {@code licenses.xml} is written */
     @OutputDirectory
     public abstract DirectoryProperty getOutputDirectory();
 
+    /** @return POM files for all bundled runtime dependencies */
     @InputFiles
     @Classpath
     public abstract ConfigurableFileCollection getPomFiles();
 
+    /** @return version of the plugin project, written into the root dependency entry */
     @Input
     public abstract Property<String> getProjectVersion();
 
+    /** @return Maven artifact ID of the plugin project */
     @Input
     public abstract Property<String> getProjectName();
 
+    /** @return Maven group ID of the plugin project */
     @Input
     public abstract Property<String> getProjectGroup();
 
+    /** @return optional human-readable description included in the root dependency entry */
     @Input
     @Optional
     public abstract Property<String> getProjectDescription();
 
+    /** @return optional project URL included in the root dependency entry */
     @Input
     @Optional
     public abstract Property<String> getProjectUrl();
 
+    /** Collects POM files and writes a {@code licenses.xml} describing their license metadata. */
     @TaskAction
     public void generateLicenseInfo() {
         var outputDir = getOutputDirectory().get().getAsFile();

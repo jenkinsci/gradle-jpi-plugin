@@ -4,6 +4,10 @@ import org.apache.maven.plugin.logging.Log;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/**
+ * Adapts the Maven {@code Log} interface to SLF4J so that {@code kohsuke.accmod.Checker}
+ * — which expects Maven logging — can write through Gradle's logging infrastructure.
+ */
 public class MavenLoggingBridge implements Log {
     private static final Logger LOGGER = LoggerFactory.getLogger(MavenLoggingBridge.class);
     private static final String EXCEPTION_MESSAGE = "An error occurred";

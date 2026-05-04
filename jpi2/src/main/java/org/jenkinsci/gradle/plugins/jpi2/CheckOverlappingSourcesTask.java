@@ -24,16 +24,33 @@ import static java.nio.file.StandardOpenOption.CREATE;
 import static java.nio.file.StandardOpenOption.TRUNCATE_EXISTING;
 import static java.util.stream.Collectors.joining;
 
+/**
+ * Verifies that multiple compile outputs don't produce conflicting Sezpoz annotation index files
+ * or duplicate {@code hudson.Plugin} service entries — both of which break Jenkins plugin loading.
+ * The fix is always joint compilation so that a single compiler run owns all annotation processing.
+ */
 public abstract class CheckOverlappingSourcesTask extends DefaultTask {
+    /** Standard name under which this task is registered. */
     public static final String NAME = "checkOverlappingSources";
 
+    /** @return all compiled-class directories to inspect for annotation index and plugin service files */
     @InputFiles
     @PathSensitive(PathSensitivity.RELATIVE)
     public abstract ConfigurableFileCollection getClassesDirs();
 
+    /**
+     * Stamp file listing discovered metadata paths; used by Gradle for up-to-date checks
+     * rather than consumed downstream.
+     *
+     * @return the output stamp file
+     */
     @OutputFile
     public abstract RegularFileProperty getOutputFile();
 
+    /**
+     * Scans each classes directory and fails if duplicate Sezpoz annotation indices
+     * or multiple {@code hudson.Plugin} service files are found.
+     */
     @TaskAction
     public void validate() {
         var discovered = new ArrayList<File>();

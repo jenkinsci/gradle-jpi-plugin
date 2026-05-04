@@ -31,57 +31,78 @@ public abstract class TestServerTask extends DefaultTask {
             "java.io.IOException: Failed to load"
     );
 
+    /** @return root directory of the plugin project, used as the working directory for the spawned Gradle process */
     @Input
     public abstract Property<String> getRootDir();
 
+    /** @return path to the {@code gradlew} executable to invoke for the nested build */
     @Input
     public abstract Property<String> getGradleExecutable();
 
+    /** @return path to the JDK passed to the spawned Gradle via {@code -Dorg.gradle.java.home} */
     @Input
     public abstract Property<String> getJavaHome();
 
+    /** @return init scripts forwarded to the spawned Gradle via {@code --init-script} */
     @Input
     public abstract ListProperty<String> getInitScripts();
 
+    /** @return composite-build inclusions forwarded via {@code --include-build} */
     @Input
     public abstract ListProperty<String> getIncludedBuilds();
 
+    /** @return {@code true} to pass {@code --offline} to the spawned Gradle */
     @Input
     public abstract Property<Boolean> getOffline();
 
+    /** @return {@code true} to pass {@code --build-cache} to the spawned Gradle */
     @Input
     public abstract Property<Boolean> getBuildCacheEnabled();
 
+    /** @return {@code true} to pass {@code --refresh-dependencies} to the spawned Gradle */
     @Input
     public abstract Property<Boolean> getRefreshDependencies();
 
+    /** @return {@code true} to pass {@code --continue} to the spawned Gradle */
     @Input
     public abstract Property<Boolean> getContinueOnFailure();
 
+    /** @return {@code true} to pass {@code --parallel} to the spawned Gradle */
     @Input
     public abstract Property<Boolean> getParallelExecution();
 
+    /** @return {@code true} to pass {@code --profile} to the spawned Gradle */
     @Input
     public abstract Property<Boolean> getProfile();
 
+    /** @return {@code true} to pass {@code --rerun-tasks} to the spawned Gradle */
     @Input
     public abstract Property<Boolean> getRerunTasks();
 
+    /** @return {@code true} to pass {@code --dry-run} to the spawned Gradle */
     @Input
     public abstract Property<Boolean> getDryRun();
 
+    /** @return system properties forwarded as {@code -Dkey=value} to the spawned Gradle, excluding internal ones */
     @Input
     public abstract MapProperty<String, String> getSystemProperties();
 
+    /** @return project properties forwarded as {@code -Pkey=value} to the spawned Gradle, excluding internal ones */
     @Input
     public abstract MapProperty<String, String> getProjectProperties();
 
+    /** @return Gradle task path to run inside the spawned build (e.g. {@code :server}) */
     @Input
     public abstract Property<String> getServerTaskPath();
 
+    /** @return build service that allocates a free TCP port for the Jenkins test server */
     @Internal
     public abstract Property<PortAllocationService> getPortAllocationService();
 
+    /**
+     * Launches a nested Gradle build, streams its output, and fails the task
+     * if Jenkins does not report a successful start within the configured timeout.
+     */
     @TaskAction
     public void runTestServer() {
         var timeoutSystemProperty = System.getProperty("testServer.timeoutSeconds", "120");

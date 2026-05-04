@@ -19,17 +19,28 @@ import java.util.jar.Attributes;
 import java.util.jar.Manifest;
 import java.util.stream.Stream;
 
+/**
+ * Generates the optional Jenkins manifest fragment that declares whether a plugin supports
+ * dynamic loading, derived from the {@code dynamicLoadable} attribute of Sezpoz extension entries.
+ */
 public abstract class GenerateOptionalJenkinsManifestTask extends DefaultTask {
+    /** Standard name under which this task is registered. */
     public static final String NAME = "generateOptionalJenkinsManifest";
     private static final String EXTENSION_INDEX = "META-INF/annotations/hudson.Extension.txt";
 
+    /** @return directories containing Sezpoz-generated annotation index files to inspect */
     @InputFiles
     @PathSensitive(PathSensitivity.RELATIVE)
     public abstract ConfigurableFileCollection getInspectionDirectories();
 
+    /** @return the partial manifest file to write (merged into the final plugin JAR manifest) */
     @OutputFile
     public abstract RegularFileProperty getOutputFile();
 
+    /**
+     * Inspects Sezpoz extension metadata and writes a manifest with {@code Support-Dynamic-Loading}
+     * set to {@code true} unless any extension opts out.
+     */
     @TaskAction
     public void generate() {
         var manifest = new Manifest();

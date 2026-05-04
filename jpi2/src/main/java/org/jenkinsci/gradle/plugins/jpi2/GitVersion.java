@@ -30,6 +30,8 @@ public final class GitVersion {
      * @param abbrevLength  length of the abbreviated hash
      * @param allowDirty    if false, throws when there are uncommitted changes
      * @return version string and full hash
+     * @throws IOException          if a git subprocess cannot be started or its output cannot be read
+     * @throws InterruptedException if the thread is interrupted while waiting for git to finish
      */
     public static VersionResult compute(
             Path gitRoot,

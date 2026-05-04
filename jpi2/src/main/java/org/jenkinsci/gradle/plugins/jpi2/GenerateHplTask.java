@@ -23,17 +23,22 @@ import java.util.jar.Manifest;
  * Generates an HPL (Hudson Plugin Link) file for running Jenkins against local classes and resources.
  */
 public abstract class GenerateHplTask extends DefaultTask {
+    /** Standard name under which this task is registered. */
     public static final String TASK_NAME = "generateJenkinsServerHpl";
 
+    /** @return the {@code .hpl} file to write */
     @OutputFile
     public abstract RegularFileProperty getHpl();
 
+    /** @return path to the plugin's resource directory (web content, Jelly views, etc.) */
     @Input
     public abstract Property<File> getResourcePath();
 
+    /** @return runtime library JARs listed in the HPL {@code Libraries} attribute */
     @Classpath
     public abstract ConfigurableFileCollection getLibraries();
 
+    /** @return upstream {@code MANIFEST.MF} whose attributes are copied into the HPL before augmentation */
     @InputFile
     public abstract RegularFileProperty getUpstreamManifest();
 
