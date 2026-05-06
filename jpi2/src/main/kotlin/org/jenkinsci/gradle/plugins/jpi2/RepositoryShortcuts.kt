@@ -46,6 +46,9 @@ fun RepositoryHandler.publishToJenkins(): MavenArtifactRepository {
     val project = (this as ExtensionAware).extensions.extraProperties[PROJECT_EXTRA_KEY] as Project
     val repo = maven {
         name = JENKINS_PUBLISH_REPO_NAME
+        // URL is updated in afterEvaluate based on the version; a default is required so that
+        // init scripts that iterate repositories don't encounter a null URL before afterEvaluate runs.
+        url = JENKINS_RELEASES_REPO_URL
         credentials(PasswordCredentials::class.java)
     }
     project.afterEvaluate(object : Action<Project> {
