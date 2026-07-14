@@ -16,7 +16,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ubuntu-latest, windows-latest]
+        os: [ubuntu-24.04-arm, windows-latest]
     steps:
     - uses: actions/checkout@v6
     - name: Set up JDK 17
