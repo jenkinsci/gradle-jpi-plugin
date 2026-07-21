@@ -19,7 +19,7 @@ nebula-release = "21.0.0"
 okhttp = "4.12.0"
 sezpoz = "1.13"
 spock = "2.4-groovy-5.0"
-spotbugs-gradle = "6.5.5"
+spotbugs-gradle = "6.5.9"
 xmlunit = "2.12.0"
 
 [libraries]
