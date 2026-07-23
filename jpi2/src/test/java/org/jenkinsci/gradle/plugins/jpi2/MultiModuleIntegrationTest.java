@@ -136,6 +136,32 @@ class MultiModuleIntegrationTest extends V2IntegrationTestBase {
     }
 
     @Test
+    @Timeout(value = 15, unit = TimeUnit.MINUTES)
+    void concurrentTestServersAcrossModulesDoNotTripValidation() throws IOException {
+        var ith = new IntegrationTestHelper(tempDir, "8.14");
+        configureTwoPluginsForVerification(ith);
+
+        // downstream depends on upstream, so downstream's prepareServer source (which testServer
+        // fingerprints) includes upstream's produced artifacts. Running both testServers together
+        // must not trip Gradle's implicit-dependency validation on the upstream producing task.
+        //
+        // The validation fires at graph/configuration time, before Jenkins boots, so a short startup
+        // timeout is enough to exercise it — this avoids booting two full Jenkins servers at once,
+        // which would spike memory/CPU on a constrained CI runner. Both launches therefore time out
+        // (buildAndFail); the fix is proven by the ABSENCE of the validation error.
+        var result = ith.gradleRunner()
+                .withArguments(":upstream:testServer", ":downstream:testServer",
+                        "--continue", "-DtestServer.timeoutSeconds=5")
+                .buildAndFail();
+
+        assertThat(result.getOutput())
+                .doesNotContain("without declaring an explicit or implicit dependency");
+        // Downstream's task must actually reach its launch (it prints the nested :downstream:server
+        // command), proving it got past validation — without the fix it fails at configuration first.
+        assertThat(result.getOutput()).contains(":downstream:server");
+    }
+
+    @Test
     void multiModuleWithNestedDependenciesShouldLaunchRun() throws IOException, InterruptedException {
         // given
         var ith = new IntegrationTestHelper(tempDir, "8.14");

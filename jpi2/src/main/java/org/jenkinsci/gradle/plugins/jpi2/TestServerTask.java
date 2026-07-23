@@ -261,13 +261,16 @@ public abstract class TestServerTask extends DefaultTask {
     }
 
     /**
-     * {@link Process#destroy()} only terminates the launched process itself, not the forked
-     * JavaExec JVM it starts, so that JVM (and the Jenkins server port/files it holds) would
-     * otherwise keep running for the rest of the build.
+     * Forcibly terminates the launched Gradle client and any of its descendants (notably the forked
+     * JavaExec JVM running {@code :server} / {@code :hplRun}, which never returns on its own). A
+     * graceful {@code destroy()} (SIGTERM) on the client leaves it waiting on that never-ending task
+     * while this task keeps blocking on its stdout — the source of the CI hang. Killing the client
+     * forcibly (SIGKILL) closes its stdout immediately so the reader unblocks; the Gradle daemon then
+     * cancels the disconnected build, which tears down the Jenkins JVM it forked.
      */
     private static void destroyTree(Process process) {
         process.descendants().forEach(ProcessHandle::destroyForcibly);
-        process.destroy();
+        process.destroyForcibly();
     }
 
     private boolean isProcessSuccessful(BufferedReader stdoutReader, Process process) throws IOException, InterruptedException {

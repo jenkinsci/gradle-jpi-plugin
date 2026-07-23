@@ -218,9 +218,29 @@ public class V2JpiPlugin implements Plugin<Project> {
             var projectByPath = project.getRootProject().getAllprojects().stream()
                     .collect(Collectors.toMap(Project::getPath, it -> it));
             var projectDependencies = getProjectDependencies(runtimeClasspath, projectByPath);
-            configureProjectDependencyJpis(prepareServer, getProjectDependencyJpis(projectDependencies, extension.getArchiveExtension().get()));
-            configureProjectDependencyTasks(prepareRun, getProjectDependencyTasks(projectDependencies, GenerateHplTask.TASK_NAME));
+            var projectDependencyJpis = getProjectDependencyJpis(projectDependencies, extension.getArchiveExtension().get());
+            configureProjectDependencyJpis(prepareServer, projectDependencyJpis);
+            var projectDependencyHplTasks = getProjectDependencyTasks(projectDependencies, GenerateHplTask.TASK_NAME);
+            configureProjectDependencyTasks(prepareRun, projectDependencyHplTasks);
             wireUpstreamJpiReferencedFiles(project, projectDependencies);
+
+            // testServer/testHplRun fingerprint prepareServer/prepareRun's *source*, which resolves
+            // each project-dependency plugin to that upstream module's prepareServer output. The
+            // provider used to read the source (map over Sync::getSource) drops task dependencies, so
+            // declare the upstream prepareServer explicitly. Otherwise Gradle fails implicit-dependency
+            // validation whenever the upstream prepareServer is also scheduled (e.g. two modules'
+            // testServers running together). We depend only on prepareServer — not prepareRun — so the
+            // two upstream prepare tasks (which share workDir/plugins) never run in the same build.
+            var upstreamPrepareServers = projectDependencies.stream()
+                    .filter(dep -> dep.getTasks().getNames().contains("prepareServer"))
+                    .map(dep -> dep.getTasks().named("prepareServer"))
+                    .toList();
+            if (!upstreamPrepareServers.isEmpty()) {
+                project.getTasks().named("testServer", TestServerTask.class,
+                        task -> upstreamPrepareServers.forEach(task::dependsOn));
+                project.getTasks().named("testHplRun", TestServerTask.class,
+                        task -> upstreamPrepareServers.forEach(task::dependsOn));
+            }
         });
 
         project.getTasks().register("server", JavaExec.class, new ServerAction(serverTaskClasspath, projectRoot, workDir, prepareServer));
