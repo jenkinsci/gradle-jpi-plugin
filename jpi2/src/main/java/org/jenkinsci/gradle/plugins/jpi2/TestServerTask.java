@@ -188,51 +188,122 @@ public abstract class TestServerTask extends DefaultTask {
     public abstract Property<PortAllocationService> getPortAllocationService();
 
     /**
-     * Launches a nested Gradle build, streams its output, and fails the task
-     * if Jenkins does not report a successful start within the configured timeout.
+     * @return the configured cap on concurrent Jenkins launches, used only to make the timeout
+     * diagnostic actionable. Not an input: it does not affect the produced marker, and folding it
+     * into the cache key would needlessly invalidate cached runs when only the parallelism changes.
+     */
+    @Internal
+    public abstract Property<Integer> getMaxParallelLaunches();
+
+    /** Outcome of a single Jenkins launch attempt. */
+    private enum Status {
+        /** Jenkins reported "fully up and running". */
+        SUCCESS,
+        /** Jenkins printed a deterministic startup failure (e.g. a plugin failed to load). */
+        CRASH,
+        /** The startup timeout fired and we terminated the process (exit code 143). */
+        TIMEOUT,
+        /** The nested build exited on its own without reporting success. */
+        EXITED
+    }
+
+    private record LaunchResult(Status status, int exitCode, String detail) {
+        static LaunchResult success() {
+            return new LaunchResult(Status.SUCCESS, 0, null);
+        }
+    }
+
+    /**
+     * Launches a nested Gradle build, streams its output, and fails the task if Jenkins does not
+     * report a successful start within the configured timeout.
+     *
+     * <p>A timeout is treated as transient (the machine was likely saturated) and retried up to
+     * {@code testServer.maxAttempts} times; a deterministic startup crash fails immediately.
      */
     @TaskAction
     public void runTestServer() {
-        var timeoutSystemProperty = System.getProperty("testServer.timeoutSeconds", "120");
-        var timeout = Integer.parseInt(timeoutSystemProperty);
+        var timeout = Integer.parseInt(System.getProperty("testServer.timeoutSeconds", "120"));
+        var maxAttempts = Math.max(1, Integer.parseInt(System.getProperty("testServer.maxAttempts", "2")));
 
         clearSuccessMarker();
 
-        Path workDir = null;
-        try {
-            workDir = createWorkDirectory();
-            var commandLine = getCommandLine(workDir);
-            var process = launchProcess(commandLine);
-
-            var timerThread = new Thread(() -> {
-                try {
-                    Thread.sleep(timeout * 1000L);
-                } catch (InterruptedException e) {
-                    return;
+        for (int attempt = 1; attempt <= maxAttempts; attempt++) {
+            Path workDir = null;
+            try {
+                workDir = createWorkDirectory();
+                var result = attemptLaunch(workDir, timeout);
+                switch (result.status()) {
+                    case SUCCESS -> {
+                        writeSuccessMarker();
+                        return;
+                    }
+                    // A real startup failure is deterministic; retrying only repeats it, so fail fast.
+                    case CRASH -> throw new GradleException("Jenkins failed to start: " + result.detail());
+                    case EXITED -> throw new GradleException(
+                            "Jenkins failed to report a successful start (exit code " + result.exitCode() + ")");
+                    case TIMEOUT -> {
+                        getLogger().warn("testServer: Jenkins did not start within " + timeout
+                                + "s (attempt " + attempt + " of " + maxAttempts + ")"
+                                + (attempt < maxAttempts ? "; retrying" : ""));
+                        if (attempt == maxAttempts) {
+                            throw new GradleException(timeoutMessage(timeout, maxAttempts));
+                        }
+                    }
                 }
+            } catch (IOException e) {
+                throw new GradleException("IO Exception", e);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                throw new GradleException("Process interrupted", e);
+            } finally {
+                cleanupWorkDirectory(workDir);
+            }
+        }
+    }
+
+    /**
+     * Launches the nested build once and waits for a verdict, terminating Jenkins after either a
+     * successful start or the timeout. A fresh work directory and port are used per attempt.
+     */
+    private LaunchResult attemptLaunch(Path workDir, int timeout) throws IOException, InterruptedException {
+        var process = launchProcess(getCommandLine(workDir));
+        var timedOut = new java.util.concurrent.atomic.AtomicBoolean(false);
+
+        var timerThread = new Thread(() -> {
+            try {
+                Thread.sleep(timeout * 1000L);
+                timedOut.set(true);
                 getLogger().warn("Timeout reached, terminating Jenkins server");
                 destroyTree(process);
-            });
-
-            timerThread.start();
-
-            BufferedReader stdoutReader = new BufferedReader(new InputStreamReader(process.getInputStream()));
-            boolean foundSuccess = isProcessSuccessful(stdoutReader, process);
-
-            process.waitFor();
-
-            if (!foundSuccess) {
-                throw new GradleException("Jenkins failed to report a successful start (exit code " + process.exitValue() + ")");
+            } catch (InterruptedException e) {
+                // The launch reached a verdict before the timeout; nothing to terminate.
             }
+        });
+        timerThread.setDaemon(true);
+        timerThread.start();
 
-            writeSuccessMarker();
-        } catch (IOException e) {
-            throw new GradleException("IO Exception", e);
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            throw new GradleException("Process interrupted", e);
+        try {
+            var reader = new BufferedReader(new InputStreamReader(process.getInputStream(), StandardCharsets.UTF_8));
+            LaunchResult verdict;
+            try {
+                verdict = readUntilVerdict(reader, process);
+            } catch (IOException e) {
+                if (!timedOut.get()) {
+                    throw e;
+                }
+                verdict = new LaunchResult(Status.EXITED, -1, null);
+            }
+            process.waitFor();
+            return switch (verdict.status()) {
+                case SUCCESS, CRASH -> verdict;
+                // EOF without a reported verdict: either our timer killed it, or it exited on its own.
+                default -> timedOut.get()
+                        ? new LaunchResult(Status.TIMEOUT, process.exitValue(), null)
+                        : new LaunchResult(Status.EXITED, process.exitValue(), null);
+            };
         } finally {
-            cleanupWorkDirectory(workDir);
+            // Stop the timer promptly so a fast start doesn't leave a thread sleeping for the full timeout.
+            timerThread.interrupt();
         }
     }
 
@@ -270,22 +341,43 @@ public abstract class TestServerTask extends DefaultTask {
         process.destroy();
     }
 
-    private boolean isProcessSuccessful(BufferedReader stdoutReader, Process process) throws IOException, InterruptedException {
+    /**
+     * Streams the nested build's output until Jenkins reports success, prints a known failure, or
+     * the stream closes. Terminates the process on success or crash; the caller decides whether an
+     * unresolved stream close was a timeout or an independent exit.
+     */
+    private LaunchResult readUntilVerdict(BufferedReader stdoutReader, Process process) throws IOException {
         String stdout;
 
         while ((stdout = stdoutReader.readLine()) != null) {
             getLogger().lifecycle("    {}", stdout);
             if (stdout.contains("Jenkins is fully up and running")) {
                 destroyTree(process);
-                return true;
+                return LaunchResult.success();
             }
             if (FAILURE_MESSAGES.stream().anyMatch(stdout::contains)) {
                 destroyTree(process);
-                process.waitFor();
-                throw new GradleException("Jenkins failed to start: " + stdout);
+                return new LaunchResult(Status.CRASH, -1, stdout);
             }
         }
-        return false;
+        return new LaunchResult(Status.EXITED, -1, null);
+    }
+
+    private String timeoutMessage(int timeout, int maxAttempts) {
+        var message = new StringBuilder("Jenkins did not start within ").append(timeout)
+                .append("s and was terminated (exit code 143)");
+        if (maxAttempts > 1) {
+            message.append(" after ").append(maxAttempts).append(" attempts");
+        }
+        message.append(".\nThis usually means too many Jenkins servers were launching at once. ");
+        var cap = getMaxParallelLaunches().getOrElse(0);
+        if (cap > 0) {
+            message.append("The plugin limits concurrent launches to ").append(cap)
+                    .append(" (override with -DtestServer.maxParallelLaunches=N or =C/D). ");
+        }
+        message.append("You can also raise the startup timeout with -DtestServer.timeoutSeconds=N ")
+                .append("or the attempt count with -DtestServer.maxAttempts=N.");
+        return message.toString();
     }
 
     @NotNull

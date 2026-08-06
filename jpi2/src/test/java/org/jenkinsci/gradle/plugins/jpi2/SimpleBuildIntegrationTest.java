@@ -142,6 +142,30 @@ class SimpleBuildIntegrationTest extends V2IntegrationTestBase {
 
     @Test
     @Timeout(value = 15, unit = TimeUnit.MINUTES)
+    void testServerRetriesThenReportsAnActionableTimeout() throws IOException {
+        // given
+        var ith = new IntegrationTestHelper(tempDir, "8.14");
+        configureSimpleBuildForVerification(ith);
+
+        // when — force a timeout far shorter than any real Jenkins boot so the timeout path is deterministic
+        var result = ith.gradleRunner()
+                .withArguments("testServer", "-DtestServer.timeoutSeconds=5", "-DtestServer.maxAttempts=2")
+                .buildAndFail();
+
+        // then — the transient timeout is retried before the task gives up...
+        assertThat(result.getOutput())
+                .contains("Jenkins did not start within 5s (attempt 1 of 2); retrying");
+        // ...and the final failure is actionable rather than a bare "exit code 143"
+        assertThat(result.getOutput())
+                .contains("Jenkins did not start within 5s and was terminated (exit code 143) after 2 attempts")
+                .contains("concurrent launches")
+                .contains("-DtestServer.maxParallelLaunches=N")
+                .contains("-DtestServer.timeoutSeconds=N")
+                .contains("-DtestServer.maxAttempts=N");
+    }
+
+    @Test
+    @Timeout(value = 15, unit = TimeUnit.MINUTES)
     void testServerIsCacheableAndInvalidatesOnSourceChange() throws IOException {
         assertVerificationTaskCachingBehavior("testServer");
     }

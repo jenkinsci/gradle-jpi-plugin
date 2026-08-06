@@ -233,6 +233,13 @@ jenkinsPlugin {
 Those temporary directories are deleted after the task finishes.
 Set `jpi2.preserveTestWorkDir=true` if you want to keep them for debugging.
 
+Each launch is a nested Gradle build plus a full Jenkins JVM, so running many at once (for example a multi-module build where every module has a `testServer` task) can saturate the machine and make Jenkins miss its startup timeout.
+To avoid this, the plugin caps how many launches run concurrently across the whole build with a shared build service, independent of `--max-workers`, so the rest of the build keeps full parallelism.
+The default cap scales with available processors (roughly one launch per three cores).
+Override it with `-DtestServer.maxParallelLaunches`, which accepts either an absolute count (for example `3`) or a processor-relative value: `C` for all available processors, or `C/D` for one launch per `D` processors (for example `C/2` for a more aggressive cap, `C/4` for a more conservative one).
+Prefer the `C/D` form when the setting is checked in or shared, so it keeps making sense on a machine with a different core count.
+A launch that still times out is retried (`-DtestServer.maxAttempts=N`, default `2`), and the per-launch startup timeout is `-DtestServer.timeoutSeconds=N` (default `120`).
+
 ## Migration And Legacy Docs
 
 Use [docs/migrating-to-jpi2.md](docs/migrating-to-jpi2.md) when moving an existing plugin from `org.jenkins-ci.jpi` to `org.jenkins-ci.jpi2`.

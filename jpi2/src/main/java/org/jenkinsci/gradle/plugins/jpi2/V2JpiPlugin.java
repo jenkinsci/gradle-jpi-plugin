@@ -272,6 +272,20 @@ public class V2JpiPlugin implements Plugin<Project> {
         var portAllocationService = buildServices.registerIfAbsent("portAllocation", PortAllocationService.class, spec -> {
         });
 
+        // Cap how many Jenkins servers boot at once. Each launch is a nested Gradle build plus a
+        // Jenkins JVM, so unbounded parallelism saturates the machine and Jenkins misses its startup
+        // timeout (killed → exit 143). The cap governs only the launch tasks, so the rest of the
+        // build keeps full parallelism. Default scales with CPUs (~1 launch per 3 cores); override
+        // with -DtestServer.maxParallelLaunches, which accepts an absolute count or a processor-
+        // relative C/D so one setting survives moving to a machine with a different core count.
+        var availableProcessors = Runtime.getRuntime().availableProcessors();
+        Provider<Integer> maxParallelLaunches = project.getProviders()
+                .systemProperty(JenkinsLaunchThrottle.MAX_PARALLEL_LAUNCHES_PROPERTY)
+                .map(spec -> JenkinsLaunchThrottle.resolveMaxParallelLaunches(spec, availableProcessors))
+                .orElse(JenkinsLaunchThrottle.resolveMaxParallelLaunches(null, availableProcessors));
+        var launchThrottle = buildServices.registerIfAbsent("jenkinsLaunchThrottle", JenkinsLaunchThrottle.class,
+                spec -> spec.getMaxParallelUsages().set(maxParallelLaunches));
+
         var gradle = project.getGradle();
         var startParameter = gradle.getStartParameter();
         var gradleHome = gradle.getGradleHomeDir();
@@ -281,7 +295,7 @@ public class V2JpiPlugin implements Plugin<Project> {
         var isRootProject = project == project.getRootProject();
         var projectPath = project.getPath();
 
-        var testServerTask = registerTestTask(project, portAllocationService, gradleExecutable, startParameter, isRootProject, projectPath,
+        var testServerTask = registerTestTask(project, portAllocationService, launchThrottle, maxParallelLaunches, gradleExecutable, startParameter, isRootProject, projectPath,
                 "testServer", "Launch Jenkins server and terminate after success or first error", ":server");
         // Fingerprint the source files that prepareServer would sync (jpi, plugin dependencies,
         // project-dependency jpis), not its destination — prepareServer and prepareRun both write
@@ -292,7 +306,7 @@ public class V2JpiPlugin implements Plugin<Project> {
             task.getJenkinsClasspath().from(serverTaskClasspath);
         });
 
-        var testHplRunTask = registerTestTask(project, portAllocationService, gradleExecutable, startParameter, isRootProject, projectPath,
+        var testHplRunTask = registerTestTask(project, portAllocationService, launchThrottle, maxParallelLaunches, gradleExecutable, startParameter, isRootProject, projectPath,
                 "testHplRun", "Launch Jenkins hplRun task and terminate after success or first error", ":hplRun");
         testHplRunTask.configure(task -> {
             task.getPluginFiles().from(prepareRun.map(Sync::getSource));
@@ -312,6 +326,7 @@ public class V2JpiPlugin implements Plugin<Project> {
     @NotNull
     private static TaskProvider<TestServerTask> registerTestTask(
             @NotNull Project project, @NotNull Provider<PortAllocationService> portAllocationService,
+            @NotNull Provider<JenkinsLaunchThrottle> launchThrottle, @NotNull Provider<Integer> maxParallelLaunches,
             @NotNull String gradleExecutable, @NotNull StartParameter startParameter,
             boolean isRootProject, @NotNull String projectPath, @NotNull String taskName,
             @NotNull String description, @NotNull String taskSuffix) {
@@ -354,6 +369,9 @@ public class V2JpiPlugin implements Plugin<Project> {
                 task.getSuccessMarker().set(project.getLayout().getBuildDirectory().file("test-server/" + taskName + ".success"));
                 task.getPortAllocationService().set(portAllocationService);
                 task.usesService(portAllocationService);
+                // Bounds concurrent Jenkins launches across the whole build (see JenkinsLaunchThrottle).
+                task.usesService(launchThrottle);
+                task.getMaxParallelLaunches().set(maxParallelLaunches);
             }
         });
     }
