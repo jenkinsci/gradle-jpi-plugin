@@ -245,6 +245,7 @@ public class V2JpiPlugin implements Plugin<Project> {
         dependencies.add(jenkinsCore.getName(), jenkinsCoreCoordinate);
 
         dependencies.getComponents().all(HpiMetadataRule.class);
+        dependencies.getAttributesSchema().attribute(ARTIFACT_TYPE_ATTRIBUTE).getDisambiguationRules().add(ArtifactTypeDisambiguationRule.class);
         var publicationName = configurePublishing(project, jpiTask, defaultRuntime, extension);
 
         var publishing = project.getExtensions().getByType(PublishingExtension.class);
