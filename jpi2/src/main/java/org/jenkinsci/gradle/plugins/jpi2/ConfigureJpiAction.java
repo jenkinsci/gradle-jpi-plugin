@@ -2,6 +2,7 @@ package org.jenkinsci.gradle.plugins.jpi2;
 
 import org.gradle.api.Action;
 import org.gradle.api.Project;
+import org.gradle.api.Task;
 import org.gradle.api.artifacts.Configuration;
 import org.gradle.api.file.CopySpec;
 import org.gradle.api.tasks.bundling.War;
@@ -29,7 +30,23 @@ class ConfigureJpiAction implements Action<War> {
     @Override
     public void execute(@NotNull War jpi) {
         jpi.getArchiveExtension().set(extension.getArchiveExtension());
-        jpi.manifest(new ManifestAction(project, configuration, extension));
+        jpi.manifest(new ManifestAction(project, extension));
+
+        // Resolving `configuration` must wait until the jpi task actually executes: some publishing
+        // plugins (e.g. com.jfrog.artifactory) realize this task from a gradle.projectsEvaluated
+        // listener, before projects are configured and before Gradle's exclusive project-execution
+        // lock is available, and an eager resolution there is rejected as unsafe.
+        var pluginDependencies = project.provider(() -> V2JpiPlugin.resolvePluginDependencies(configuration));
+        jpi.getInputs().property("pluginDependencies", pluginDependencies).optional(true);
+        jpi.doFirst(new Action<>() {
+            @Override
+            public void execute(@NotNull Task task) {
+                var value = pluginDependencies.getOrNull();
+                if (value != null) {
+                    jpi.getManifest().getAttributes().put("Plugin-Dependencies", value);
+                }
+            }
+        });
         jpi.from(project.getTasks().named("jar"), new Action<>() {
             @Override
             public void execute(@NotNull CopySpec copySpec) {

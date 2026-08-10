@@ -11,6 +11,7 @@ import org.gradle.api.artifacts.ResolvedArtifact;
 import org.gradle.api.artifacts.component.ModuleComponentIdentifier;
 import org.gradle.api.attributes.Usage;
 import org.gradle.api.file.Directory;
+import org.gradle.api.internal.artifacts.result.DefaultResolvedDependencyResult;
 import org.gradle.api.plugins.BasePlugin;
 import org.gradle.api.plugins.ExtensionAware;
 import org.gradle.api.plugins.GroovyBasePlugin;
@@ -34,6 +35,7 @@ import org.jenkinsci.gradle.plugins.jpi2.localization.LocalizationPlugin;
 import org.jenkinsci.gradle.plugins.jpi2.accmod.CheckAccessModifierTask;
 import org.jenkinsci.gradle.plugins.jpi2.accmod.PrefixedPropertiesProvider;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -45,6 +47,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -169,11 +172,27 @@ public class V2JpiPlugin implements Plugin<Project> {
         project.getTasks().named("jar", Jar.class).configure(new Action<>() {
             @Override
             public void execute(@NotNull Jar jarTask) {
-                jarTask.manifest(new ManifestAction(project, defaultRuntime, extension));
+                jarTask.manifest(new ManifestAction(project, extension));
                 jarTask.getInputs().file(optionalManifestFile);
                 jarTask.getManifest().from(optionalManifestFile);
                 jarTask.setPreserveFileTimestamps(false);
                 jarTask.setReproducibleFileOrder(true);
+
+                // Resolving defaultRuntime must wait until the jar task actually executes: some publishing
+                // plugins (e.g. com.jfrog.artifactory) realize this task from a gradle.projectsEvaluated
+                // listener, before projects are configured and before Gradle's exclusive project-execution
+                // lock is available, and an eager resolution there is rejected as unsafe.
+                var pluginDependencies = project.provider(() -> resolvePluginDependencies(defaultRuntime));
+                jarTask.getInputs().property("pluginDependencies", pluginDependencies).optional(true);
+                jarTask.doFirst(new Action<>() {
+                    @Override
+                    public void execute(@NotNull Task task) {
+                        var value = pluginDependencies.getOrNull();
+                        if (value != null) {
+                            jarTask.getManifest().getAttributes().put("Plugin-Dependencies", value);
+                        }
+                    }
+                });
             }
         });
         Provider<Directory> jpiDirectory = project.getLayout().getBuildDirectory().dir("jpi");
@@ -622,6 +641,24 @@ public class V2JpiPlugin implements Plugin<Project> {
     private static String getVersionFromProperties(@NotNull Project project, String propertyName, String defaultVersion) {
         Provider<String> myProperty = project.getProviders().gradleProperty(propertyName);
         return myProperty.getOrElse(defaultVersion);
+    }
+
+    @Nullable
+    static String resolvePluginDependencies(@NotNull Configuration defaultRuntime) {
+        var rootDependencies = defaultRuntime.getIncoming().getResolutionResult().getRoot().getDependencies();
+
+        var pluginDependencies = rootDependencies
+                .stream()
+                .filter(it -> !it.isConstraint())
+                .filter(it -> it instanceof DefaultResolvedDependencyResult)
+                .map(it -> ((DefaultResolvedDependencyResult) it))
+                .filter(it -> it.getResolvedVariant().getDisplayName().equals(HpiMetadataRule.DEFAULT_RUNTIME_VARIANT))
+                .map(it -> it.getSelected().getModuleVersion())
+                .filter(Objects::nonNull)
+                .map(it -> it.getName() + ":" + it.getVersion())
+                .toList();
+
+        return pluginDependencies.isEmpty() ? null : String.join(",", pluginDependencies);
     }
 
 }
