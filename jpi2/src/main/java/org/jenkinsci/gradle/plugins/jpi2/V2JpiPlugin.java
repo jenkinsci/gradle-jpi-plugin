@@ -234,7 +234,6 @@ public class V2JpiPlugin implements Plugin<Project> {
          * If other annotation processors contribute methods/controllers that sezpoz expects, this will ensure it happens.
          */
         var lastAnnotationProcessor = project.getConfigurations().create("lastAnnotationProcessor");
-        lastAnnotationProcessor.setVisible(false);
         project.getDependencies().add("lastAnnotationProcessor", "net.java.sezpoz:sezpoz:1.13");
         project.getDependencies().add("lastAnnotationProcessor", jenkinsCoreCoordinate);
         project.getConfigurations().getByName("annotationProcessor").extendsFrom(lastAnnotationProcessor);
@@ -381,7 +380,6 @@ public class V2JpiPlugin implements Plugin<Project> {
         var mavenLog = project.getDependencies().create("org.apache.maven:maven-plugin-api:2.0.1");
         var jenkinsAccessModifier = project.getConfigurations().create("jenkinsAccessModifier", c -> {
             c.getAttributes().attribute(Usage.USAGE_ATTRIBUTE, project.getObjects().named(Usage.class, Usage.JAVA_RUNTIME));
-            c.setVisible(false);
             c.setCanBeConsumed(false);
             c.setCanBeResolved(true);
             c.withDependencies(dependencies -> {
