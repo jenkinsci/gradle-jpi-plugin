@@ -97,6 +97,18 @@ class MultiModuleIntegrationTest extends V2IntegrationTestBase {
 
     @Test
     @Timeout(value = 15, unit = TimeUnit.MINUTES)
+    void testServerAcrossPluginDependencyHasNoImplicitDependencyWarning() throws IOException {
+        var ith = new IntegrationTestHelper(tempDir, "8.14");
+        configureTwoPluginsForVerification(ith);
+
+        var result = ith.gradleRunner().withArguments(":downstream:testServer", "--build-cache").build();
+
+        assertThat(result.task(":downstream:testServer").getOutcome()).isEqualTo(TaskOutcome.SUCCESS);
+        assertThat(result.getOutput()).doesNotContainIgnoringCase("implicit dependency");
+    }
+
+    @Test
+    @Timeout(value = 15, unit = TimeUnit.MINUTES)
     void testHplRunInvalidatesOnUpstreamModuleSourceChange() throws IOException {
         var ith = new IntegrationTestHelper(tempDir, "8.14");
         configureTwoPluginsForVerification(ith);
@@ -107,6 +119,7 @@ class MultiModuleIntegrationTest extends V2IntegrationTestBase {
         var first = runner.withArguments(":downstream:testHplRun", "--build-cache").build();
         assertThat(first.task(taskPath).getOutcome()).isEqualTo(TaskOutcome.SUCCESS);
         assertThat(first.getOutput()).contains("Jenkins is fully up and running");
+        assertThat(first.getOutput()).doesNotContainIgnoringCase("implicit dependency");
 
         var noChange = runner.withArguments(":downstream:testHplRun", "--build-cache").build();
         assertThat(noChange.task(taskPath).getOutcome())

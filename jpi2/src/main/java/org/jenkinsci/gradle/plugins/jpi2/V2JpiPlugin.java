@@ -302,14 +302,18 @@ public class V2JpiPlugin implements Plugin<Project> {
         // to workDir/plugins, so snapshotting the destination would create an implicit dependency
         // between the two test tasks.
         testServerTask.configure(task -> {
-            task.getPluginFiles().from(prepareServer.map(Sync::getSource));
+            var pluginSourceFiles = prepareServer.map(Sync::getSource);
+            task.getPluginFiles().from(pluginSourceFiles);
+            task.mustRunAfter(pluginSourceFiles);
             task.getJenkinsClasspath().from(serverTaskClasspath);
         });
 
         var testHplRunTask = registerTestTask(project, portAllocationService, launchThrottle, maxParallelLaunches, gradleExecutable, startParameter, isRootProject, projectPath,
                 "testHplRun", "Launch Jenkins hplRun task and terminate after success or first error", ":hplRun");
         testHplRunTask.configure(task -> {
-            task.getPluginFiles().from(prepareRun.map(Sync::getSource));
+            var runSourceFiles = prepareRun.map(Sync::getSource);
+            task.getPluginFiles().from(runSourceFiles);
+            task.mustRunAfter(runSourceFiles);
             task.getJenkinsClasspath().from(serverTaskClasspath);
             // The .hpl manifest points at these directories on disk by absolute path; their
             // contents must be fingerprinted for caching to be correct, even though only the
