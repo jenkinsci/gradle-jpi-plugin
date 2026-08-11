@@ -376,7 +376,7 @@ public class V2JpiPlugin implements Plugin<Project> {
     }
 
     private static void configureAccessModifier(@NotNull Project project) {
-        var library = project.getDependencies().create("org.kohsuke:access-modifier-checker:1.33");
+        var library = project.getDependencies().create("org.kohsuke:access-modifier-checker:1.35");
         var mavenLog = project.getDependencies().create("org.apache.maven:maven-plugin-api:2.0.1");
         var jenkinsAccessModifier = project.getConfigurations().create("jenkinsAccessModifier", c -> {
             c.getAttributes().attribute(Usage.USAGE_ATTRIBUTE, project.getObjects().named(Usage.class, Usage.JAVA_RUNTIME));
