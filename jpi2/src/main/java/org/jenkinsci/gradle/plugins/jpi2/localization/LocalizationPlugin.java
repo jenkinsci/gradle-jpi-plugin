@@ -91,7 +91,6 @@ public class LocalizationPlugin implements Plugin<Project> {
         } catch (NoSuchMethodException ignored) {
             return target.getConfigurations().create(CONFIGURATION_NAME, c -> {
                 configure.execute(c);
-                c.setVisible(false);
                 c.setCanBeConsumed(false);
                 c.setCanBeResolved(true);
             });

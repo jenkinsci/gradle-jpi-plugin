@@ -44,7 +44,6 @@ public class UnsupportedGradleConfigurationVerifier {
         project.getConfigurations().create(confName, new Action<Configuration>() {
             @Override
             public void execute(Configuration conf) {
-                conf.setVisible(false);
                 conf.getIncoming().beforeResolve(new Action<ResolvableDependencies>() {
                     @Override
                     public void execute(ResolvableDependencies resolvable) {
