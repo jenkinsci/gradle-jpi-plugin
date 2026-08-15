@@ -136,6 +136,37 @@ class MultiModuleIntegrationTest extends V2IntegrationTestBase {
     }
 
     @Test
+    @Timeout(value = 15, unit = TimeUnit.MINUTES)
+    void concurrentTestServersAcrossModulesDoNotTripValidation() throws IOException {
+        var ith = new IntegrationTestHelper(tempDir, "8.14");
+        configureTwoPluginsForVerification(ith);
+
+        // downstream depends on upstream, so downstream's prepareServer source (which testServer
+        // fingerprints) includes upstream's produced artifacts. Running both testServers together
+        // must not trip Gradle's implicit-dependency validation on the upstream producing task.
+        //
+        // The validation fires at graph/configuration time, before Jenkins boots, so a short startup
+        // timeout is enough to exercise it — this avoids booting two full Jenkins servers at once,
+        // which would spike memory/CPU on a constrained CI runner. Both launches therefore time out
+        // (buildAndFail); the fix is proven by the ABSENCE of the validation error.
+        var result = ith.gradleRunner()
+                .withArguments(":upstream:testServer", ":downstream:testServer",
+                        "--continue", "-DtestServer.timeoutSeconds=5")
+                .buildAndFail();
+
+        assertThat(result.getOutput())
+                .doesNotContain("without declaring an explicit or implicit dependency");
+        // Without the fix, downstream's testServer fails at configuration time — immediately, with
+        // the validation error above, never entering its task action. With the fix it reaches its own
+        // launch/retry loop and reports the same actionable timeout as upstream, proving it got past
+        // validation. Asserting on this (rather than a line from the nested build's own console output)
+        // avoids depending on how fast that nested, single-use-daemon JVM happens to start up.
+        assertThat(result.getOutput())
+                .contains("Execution failed for task ':downstream:testServer'")
+                .contains("Jenkins did not start within 5s and was terminated (exit code 143) after 2 attempts");
+    }
+
+    @Test
     void multiModuleWithNestedDependenciesShouldLaunchRun() throws IOException, InterruptedException {
         // given
         var ith = new IntegrationTestHelper(tempDir, "8.14");
