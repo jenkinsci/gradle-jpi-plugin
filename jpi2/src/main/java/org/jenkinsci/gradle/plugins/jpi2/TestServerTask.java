@@ -50,7 +50,8 @@ import java.util.List;
  *
  * <p><strong>Cacheability boundary.</strong> Because the nested build re-evaluates the whole project,
  * its inputs cannot be captured exhaustively from here. Changes to build logic <em>outside</em> the
- * modeled set are <em>not</em> guaranteed to invalidate the cache, notably: included builds located
+ * modeled set are <em>not</em> guaranteed to invalidate the cache, notably: scripts applied from
+ * outside {@code gradle/}, included builds located
  * outside the project tree, environment variables, {@code ~/.gradle/gradle.properties}, the Gradle or
  * wrapper version, and dynamic dependency versions resolved from the network. When in doubt, run with
  * {@code --rerun-tasks} to force a fresh launch.
@@ -97,9 +98,9 @@ public abstract class TestServerTask extends DefaultTask {
     public abstract ConfigurableFileCollection getInitScriptFiles();
 
     /**
-     * @return build-logic files for the nested build's project tree: build &amp; settings scripts
-     * ({@code *.gradle}, {@code *.gradle.kts}), {@code gradle.properties}, version catalogs
-     * ({@code *.versions.toml}), and {@code buildSrc} sources. Changes to these affect the nested
+     * @return build-logic files for the nested build's project tree: each project's build script and
+     * {@code gradle.properties}, the root settings script, the scripts and version catalogs
+     * ({@code *.versions.toml}) under {@code gradle/}, and {@code buildSrc} sources. Changes to these affect the nested
      * build's behavior (e.g. {@code JavaExec} task args or resolved plugin versions) but are not
      * captured by plugin-file or classpath inputs. This is best-effort, not exhaustive — see the
      * cacheability boundary on the class javadoc.
