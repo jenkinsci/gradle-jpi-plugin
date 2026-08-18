@@ -360,18 +360,7 @@ public class V2JpiPlugin implements Plugin<Project> {
                 var initScripts = startParameter.getAllInitScripts();
                 task.getInitScriptFiles().from(initScripts);
                 task.getInitScriptPaths().set(initScripts.stream().map(File::getAbsolutePath).toList());
-                task.getBuildConfigFiles().from(project.fileTree(project.getRootDir(), tree -> {
-                    // Build logic that can change how the nested :server / :hplRun build behaves.
-                    // This cannot be exhaustive — the nested build re-evaluates everything — so see
-                    // the cacheability note on TestServerTask for what is and isn't guaranteed.
-                    tree.include(
-                            "**/*.gradle", "**/*.gradle.kts",   // build & settings scripts (incl. buildSrc, included builds)
-                            "**/gradle.properties",
-                            "**/*.versions.toml",               // version catalogs, e.g. gradle/libs.versions.toml
-                            "buildSrc/src/**"                   // precompiled script plugins / buildSrc logic
-                    );
-                    tree.exclude("**/build/**", "**/.gradle/**");
-                }));
+                addBuildConfigFiles(project, task);
                 task.getIncludedBuilds().set(startParameter.getIncludedBuilds().stream()
                         .map(File::getPath).toList());
                 task.getOffline().set(startParameter.isOffline());
@@ -393,6 +382,42 @@ public class V2JpiPlugin implements Plugin<Project> {
                 task.getMaxParallelLaunches().set(maxParallelLaunches);
             }
         });
+    }
+
+    /**
+     * Registers the build logic that can change how the nested {@code :server} / {@code :hplRun}
+     * build behaves: build &amp; settings scripts, {@code gradle.properties}, version catalogs and
+     * {@code buildSrc} sources.
+     *
+     * <p>The files are enumerated per project instead of scanned from the root directory. A file
+     * tree rooted at the root directory is an ancestor of every other task's output in the build
+     * (a sibling module's Jenkins work directory, an npm install directory, …), and Gradle reports
+     * such an input as an undeclared dependency on those producing tasks and, since Gradle 9, fails
+     * the build for it. Naming the files keeps the fingerprint without claiming to read the whole
+     * tree.
+     *
+     * <p>This cannot be exhaustive — the nested build re-evaluates everything — so see the
+     * cacheability note on {@link TestServerTask} for what is and isn't guaranteed.
+     */
+    private static void addBuildConfigFiles(@NotNull Project project, @NotNull TestServerTask task) {
+        var rootDir = project.getRootDir();
+        var files = new LinkedHashSet<File>();
+        files.add(new File(rootDir, "settings.gradle"));
+        files.add(new File(rootDir, "settings.gradle.kts"));
+        // buildSrc is a separate build, so it is not part of getAllprojects().
+        for (var name : List.of("build.gradle", "build.gradle.kts", "settings.gradle", "settings.gradle.kts", "gradle.properties")) {
+            files.add(new File(rootDir, "buildSrc/" + name));
+        }
+        for (var candidate : project.getRootProject().getAllprojects()) {
+            files.add(candidate.getBuildFile());
+            files.add(new File(candidate.getProjectDir(), "gradle.properties"));
+        }
+        task.getBuildConfigFiles().from(files);
+        // The `gradle` and `buildSrc/src` directories hold no task outputs, so they are safe to
+        // walk as trees: version catalogs, script plugins and precompiled build logic.
+        task.getBuildConfigFiles().from(project.fileTree(new File(rootDir, "gradle"), tree ->
+                tree.include("**/*.versions.toml", "**/*.gradle", "**/*.gradle.kts")));
+        task.getBuildConfigFiles().from(project.fileTree(new File(rootDir, "buildSrc/src")));
     }
 
     private static void configureAccessModifier(@NotNull Project project) {

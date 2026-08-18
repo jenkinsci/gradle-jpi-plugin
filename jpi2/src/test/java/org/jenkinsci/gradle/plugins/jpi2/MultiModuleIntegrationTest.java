@@ -136,6 +136,25 @@ class MultiModuleIntegrationTest extends V2IntegrationTestBase {
     }
 
     @Test
+    @Timeout(value = 15, unit = TimeUnit.MINUTES)
+    void testServerDoesNotClaimSiblingModuleOutputsAsItsOwnInputs() throws IOException {
+        var ith = new IntegrationTestHelper(tempDir, "8.14");
+        configureTwoPluginsForVerification(ith);
+
+        // A sibling module's prepareServer writes into upstream/work, i.e. inside the root
+        // directory. If testServer fingerprinted its build logic by scanning the root directory,
+        // that input would cover the sibling's output and Gradle would flag the missing dependency.
+        // Gradle only reports the overlap for output produced earlier in the same build, hence the
+        // single worker and the sibling task listed first.
+        var result = ith.gradleRunner()
+                .withArguments(":upstream:prepareServer", ":downstream:testServer", "--max-workers=1")
+                .build();
+
+        assertThat(result.task(":downstream:testServer").getOutcome()).isEqualTo(TaskOutcome.SUCCESS);
+        assertThat(result.getOutput()).doesNotContain("implicit dependency");
+    }
+
+    @Test
     void multiModuleWithNestedDependenciesShouldLaunchRun() throws IOException, InterruptedException {
         // given
         var ith = new IntegrationTestHelper(tempDir, "8.14");
