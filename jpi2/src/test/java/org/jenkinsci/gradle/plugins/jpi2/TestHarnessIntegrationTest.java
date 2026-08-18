@@ -6,7 +6,6 @@ import org.jenkinsci.gradle.plugins.jpi.IntegrationTestHelper;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
 import java.util.jar.Manifest;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -274,5 +273,45 @@ class TestHarnessIntegrationTest extends V2IntegrationTestBase {
         assertThat(result.getOutput())
                 .contains("org.jenkins-ci.main:jenkins-test-harness:2411.v1e79b_0dc94b_7")
                 .contains("org.jenkins-ci.main:jenkins-core:2.492.1");
+    }
+
+    @Test
+    void jpiDependenciesShouldBeInstalledAsPluginsNotJustOnClasspath() throws IOException {
+        // given
+        var ith = new IntegrationTestHelper(tempDir, "8.14");
+        initBuild(ith);
+        Files.writeString(ith.inProjectDir("build.gradle.kts").toPath(), getBasePluginConfig() + /* language=kotlin */ """
+                dependencies {
+                    implementation("org.jenkins-ci.plugins:git:5.7.0")
+                }
+                """);
+        ith.mkDirInProjectDir("src/test/java/com/example/plugin");
+        Files.writeString(ith.inProjectDir("src/test/java/com/example/plugin/PluginTest.java").toPath(), /* language=java */ """
+                package com.example.plugin;
+                import org.junit.jupiter.api.Test;
+                import org.jvnet.hudson.test.JenkinsRule;
+                import org.jvnet.hudson.test.junit.jupiter.WithJenkins;
+                import static org.junit.jupiter.api.Assertions.*;
+                @WithJenkins
+                public class PluginTest {
+                    /** @noinspection JUnitMalformedDeclaration*/
+                    @Test
+                    void test(JenkinsRule j) {
+                        // The git plugin is only usable at runtime if the Jenkins
+                        // instance under test actually has it installed, not merely
+                        // available on the classpath.
+                        assertNotNull(j.jenkins.getPluginManager().getPlugin("git"),
+                                "git plugin should be installed in the JenkinsRule instance");
+                    }
+                }
+                """);
+
+        GradleRunner gradleRunner = ith.gradleRunner();
+
+        // when
+        var result = gradleRunner.withArguments("test").build();
+
+        // then
+        assertThat(result.getOutput()).contains("BUILD SUCCESSFUL");
     }
 }
