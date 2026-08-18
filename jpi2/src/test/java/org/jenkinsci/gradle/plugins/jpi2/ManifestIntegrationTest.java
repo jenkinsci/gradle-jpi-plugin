@@ -18,6 +18,7 @@ import java.util.jar.Attributes;
 import java.util.jar.Manifest;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatCode;
 
 class ManifestIntegrationTest extends V2IntegrationTestBase {
 
@@ -188,6 +189,22 @@ class ManifestIntegrationTest extends V2IntegrationTestBase {
         ith.gradleRunner().withArguments("build").build();
 
         assertThat(manifestAttributes(ith).getValue("Support-Dynamic-Loading")).isEqualTo("false");
+    }
+
+    @Test
+    void manifestCanBeComputedWhenPublicationArtifactsAreAccessedFromProjectsEvaluated() throws IOException {
+        // Publishing plugins such as com.jfrog.artifactory inspect every maven publication's
+        // artifacts from a gradle.projectsEvaluated listener, which realizes the jar task (and its
+        // manifest) outside of the per-project configuration lock that plain afterEvaluate holds.
+        var ith = new IntegrationTestHelper(tempDir, "8.14");
+        initBuild(ith);
+        Files.write(ith.inProjectDir("build.gradle.kts").toPath(), (getBasePluginConfig() + /* language=kotlin */ """
+                gradle.projectsEvaluated {
+                    (publishing.publications["mavenJpi"] as MavenPublication).artifacts.forEach { }
+                }
+                """).getBytes(StandardCharsets.UTF_8));
+
+        assertThatCode(() -> ith.gradleRunner().withArguments("help").build()).doesNotThrowAnyException();
     }
 
     private static Attributes manifestAttributes(IntegrationTestHelper ith) throws IOException {
