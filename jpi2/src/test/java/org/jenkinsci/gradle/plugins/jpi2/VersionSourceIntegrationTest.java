@@ -295,7 +295,7 @@ class VersionSourceIntegrationTest extends V2IntegrationTestBase {
         runGit(projectDir, "add", ".");
         runGit(projectDir, "config", "user.email", "test@test");
         runGit(projectDir, "config", "user.name", "Test");
-        runGit(projectDir, "commit", "-m", "Initial commit");
+        runGit(projectDir, "commit", "--no-gpg-sign", "-m", "Initial commit");
     }
 
     private static void runGit(File workDir, String... args) throws IOException, InterruptedException {
