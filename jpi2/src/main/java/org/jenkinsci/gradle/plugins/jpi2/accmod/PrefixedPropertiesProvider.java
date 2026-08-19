@@ -1,39 +1,30 @@
 package org.jenkinsci.gradle.plugins.jpi2.accmod;
 
 import org.gradle.api.Project;
+import org.gradle.api.provider.Provider;
 
-import java.util.LinkedHashMap;
 import java.util.Map;
-import java.util.concurrent.Callable;
+import java.util.stream.Collectors;
 
 /**
  * Extracts Gradle project properties that share a common prefix and strips that prefix,
  * making them available as a plain map to the access-modifier checker.
  */
-public class PrefixedPropertiesProvider implements Callable<Map<String, Object>> {
-    private final Project project;
-    private final String prefix;
+public class PrefixedPropertiesProvider {
+    private PrefixedPropertiesProvider() {
+    }
 
     /**
      * @param project the Gradle project whose properties are scanned
      * @param prefix  only properties with this prefix are included; the prefix is stripped from the keys
      */
-    public PrefixedPropertiesProvider(Project project, String prefix) {
-        this.project = project;
-        this.prefix = prefix;
-    }
-
-    @Override
-    public Map<String, Object> call() {
-        Map<String, Object> filtered = new LinkedHashMap<>();
-        for (Map.Entry<String, ?> entry : project.getProperties().entrySet()) {
-            Object value = entry.getValue();
-            String key = entry.getKey();
-            if (key.startsWith(prefix) && value != null) {
-                String trimmed = key.substring(prefix.length());
-                filtered.put(trimmed, value);
-            }
-        }
-        return filtered;
+    public static Provider<Map<String, String>> gradlePropertiesPrefixedBy(Project project, String prefix) {
+        return project.getProviders().gradlePropertiesPrefixedBy(prefix).map(properties ->
+                properties.entrySet().stream()
+                        .filter(e -> e.getValue() != null)
+                        .collect(Collectors.toMap(
+                                e -> e.getKey().substring(prefix.length()),
+                                Map.Entry::getValue))
+        );
     }
 }
