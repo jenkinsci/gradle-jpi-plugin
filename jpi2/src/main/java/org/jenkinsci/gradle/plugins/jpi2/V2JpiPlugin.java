@@ -93,24 +93,25 @@ public class V2JpiPlugin implements Plugin<Project> {
         var jenkinsTestHarnessCoordinate = testHarnessVersion.map(version -> "org.jenkins-ci.main:jenkins-test-harness:" + version);
 
         var jenkinsCore = configurations.create("jenkinsCore");
+        var jenkinsCoreAlignment = ConsistentResolution.createAlignment(project, jenkinsCore);
 
         var runtimeClasspath = configurations.getByName("runtimeClasspath");
-        runtimeClasspath.shouldResolveConsistentlyWith(jenkinsCore);
+        runtimeClasspath.extendsFrom(jenkinsCoreAlignment);
         runtimeClasspath.getAttributes().attribute(ARTIFACT_TYPE_ATTRIBUTE, project.getObjects().named(ArtifactType.class, ArtifactType.PLUGIN_JAR));
 
         var testRuntimeClasspath = configurations.getByName("testRuntimeClasspath");
-        testRuntimeClasspath.shouldResolveConsistentlyWith(jenkinsCore);
+        testRuntimeClasspath.extendsFrom(jenkinsCoreAlignment);
         testRuntimeClasspath.getAttributes().attribute(ARTIFACT_TYPE_ATTRIBUTE, project.getObjects().named(ArtifactType.class, ArtifactType.PLUGIN_JAR));
 
         var testDefaultRuntime = configurations.create("testDefaultRuntime");
         testDefaultRuntime.setCanBeConsumed(false);
         testRuntimeClasspath.getExtendsFrom().forEach(testDefaultRuntime::extendsFrom);
-        testDefaultRuntime.shouldResolveConsistentlyWith(jenkinsCore);
+        testDefaultRuntime.extendsFrom(jenkinsCoreAlignment);
         testDefaultRuntime.getAttributes().attribute(ARTIFACT_TYPE_ATTRIBUTE, project.getObjects().named(ArtifactType.class, ArtifactType.DEFAULT));
 
         var defaultRuntime = configurations.create("defaultRuntime");
         runtimeClasspath.getExtendsFrom().forEach(defaultRuntime::extendsFrom);
-        defaultRuntime.shouldResolveConsistentlyWith(jenkinsCore);
+        defaultRuntime.extendsFrom(jenkinsCoreAlignment);
         defaultRuntime.getAttributes().attribute(ARTIFACT_TYPE_ATTRIBUTE, project.getObjects().named(ArtifactType.class, ArtifactType.DEFAULT));
 
         var pomFiles = resolvePomFiles(project, defaultRuntime);
@@ -130,7 +131,7 @@ public class V2JpiPlugin implements Plugin<Project> {
         });
 
         var testCompileClasspath = configurations.getByName("testCompileClasspath");
-        testCompileClasspath.shouldResolveConsistentlyWith(jenkinsCore);
+        testCompileClasspath.extendsFrom(jenkinsCoreAlignment);
 
         JavaPluginExtension ext = project.getExtensions().getByType(JavaPluginExtension.class);
         SourceSetContainer sourceSets = ext.getSourceSets();
@@ -263,7 +264,7 @@ public class V2JpiPlugin implements Plugin<Project> {
         project.getDependencies().add("lastAnnotationProcessor", "net.java.sezpoz:sezpoz:1.13");
         project.getDependencies().add("lastAnnotationProcessor", jenkinsCoreCoordinate);
         project.getConfigurations().getByName("annotationProcessor").extendsFrom(lastAnnotationProcessor);
-        lastAnnotationProcessor.shouldResolveConsistentlyWith(jenkinsCore);
+        lastAnnotationProcessor.extendsFrom(jenkinsCoreAlignment);
 
         dependencies.add("compileOnly", jenkinsCoreCoordinate);
         dependencies.add("compileOnly", "jakarta.servlet:jakarta.servlet-api:5.0.0");
