@@ -31,6 +31,7 @@ import org.gradle.api.tasks.Sync;
 import org.gradle.api.tasks.TaskProvider;
 import org.gradle.api.tasks.bundling.Jar;
 import org.gradle.api.tasks.bundling.War;
+import org.gradle.api.tasks.testing.Test;
 import org.jenkinsci.gradle.plugins.jpi2.localization.LocalizationPlugin;
 import org.jenkinsci.gradle.plugins.jpi2.accmod.CheckAccessModifierTask;
 import org.jenkinsci.gradle.plugins.jpi2.accmod.PrefixedPropertiesProvider;
@@ -100,6 +101,12 @@ public class V2JpiPlugin implements Plugin<Project> {
         var testRuntimeClasspath = configurations.getByName("testRuntimeClasspath");
         testRuntimeClasspath.shouldResolveConsistentlyWith(jenkinsCore);
         testRuntimeClasspath.getAttributes().attribute(ARTIFACT_TYPE_ATTRIBUTE, project.getObjects().named(ArtifactType.class, ArtifactType.PLUGIN_JAR));
+
+        var testDefaultRuntime = configurations.create("testDefaultRuntime");
+        testDefaultRuntime.setCanBeConsumed(false);
+        testRuntimeClasspath.getExtendsFrom().forEach(testDefaultRuntime::extendsFrom);
+        testDefaultRuntime.shouldResolveConsistentlyWith(jenkinsCore);
+        testDefaultRuntime.getAttributes().attribute(ARTIFACT_TYPE_ATTRIBUTE, project.getObjects().named(ArtifactType.class, ArtifactType.DEFAULT));
 
         var defaultRuntime = configurations.create("defaultRuntime");
         runtimeClasspath.getExtendsFrom().forEach(defaultRuntime::extendsFrom);
@@ -267,6 +274,8 @@ public class V2JpiPlugin implements Plugin<Project> {
         dependencies.add("testImplementation", jenkinsTestHarnessCoordinate);
         dependencies.add("testImplementation", "org.junit.jupiter:junit-jupiter");
         dependencies.add("testRuntimeOnly", "org.junit.platform:junit-platform-launcher");
+
+        configureTestPluginDependencies(project, testDefaultRuntime);
 
         dependencies.add(jenkinsCore.getName(), jenkinsCoreCoordinate);
 
@@ -665,6 +674,41 @@ public class V2JpiPlugin implements Plugin<Project> {
     private static String getVersionFromProperties(@NotNull Project project, String propertyName, String defaultVersion) {
         Provider<String> myProperty = project.getProviders().gradleProperty(propertyName);
         return myProperty.getOrElse(defaultVersion);
+    }
+
+    /**
+     * Wires up {@link CopyTestPluginDependenciesTask} so that Jenkins plugin dependencies
+     * resolved on the test classpath (not just library jars) are installed into the
+     * {@code JenkinsRule} instance used by the {@code test} task, mirroring what JPI (v1)'s
+     * {@code copyTestPluginDependencies} task does.
+     */
+    private static void configureTestPluginDependencies(@NotNull Project project, @NotNull Configuration testDefaultRuntime) {
+        var testPluginDependenciesDir = project.getLayout().getBuildDirectory().dir("jpi-plugin/test");
+        var copyTestPluginDependencies = project.getTasks().register(
+                CopyTestPluginDependenciesTask.NAME,
+                CopyTestPluginDependenciesTask.class,
+                task -> {
+                    task.setGroup("Verification");
+                    task.setDescription("Copies Jenkins plugin dependencies on the test classpath into a directory " +
+                            "jenkins-test-harness reads to install them as plugins in JenkinsRule.");
+                    task.getPluginFiles().from(project.provider(() -> resolveTestPluginArtifacts(testDefaultRuntime).stream()
+                            .map(ResolvedArtifact::getFile)
+                            .collect(Collectors.toList())));
+                    task.getFileNameToPluginId().set(project.provider(() -> resolveTestPluginArtifacts(testDefaultRuntime).stream()
+                            .collect(Collectors.toMap(a -> a.getFile().getName(), ResolvedArtifact::getName, (a, b) -> a))));
+                    task.getOutputDir().set(testPluginDependenciesDir.map(dir -> dir.dir("test-dependencies")));
+                });
+        project.getTasks().named("test", Test.class, task -> {
+            task.getInputs().files(copyTestPluginDependencies);
+            task.setClasspath(task.getClasspath().plus(project.files(testPluginDependenciesDir)));
+        });
+    }
+
+    @NotNull
+    private static List<ResolvedArtifact> resolveTestPluginArtifacts(@NotNull Configuration testDefaultRuntime) {
+        return testDefaultRuntime.getResolvedConfiguration().getResolvedArtifacts().stream()
+                .filter(a -> "jpi".equals(a.getExtension()) || "hpi".equals(a.getExtension()))
+                .collect(Collectors.toList());
     }
 
     @Nullable
