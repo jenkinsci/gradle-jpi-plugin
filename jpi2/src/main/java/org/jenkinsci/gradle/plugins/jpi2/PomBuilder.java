@@ -1,8 +1,7 @@
 package org.jenkinsci.gradle.plugins.jpi2;
 
-import groovy.namespace.QName;
-import groovy.util.Node;
-import groovy.util.NodeList;
+import java.util.stream.IntStream;
+import java.util.stream.Stream;
 import org.gradle.api.Action;
 import org.gradle.api.Project;
 import org.gradle.api.XmlProvider;
@@ -10,9 +9,12 @@ import org.gradle.api.artifacts.Configuration;
 import org.gradle.api.artifacts.repositories.MavenArtifactRepository;
 import org.gradle.api.logging.Logger;
 import org.jetbrains.annotations.NotNull;
+import org.w3c.dom.Document;
+import org.w3c.dom.Element;
+import org.w3c.dom.Node;
+import org.w3c.dom.NodeList;
 
 import java.util.ArrayList;
-import java.util.List;
 import java.util.Optional;
 
 /**
@@ -32,21 +34,17 @@ class PomBuilder implements Action<XmlProvider> {
         this.logger = logger;
     }
 
-    private static Optional<String> getNodeElement(Node dependencyNode, String elementName) {
-        return dependencyNode.getAt(new QName("http://maven.apache.org/POM/4.0.0", elementName))
-                .stream().findFirst()
-                .filter(it -> it instanceof Node)
-                .map(it -> (((Node) it).value()))
-                .filter(it -> it instanceof List)
-                .flatMap(it -> ((List) it).stream().findFirst())
-                .filter(it -> it instanceof String);
+    private static Optional<String> getNodeElement(Element dependencyNode, String elementName) {
+        return firstChild(dependencyNode, elementName)
+                .map(Node::getTextContent)
+                .filter(value -> !value.isBlank());
     }
 
     private static final String POM_NS = "http://maven.apache.org/POM/4.0.0";
 
     @Override
     public void execute(@NotNull XmlProvider xmlProvider) {
-        var root = xmlProvider.asNode();
+        var root = xmlProvider.asElement();
         resolveDependencyVersions(root);
         addRepositories(root);
         addDevelopers(root);
@@ -54,20 +52,18 @@ class PomBuilder implements Action<XmlProvider> {
         fixPackaging(root);
     }
 
-    private void resolveDependencyVersions(Node root) {
+    private void resolveDependencyVersions(Element root) {
         var resolvedDependencies = runtimeClasspath.getResolvedConfiguration()
                 .getFirstLevelModuleDependencies();
 
-        final var originalDependencies = root.getAt(new QName(POM_NS, "dependencies"));
-        final var dependencies = originalDependencies.isEmpty()
-                ? root.appendNode("dependencies")
-                : (Node) originalDependencies.get(0);
-        final var dependencyNodes = new ArrayList<Node>(dependencies.getAt(new QName(POM_NS, "dependency")));
-        final var dependencyManagement = root.getAt(new QName(POM_NS, "dependencyManagement"));
-        if (!dependencyManagement.isEmpty()) {
-            NodeList dmDependencies = dependencyManagement.getAt(new QName(POM_NS, "dependencies"));
-            dependencyNodes.addAll(dmDependencies.getAt(new QName(POM_NS, "dependency")));
-        }
+        final var dependencies = firstChildOrAppend(root, "dependencies");
+        final var dependencyNodes = new ArrayList<Element>();
+        childElements(dependencies, "dependency").forEach(dependencyNodes::add);
+        final var dependencyManagement = firstChild(root, "dependencyManagement");
+        dependencyManagement.ifPresent(dm -> {
+            var dmDependencies = firstChild(dm, "dependencies");
+            dmDependencies.ifPresent(element -> childElements(element, "dependency").forEach(dependencyNodes::add));
+        });
 
         dependencyNodes.forEach(dependencyNode -> {
             var groupId = getNodeElement(dependencyNode, "groupId");
@@ -83,39 +79,36 @@ class PomBuilder implements Action<XmlProvider> {
 
             if (resolvedDependency.isPresent()) {
                 if (version.isPresent()) {
-                    var versionNode = (Node) dependencyNode.getAt(new QName(POM_NS, "version")).get(0);
-                    dependencyNode.remove(versionNode);
+                    firstChild(dependencyNode, "version")
+                            .ifPresent(dependencyNode::removeChild);
                 }
-                dependencyNode.appendNode(new QName(POM_NS, "version"), resolvedDependency.get().getModuleVersion());
+                appendChildElement(dependencyNode, "version", resolvedDependency.get().getModuleVersion());
             } else {
                 logger.warn("Dependency not found: {}:{}", groupId, artifactId);
             }
         });
     }
 
-    private void addRepositories(Node root) {
-        final var originalRepositories = root.getAt(new QName(POM_NS, "repositories"));
-        var repositories = originalRepositories.isEmpty()
-                ? root.appendNode("repositories")
-                : (Node) originalRepositories.get(0);
+    private void addRepositories(Element root) {
+        var repositories = firstChildOrAppend(root, "repositories");
 
         project.getRepositories().forEach(it -> {
             if (it instanceof MavenArtifactRepository m) {
-                var repository = repositories.appendNode("repository");
-                repository.appendNode("id", it.getName());
-                repository.appendNode("url", m.getUrl());
+                var repository = appendChildElement(repositories, "repository");
+                appendChildElement(repository, "id", it.getName());
+                appendChildElement(repository, "url", m.getUrl().toString());
             }
         });
     }
 
-    private void addDevelopers(Node root) {
+    private void addDevelopers(Element root) {
         var devs = extension.getPluginDevelopers().get();
         if (devs.isEmpty()) {
             return;
         }
-        var developersNode = root.appendNode(new QName(POM_NS, "developers"));
+        var developersNode = appendChildElement(root, "developers");
         for (var dev : devs) {
-            var developerNode = developersNode.appendNode(new QName(POM_NS, "developer"));
+            var developerNode = appendChildElement(developersNode, "developer");
             appendIfPresent(developerNode, "id", dev.getId().getOrNull());
             appendIfPresent(developerNode, "name", dev.getName().getOrNull());
             appendIfPresent(developerNode, "email", dev.getEmail().getOrNull());
@@ -128,36 +121,36 @@ class PomBuilder implements Action<XmlProvider> {
         }
     }
 
-    private void addDeveloperRoles(Node developerNode, PluginDeveloper dev) {
+    private void addDeveloperRoles(Element developerNode, PluginDeveloper dev) {
         var roles = dev.getRoles().get();
         if (roles.isEmpty()) {
             return;
         }
-        var rolesNode = developerNode.appendNode(new QName(POM_NS, "roles"));
+        var rolesNode = appendChildElement(developerNode, "roles");
         for (var role : roles) {
-            rolesNode.appendNode(new QName(POM_NS, "role"), role);
+            appendChildElement(rolesNode, "role", role);
         }
     }
 
-    private void addDeveloperProperties(Node developerNode, PluginDeveloper dev) {
+    private void addDeveloperProperties(Element developerNode, PluginDeveloper dev) {
         var properties = dev.getProperties().get();
         if (properties.isEmpty()) {
             return;
         }
-        var propertiesNode = developerNode.appendNode(new QName(POM_NS, "properties"));
+        var propertiesNode = appendChildElement(developerNode, "properties");
         for (var entry : properties.entrySet()) {
-            propertiesNode.appendNode(new QName(POM_NS, entry.getKey()), entry.getValue());
+            appendChildElement(propertiesNode, entry.getKey(), entry.getValue());
         }
     }
 
-    private void addLicenses(Node root) {
+    private void addLicenses(Element root) {
         var licenses = extension.getPluginLicenses().get();
         if (licenses.isEmpty()) {
             return;
         }
-        var licensesNode = root.appendNode(new QName(POM_NS, "licenses"));
+        var licensesNode = appendChildElement(root, "licenses");
         for (var license : licenses) {
-            var licenseNode = licensesNode.appendNode(new QName(POM_NS, "license"));
+            var licenseNode = appendChildElement(licensesNode, "license");
             appendIfPresent(licenseNode, "name", license.getName().getOrNull());
             appendIfPresent(licenseNode, "url", license.getUrl().getOrNull());
             appendIfPresent(licenseNode, "distribution", license.getDistribution().getOrNull());
@@ -165,19 +158,58 @@ class PomBuilder implements Action<XmlProvider> {
         }
     }
 
-    private void fixPackaging(Node root) {
-        var packagingList = root.getAt(new QName(POM_NS, "packaging"));
+    private void fixPackaging(Element root) {
         var packaging = extension.getArchiveExtension().get();
-        if (!packagingList.isEmpty()) {
-            ((Node) packagingList.get(0)).setValue(packaging);
+        var packagingNode = firstChild(root, "packaging");
+        if (packagingNode.isPresent()) {
+            packagingNode.get().setTextContent(packaging);
         } else {
-            root.appendNode(new QName(POM_NS, "packaging"), packaging);
+            appendChildElement(root, "packaging", packaging);
         }
     }
 
-    private static void appendIfPresent(Node parent, String name, String value) {
+    private static void appendIfPresent(Element parent, String name, String value) {
         if (value != null) {
-            parent.appendNode(new QName(POM_NS, name), value);
+            appendChildElement(parent, name, value);
         }
+    }
+
+    private static Optional<Element> firstChild(Element parent, String childName) {
+        return childElements(parent, childName).findFirst();
+    }
+
+    private static Stream<Element> childElements(Element parent, String childName) {
+        NodeList childNodes = parent.getChildNodes();
+        return IntStream.range(0, childNodes.getLength())
+                .mapToObj(childNodes::item)
+                .filter(Element.class::isInstance)
+                .map(Element.class::cast)
+                .filter(element -> matches(element, childName));
+    }
+
+    private static Element firstChildOrAppend(Element parent, String childName) {
+        return firstChild(parent, childName).orElseGet(() -> appendChildElement(parent, childName));
+    }
+
+    private static Element appendChildElement(Element parent, String childName) {
+        return appendChildElement(parent, childName, null);
+    }
+
+    private static Element appendChildElement(Element parent, String childName, String value) {
+        Document document = parent.getOwnerDocument();
+        Element child = document.createElementNS(POM_NS, childName);
+        if (value != null) {
+            child.setTextContent(value);
+        }
+        parent.appendChild(child);
+        return child;
+    }
+
+    private static boolean matches(Element element, String childName) {
+        var localName = element.getLocalName();
+        if (localName != null) {
+            return POM_NS.equals(element.getNamespaceURI()) && childName.equals(localName);
+        }
+        return childName.equals(element.getTagName());
     }
 }
