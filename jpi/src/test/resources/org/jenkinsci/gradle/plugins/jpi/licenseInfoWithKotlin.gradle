@@ -25,7 +25,7 @@ dependencies {
     // dependency provided -> do not include license
     compileOnly 'commons-codec:commons-codec:1.22.0'
     // plugin dependency -> do not include license
-    implementation 'org.jenkins-ci.plugins:credentials:1.28'
+    implementation 'org.jenkins-ci.plugins:credentials:1511.v2e3cb_0008ef0'
 
     // Kotlin plugin needs workaround on detached configuration
     implementation 'com.squareup.okio:okio:2.10.0'
