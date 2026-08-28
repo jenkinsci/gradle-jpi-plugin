@@ -267,7 +267,7 @@ public abstract class TestServerTask extends DefaultTask {
      * successful start or the timeout. A fresh work directory and port are used per attempt.
      */
     private LaunchResult attemptLaunch(Path workDir, int timeout) throws IOException, InterruptedException {
-        var process = launchProcess(getCommandLine(workDir));
+        var process = launchWithReservedPort(workDir);
         var timedOut = new java.util.concurrent.atomic.AtomicBoolean(false);
 
         var timerThread = new Thread(() -> {
@@ -330,6 +330,29 @@ public abstract class TestServerTask extends DefaultTask {
     @NotNull
     private Process launchProcess(List<String> commandLine) throws IOException {
         return new ProcessBuilder(commandLine).directory(new File(getRootDir().get())).redirectErrorStream(true).start();
+    }
+
+    /**
+     * Reserves the Jenkins server port and holds it open (see {@link PortAllocationService})
+     * while the command line is assembled, releasing it as late as possible -- immediately before
+     * the nested Gradle build is spawned to actually bind it -- to keep the window in which
+     * another process could steal the port as small as possible. See
+     * <a href="https://github.com/jenkinsci/gradle-jpi-plugin/issues/344">#344</a>.
+     */
+    @NotNull
+    private Process launchWithReservedPort(Path workDir) throws IOException {
+        var portAllocationService = getPortAllocationService().get();
+        int port = portAllocationService.reservePort();
+        try {
+            var commandLine = getCommandLine(workDir, port);
+            portAllocationService.releasePort(port);
+            return launchProcess(commandLine);
+        } finally {
+            // Safety net: if reservePort() succeeded but something above threw before the
+            // explicit release, don't leak the held socket for the rest of the build. A no-op if
+            // the port was already released on the success path.
+            portAllocationService.releasePort(port);
+        }
     }
 
     /**
@@ -402,7 +425,7 @@ public abstract class TestServerTask extends DefaultTask {
     }
 
     @NotNull
-    private List<String> getCommandLine(@NotNull Path workDir) {
+    private List<String> getCommandLine(@NotNull Path workDir, int serverPort) {
         List<String> commandLine = new ArrayList<>();
         commandLine.add(slashify(getGradleExecutable().get()));
         commandLine.add("-Dorg.gradle.java.home=" + slashify(getJavaHome().get()));
@@ -439,7 +462,7 @@ public abstract class TestServerTask extends DefaultTask {
         });
 
         commandLine.add(getServerTaskPath().get());
-        commandLine.add("-Pserver.port=" + getPortAllocationService().get().findAndReserveFreePort());
+        commandLine.add("-Pserver.port=" + serverPort);
         commandLine.add("-P" + WorkDirectorySettings.PROPERTY + "=" + slashify(workDir.toAbsolutePath().toString()));
         getLogger().info("Command: {}", commandLine);
         return commandLine;
