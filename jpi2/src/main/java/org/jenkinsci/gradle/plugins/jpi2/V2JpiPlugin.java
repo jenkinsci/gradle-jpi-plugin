@@ -442,7 +442,7 @@ public class V2JpiPlugin implements Plugin<Project> {
             });
         });
 
-        var propertyProvider = project.provider(new PrefixedPropertiesProvider(project, CheckAccessModifierTask.PREFIX));
+        var propertyProvider = PrefixedPropertiesProvider.gradlePropertiesPrefixedBy(project, CheckAccessModifierTask.PREFIX);
         var checkAccessModifier = project.getTasks().register(CheckAccessModifierTask.NAME, CheckAccessModifierTask.class, task -> {
             task.setGroup("Verification");
             task.setDescription("Checks if Jenkins restricted apis are used (https://tiny.cc/jenkins-restricted).");
