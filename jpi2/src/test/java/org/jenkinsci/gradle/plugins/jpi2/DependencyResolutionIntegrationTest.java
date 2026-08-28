@@ -192,4 +192,40 @@ class DependencyResolutionIntegrationTest extends V2IntegrationTestBase {
                         "test-plugin-1.0.0.jar",
                         "commons-math3-3.6.1.jar");
     }
+
+    /**
+     * Libraries Jenkins core ships are strictly pinned to core's version, so a plugin cannot build
+     * or test against a version it will not get at runtime.
+     */
+    @Test
+    void stillPinsLibrariesJenkinsCoreShipsToCoreVersion() throws IOException {
+        var ith = new IntegrationTestHelper(tempDir, "8.14");
+        initBuild(ith);
+        Files.writeString(ith.inProjectDir("gradle.properties").toPath(), /* language=properties */ """
+                jenkins.version=2.541.1
+                """);
+        Files.writeString(ith.inProjectDir("build.gradle.kts").toPath(), /* language=kotlin */ """
+                plugins {
+                    id("org.jenkins-ci.jpi2")
+                }
+                repositories {
+                    mavenCentral()
+                    jenkinsPublic()
+                }
+                group = "com.example"
+                version = "1.0.0"
+                dependencies {
+                    testImplementation("commons-io:commons-io:2.21.0")
+                }
+                """);
+
+        var result = ith.gradleRunner()
+                .withArguments("copyTestPluginDependencies")
+                .buildAndFail();
+
+        assertThat(result.getOutput())
+                .contains("Cannot find a version of 'commons-io:commons-io' that satisfies the version constraints")
+                .contains("commons-io:commons-io:{strictly 2.20.0}")
+                .contains("by consistent resolution");
+    }
 }
