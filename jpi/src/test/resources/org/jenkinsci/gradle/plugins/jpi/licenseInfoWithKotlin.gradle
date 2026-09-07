@@ -28,5 +28,5 @@ dependencies {
     implementation 'org.jenkins-ci.plugins:credentials:1511.v2e3cb_0008ef0'
 
     // Kotlin plugin needs workaround on detached configuration
-    implementation 'com.squareup.okio:okio:3.18.1'
+    implementation 'com.squareup.okio:okio:3.18.2'
 }
