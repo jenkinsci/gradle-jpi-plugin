@@ -23,6 +23,7 @@ dependencies {
     testImplementation(libs.awaitility)
     testImplementation(libs.commons.io)
     testImplementation(libs.maven.model)
+    testImplementation(libs.mockito.core)
     testCompileOnly(libs.develocity.testing.annotations)
     testCompileOnly(libs.jetbrains.annotations)
     testRuntimeOnly(libs.junit5.jupiter)
