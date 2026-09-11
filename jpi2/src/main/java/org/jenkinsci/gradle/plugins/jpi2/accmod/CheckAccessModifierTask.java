@@ -29,7 +29,7 @@ public abstract class CheckAccessModifierTask extends DefaultTask {
 
     private final WorkerExecutor workerExecutor;
     private final ConfigurableFileCollection accessModifierClasspath;
-    private final MapProperty<String, Object> accessModifierProperties;
+    private final MapProperty<String, String> accessModifierProperties;
     private final ConfigurableFileCollection compileClasspath;
     private final ConfigurableFileCollection compilationDirs;
     private final Property<Boolean> ignoreFailures;
@@ -46,7 +46,7 @@ public abstract class CheckAccessModifierTask extends DefaultTask {
         this.workerExecutor = workerExecutor;
         var objects = getProject().getObjects();
         this.accessModifierClasspath = objects.fileCollection();
-        this.accessModifierProperties = objects.mapProperty(String.class, Object.class);
+        this.accessModifierProperties = objects.mapProperty(String.class, String.class);
         this.compileClasspath = objects.fileCollection();
         this.compilationDirs = objects.fileCollection();
         this.ignoreFailures = objects.property(Boolean.class);
@@ -61,7 +61,7 @@ public abstract class CheckAccessModifierTask extends DefaultTask {
 
     /** @return additional properties forwarded to the checker (e.g. project-property overrides) */
     @Input
-    public MapProperty<String, Object> getAccessModifierProperties() {
+    public MapProperty<String, String> getAccessModifierProperties() {
         return accessModifierProperties;
     }
 

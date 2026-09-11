@@ -12,7 +12,7 @@ import org.gradle.workers.WorkParameters;
  */
 public interface CheckAccessParameters extends WorkParameters {
     /** @return extra properties forwarded to {@code kohsuke.accmod.Checker} */
-    MapProperty<String, Object> getPropertiesForAccessModifier();
+    MapProperty<String, String> getPropertiesForAccessModifier();
 
     /** @return full classpath (compiled classes + compile deps) for type resolution during scanning */
     ConfigurableFileCollection getClasspathToScan();

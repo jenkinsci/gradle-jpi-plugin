@@ -42,7 +42,7 @@ public abstract class CheckAccess implements WorkAction<CheckAccessParameters> {
         URLClassLoader loader = new URLClassLoader(urls, getClass().getClassLoader());
         InternalErrorListener listener = new InternalErrorListener();
         Properties props = new Properties();
-        getParameters().getPropertiesForAccessModifier().get().forEach(props::put);
+        props.putAll(getParameters().getPropertiesForAccessModifier().get());
 
         try {
             Checker checker = new Checker(loader, listener, props, new MavenLoggingBridge());
