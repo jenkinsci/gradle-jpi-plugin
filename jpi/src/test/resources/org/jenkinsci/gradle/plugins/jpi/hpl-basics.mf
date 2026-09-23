@@ -1,7 +1,0 @@
-Manifest-Version: 1.0
-Jenkins-Version: 1.509.3
-Group-Id: org.example
-Short-Name: test
-Plugin-Version: 1.2
-Long-Name: test
-Extension-Name: test
