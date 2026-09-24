@@ -1,11 +1,5 @@
 package org.jenkinsci.gradle.plugins.jpi2.accmod;
 
-import org.gradle.workers.WorkAction;
-import org.kohsuke.accmod.impl.Checker;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import javax.inject.Inject;
 import java.io.IOException;
 import java.net.URL;
 import java.net.URLClassLoader;
@@ -13,6 +7,11 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.util.List;
 import java.util.Properties;
+import javax.inject.Inject;
+import org.gradle.workers.WorkAction;
+import org.kohsuke.accmod.impl.Checker;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Work action that runs {@code kohsuke.accmod.Checker} against a compiled class directory
@@ -23,8 +22,7 @@ public abstract class CheckAccess implements WorkAction<CheckAccessParameters> {
 
     /** Required by Gradle's worker injection infrastructure. */
     @Inject
-    public CheckAccess() {
-    }
+    public CheckAccess() {}
 
     @Override
     public void execute() {

@@ -5,9 +5,9 @@ name: CI
 
 on:
   push:
-    branches: [ main ]
+    branches: [main]
   pull_request:
-    branches: [ main ]
+    branches: [main]
   merge_group:
 
 jobs:
@@ -18,25 +18,25 @@ jobs:
       matrix:
         os: [ubuntu-latest, windows-latest]
     steps:
-    - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-    - name: Set up JDK 17
-      uses: actions/setup-java@dd06d9cba3e5552c54d9f8ea23572deb30010f7c # v6
-      with:
-        java-version: "17"
-        distribution: "temurin"
-        cache: "gradle"
-    - uses: gradle/actions/setup-gradle@9c971963bec38e04b3d30dcc455b5382be2fdbfb # v6
-    - name: Build
-      run: ./gradlew clean build
-    - name: Archive Codenarc Report on Failure
-      uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
-      if: ${{ failure() }}
-      with:
-        name: codenarc-results
-        path: build/reports/codenarc
-    - name: Archive Test Results on Failure
-      uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
-      if: ${{ failure() }}
-      with:
-        name: ${{ matrix.os }}-ci-test-results
-        path: build/reports/tests
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - name: Set up JDK 17
+        uses: actions/setup-java@dd06d9cba3e5552c54d9f8ea23572deb30010f7c # v6
+        with:
+          java-version: "17"
+          distribution: "temurin"
+          cache: "gradle"
+      - uses: gradle/actions/setup-gradle@9c971963bec38e04b3d30dcc455b5382be2fdbfb # v6
+      - name: Build
+        run: ./gradlew clean build
+      - name: Archive Codenarc Report on Failure
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        if: ${{ failure() }}
+        with:
+          name: codenarc-results
+          path: build/reports/codenarc
+      - name: Archive Test Results on Failure
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        if: ${{ failure() }}
+        with:
+          name: ${{ matrix.os }}-ci-test-results
+          path: build/reports/tests

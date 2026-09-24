@@ -1,14 +1,12 @@
 package org.jenkinsci.gradle.plugins.jpi2;
 
-import java.nio.file.Files;
-import org.jenkinsci.gradle.plugins.jpi.IntegrationTestHelper;
-import org.junit.jupiter.api.Test;
+import static org.assertj.core.api.Assertions.assertThat;
 
 import java.io.File;
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
-
-import static org.assertj.core.api.Assertions.assertThat;
+import java.nio.file.Files;
+import org.jenkinsci.gradle.plugins.jpi.IntegrationTestHelper;
+import org.junit.jupiter.api.Test;
 
 class DependencyFilteringIntegrationTest extends V2IntegrationTestBase {
 
@@ -17,7 +15,8 @@ class DependencyFilteringIntegrationTest extends V2IntegrationTestBase {
         // given
         var ith = new IntegrationTestHelper(tempDir, "8.14");
         initBuild(ith);
-        Files.writeString(ith.inProjectDir("build.gradle.kts").toPath(), getBasePluginConfig() +/* language=kotlin */ """
+        Files.writeString(
+                ith.inProjectDir("build.gradle.kts").toPath(), getBasePluginConfig() + /* language=kotlin */ """
                 dependencies {
                     annotationProcessor("org.projectlombok:lombok:1.18.38")
                     compileOnly("org.projectlombok:lombok:1.18.38")
@@ -26,7 +25,10 @@ class DependencyFilteringIntegrationTest extends V2IntegrationTestBase {
                 configurations.getByName("compileClasspath").shouldResolveConsistentlyWith(configurations.getByName("runtimeClasspath"))
                 """);
         ith.mkDirInProjectDir("src/main/java/com/example/plugin");
-        Files.writeString(ith.inProjectDir("src/main/java/com/example/plugin/PluginAction.java").toPath(), /* language=java */ """
+        Files.writeString(
+                ith.inProjectDir("src/main/java/com/example/plugin/PluginAction.java")
+                        .toPath(), /* language=java */
+                """
                 package com.example.plugin;
                 import lombok.*;
                 import hudson.Extension;
@@ -59,8 +61,7 @@ class DependencyFilteringIntegrationTest extends V2IntegrationTestBase {
         assertThat(jpiLibsDir).exists();
 
         var jpiLibs = jpiLibsDir.list();
-        assertThat(jpiLibs).isNotNull()
-                .containsExactlyInAnyOrder("test-plugin-1.0.0.jar");
+        assertThat(jpiLibs).isNotNull().containsExactlyInAnyOrder("test-plugin-1.0.0.jar");
     }
 
     @Test
@@ -68,7 +69,8 @@ class DependencyFilteringIntegrationTest extends V2IntegrationTestBase {
         // given
         var ith = new IntegrationTestHelper(tempDir, "8.14");
         initBuild(ith);
-        Files.writeString(ith.inProjectDir("build.gradle.kts").toPath(), getBasePluginConfig() +/* language=kotlin */ """
+        Files.writeString(
+                ith.inProjectDir("build.gradle.kts").toPath(), getBasePluginConfig() + /* language=kotlin */ """
                 dependencies {
                     annotationProcessor("org.projectlombok:lombok:1.18.38")
                     compileOnly("org.projectlombok:lombok:1.18.38")
@@ -78,7 +80,10 @@ class DependencyFilteringIntegrationTest extends V2IntegrationTestBase {
                 configurations.getByName("compileClasspath").shouldResolveConsistentlyWith(configurations.getByName("runtimeClasspath"))
                 """);
         ith.mkDirInProjectDir("src/main/java/com/example/plugin");
-        Files.writeString(ith.inProjectDir("src/main/java/com/example/plugin/PluginAction.java").toPath(), /* language=java */ """
+        Files.writeString(
+                ith.inProjectDir("src/main/java/com/example/plugin/PluginAction.java")
+                        .toPath(), /* language=java */
+                """
                 package com.example.plugin;
                 import lombok.*;
                 import hudson.Extension;
@@ -111,8 +116,7 @@ class DependencyFilteringIntegrationTest extends V2IntegrationTestBase {
         assertThat(jpiLibsDir).exists();
 
         var jpiLibs = jpiLibsDir.list();
-        assertThat(jpiLibs).isNotNull()
-                .containsExactlyInAnyOrder("test-plugin-1.0.0.jar");
+        assertThat(jpiLibs).isNotNull().containsExactlyInAnyOrder("test-plugin-1.0.0.jar");
     }
 
     @Test
@@ -120,7 +124,8 @@ class DependencyFilteringIntegrationTest extends V2IntegrationTestBase {
         // given
         var ith = new IntegrationTestHelper(tempDir, "8.14");
         initBuild(ith);
-        Files.writeString(ith.inProjectDir("build.gradle.kts").toPath(), getBasePluginConfig() +/* language=kotlin */ """
+        Files.writeString(
+                ith.inProjectDir("build.gradle.kts").toPath(), getBasePluginConfig() + /* language=kotlin */ """
                 dependencies {
                     annotationProcessor("org.projectlombok:lombok:1.18.38")
                     compileOnly("org.projectlombok:lombok:1.18.38")
@@ -130,7 +135,10 @@ class DependencyFilteringIntegrationTest extends V2IntegrationTestBase {
                 configurations.getByName("compileClasspath").shouldResolveConsistentlyWith(configurations.getByName("runtimeClasspath"))
                 """);
         ith.mkDirInProjectDir("src/main/java/com/example/plugin");
-        Files.writeString(ith.inProjectDir("src/main/java/com/example/plugin/PluginAction.java").toPath(), /* language=java */ """
+        Files.writeString(
+                ith.inProjectDir("src/main/java/com/example/plugin/PluginAction.java")
+                        .toPath(), /* language=java */
+                """
                 package com.example.plugin;
                 import lombok.*;
                 import hudson.Extension;
@@ -163,8 +171,7 @@ class DependencyFilteringIntegrationTest extends V2IntegrationTestBase {
         assertThat(jpiLibsDir).exists();
 
         var jpiLibs = jpiLibsDir.list();
-        assertThat(jpiLibs).isNotNull()
-                .containsExactlyInAnyOrder("test-plugin-1.0.0.jar", "java-jwt-4.5.0.jar");
+        assertThat(jpiLibs).isNotNull().containsExactlyInAnyOrder("test-plugin-1.0.0.jar", "java-jwt-4.5.0.jar");
     }
 
     @Test
@@ -172,13 +179,17 @@ class DependencyFilteringIntegrationTest extends V2IntegrationTestBase {
         // given
         var ith = new IntegrationTestHelper(tempDir, "8.14");
         initBuild(ith);
-        Files.writeString(ith.inProjectDir("build.gradle.kts").toPath(), getBasePluginConfig() + /* language=kotlin */ """
+        Files.writeString(
+                ith.inProjectDir("build.gradle.kts").toPath(), getBasePluginConfig() + /* language=kotlin */ """
                 dependencies {
                     implementation("org.jenkins-ci.plugins:git:5.7.0")
                 }
                 """);
         ith.mkDirInProjectDir("src/main/java/com/example/plugin");
-        Files.writeString(ith.inProjectDir("src/main/java/com/example/plugin/PluginAction.java").toPath(), /* language=java */ """
+        Files.writeString(
+                ith.inProjectDir("src/main/java/com/example/plugin/PluginAction.java")
+                        .toPath(), /* language=java */
+                """
                 package com.example.plugin;
                 import hudson.plugins.git.Branch;
                 public class PluginAction {
@@ -203,8 +214,7 @@ class DependencyFilteringIntegrationTest extends V2IntegrationTestBase {
         assertThat(jpiLibsDir).exists();
 
         var jpiLibs = jpiLibsDir.list();
-        assertThat(jpiLibs).isNotNull()
-                .containsExactlyInAnyOrder("test-plugin-1.0.0.jar");
+        assertThat(jpiLibs).isNotNull().containsExactlyInAnyOrder("test-plugin-1.0.0.jar");
     }
 
     @Test
@@ -212,14 +222,18 @@ class DependencyFilteringIntegrationTest extends V2IntegrationTestBase {
         // given
         var ith = new IntegrationTestHelper(tempDir, "8.14");
         initBuild(ith);
-        Files.writeString(ith.inProjectDir("build.gradle.kts").toPath(), getBasePluginConfig() +/* language=kotlin */ """
+        Files.writeString(
+                ith.inProjectDir("build.gradle.kts").toPath(), getBasePluginConfig() + /* language=kotlin */ """
                 dependencies {
                     annotationProcessor("org.projectlombok:lombok:1.18.38")
                     compileOnly("org.projectlombok:lombok:1.18.38")
                 }
                 """);
         ith.mkDirInProjectDir("src/main/java/com/example/plugin");
-        Files.writeString(ith.inProjectDir("src/main/java/com/example/plugin/PluginAction.java").toPath(), /* language=java */ """
+        Files.writeString(
+                ith.inProjectDir("src/main/java/com/example/plugin/PluginAction.java")
+                        .toPath(), /* language=java */
+                """
                 package com.example.plugin;
                 import lombok.*;
                 import hudson.Extension;
@@ -252,7 +266,6 @@ class DependencyFilteringIntegrationTest extends V2IntegrationTestBase {
         assertThat(jpiLibsDir).exists();
 
         var jpiLibs = jpiLibsDir.list();
-        assertThat(jpiLibs).isNotNull()
-                .containsExactlyInAnyOrder("test-plugin-1.0.0.jar");
+        assertThat(jpiLibs).isNotNull().containsExactlyInAnyOrder("test-plugin-1.0.0.jar");
     }
 }

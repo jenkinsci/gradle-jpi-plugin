@@ -1,17 +1,15 @@
 package org.jenkinsci.gradle.plugins.jpi2;
 
+import static org.assertj.core.api.Assertions.assertThat;
+
+import java.io.FileReader;
+import java.io.IOException;
 import java.nio.file.Files;
 import org.apache.maven.model.Model;
 import org.apache.maven.model.io.xpp3.MavenXpp3Reader;
 import org.codehaus.plexus.util.xml.pull.XmlPullParserException;
 import org.jenkinsci.gradle.plugins.jpi.IntegrationTestHelper;
 import org.junit.jupiter.api.Test;
-
-import java.io.FileReader;
-import java.io.IOException;
-import java.nio.charset.StandardCharsets;
-
-import static org.assertj.core.api.Assertions.assertThat;
 
 class ArchiveExtensionIntegrationTest extends V2IntegrationTestBase {
 
@@ -36,7 +34,8 @@ class ArchiveExtensionIntegrationTest extends V2IntegrationTestBase {
         // given
         var ith = new IntegrationTestHelper(tempDir, "8.14");
         initBuild(ith);
-        Files.writeString(ith.inProjectDir("build.gradle.kts").toPath(), getBasePluginConfig() + /* language=kotlin */ """
+        Files.writeString(
+                ith.inProjectDir("build.gradle.kts").toPath(), getBasePluginConfig() + /* language=kotlin */ """
                 jenkinsPlugin {
                     archiveExtension.set("hpi")
                 }
@@ -57,7 +56,8 @@ class ArchiveExtensionIntegrationTest extends V2IntegrationTestBase {
         // given
         var ith = new IntegrationTestHelper(tempDir, "8.14");
         initBuild(ith);
-        Files.writeString(ith.inProjectDir("build.gradle.kts").toPath(), getBasePluginConfig() + /* language=kotlin */ """
+        Files.writeString(
+                ith.inProjectDir("build.gradle.kts").toPath(), getBasePluginConfig() + /* language=kotlin */ """
                 jenkinsPlugin {
                     archiveExtension.set("hpi")
                 }
@@ -83,7 +83,8 @@ class ArchiveExtensionIntegrationTest extends V2IntegrationTestBase {
         // given
         var ith = new IntegrationTestHelper(tempDir, "8.14");
         initBuild(ith);
-        Files.writeString(ith.inProjectDir("build.gradle.kts").toPath(), getBasePluginConfig() + /* language=kotlin */ """
+        Files.writeString(
+                ith.inProjectDir("build.gradle.kts").toPath(), getBasePluginConfig() + /* language=kotlin */ """
                 jenkinsPlugin {
                     archiveExtension.set("hpi")
                 }

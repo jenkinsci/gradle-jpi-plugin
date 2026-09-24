@@ -1,11 +1,10 @@
 package org.jenkinsci.gradle.plugins.jpi2;
 
-import org.gradle.api.services.BuildService;
-import org.gradle.api.services.BuildServiceParameters;
-
 import java.io.IOException;
 import java.net.ServerSocket;
 import java.util.concurrent.ConcurrentHashMap;
+import org.gradle.api.services.BuildService;
+import org.gradle.api.services.BuildServiceParameters;
 
 /**
  * A shared Gradle build service that finds and reserves free TCP ports for use during the build,
@@ -85,7 +84,10 @@ public abstract class PortAllocationService implements BuildService<BuildService
             socket.setReuseAddress(true);
         } catch (IOException e) {
             if (attempt == RETRY_LIMIT - 1) {
-                throw new IllegalStateException("Could not find a free port after " + RETRY_LIMIT + " attempts. Exception at server socket creation.", e);
+                throw new IllegalStateException(
+                        "Could not find a free port after " + RETRY_LIMIT
+                                + " attempts. Exception at server socket creation.",
+                        e);
             }
             return -1;
         }

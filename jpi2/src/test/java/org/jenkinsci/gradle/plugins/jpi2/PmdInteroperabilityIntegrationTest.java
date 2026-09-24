@@ -1,15 +1,14 @@
 package org.jenkinsci.gradle.plugins.jpi2;
 
-import org.jenkinsci.gradle.plugins.jpi.IntegrationTestHelper;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.condition.DisabledOnOs;
-import org.junit.jupiter.api.condition.OS;
+import static org.assertj.core.api.Assertions.assertThat;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
-
-import static org.assertj.core.api.Assertions.assertThat;
+import org.jenkinsci.gradle.plugins.jpi.IntegrationTestHelper;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.DisabledOnOs;
+import org.junit.jupiter.api.condition.OS;
 
 @DisabledOnOs(value = OS.WINDOWS, disabledReason = "TempDir doesn't appear to work correctly on Windows")
 class PmdInteroperabilityIntegrationTest extends V2IntegrationTestBase {
@@ -49,7 +48,8 @@ class PmdInteroperabilityIntegrationTest extends V2IntegrationTestBase {
                 }
                 """, StandardCharsets.UTF_8);
         ith.mkDirInProjectDir("src/test/java/com/example");
-        Files.writeString(ith.inProjectDir("src/test/java/com/example/ExampleTest.java").toPath(), """
+        Files.writeString(
+                ith.inProjectDir("src/test/java/com/example/ExampleTest.java").toPath(), """
                 package com.example;
                 import org.junit.jupiter.api.Test;
                 class ExampleTest {

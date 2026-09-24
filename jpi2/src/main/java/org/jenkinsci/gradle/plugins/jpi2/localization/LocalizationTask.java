@@ -1,5 +1,9 @@
 package org.jenkinsci.gradle.plugins.jpi2.localization;
 
+import java.io.File;
+import java.util.HashSet;
+import java.util.Set;
+import javax.inject.Inject;
 import org.gradle.api.GradleException;
 import org.gradle.api.file.ConfigurableFileCollection;
 import org.gradle.api.file.DirectoryProperty;
@@ -13,11 +17,6 @@ import org.gradle.api.tasks.SourceTask;
 import org.gradle.api.tasks.TaskAction;
 import org.gradle.workers.WorkQueue;
 import org.gradle.workers.WorkerExecutor;
-
-import javax.inject.Inject;
-import java.io.File;
-import java.util.HashSet;
-import java.util.Set;
 
 /**
  * Task that generates Java classes from Messages.properties files.
@@ -50,8 +49,8 @@ public abstract class LocalizationTask extends SourceTask {
     /** Submits one localizer work item per {@code Messages.properties} file, resolved relative to the configured source roots. */
     @TaskAction
     public void generate() {
-        WorkQueue workQueue = getWorkerExecutor().classLoaderIsolation(spec ->
-                spec.getClasspath().from(getLocalizerClasspath()));
+        WorkQueue workQueue = getWorkerExecutor()
+                .classLoaderIsolation(spec -> spec.getClasspath().from(getLocalizerClasspath()));
 
         Set<String> roots = new HashSet<>();
         for (File root : getSourceRoots().getFiles()) {
@@ -69,7 +68,8 @@ public abstract class LocalizationTask extends SourceTask {
                 }
             }
             if (candidate == null) {
-                throw new GradleException("Could not determine relative path of " + absolutePath + " from configured roots: " + String.join(",", roots));
+                throw new GradleException("Could not determine relative path of " + absolutePath
+                        + " from configured roots: " + String.join(",", roots));
             }
             final String relativePath = candidate;
             workQueue.submit(RunGenerator.class, parameters -> {

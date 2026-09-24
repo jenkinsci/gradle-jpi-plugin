@@ -1,5 +1,6 @@
 package org.jenkinsci.gradle.plugins.jpi2.accmod;
 
+import javax.inject.Inject;
 import org.gradle.api.DefaultTask;
 import org.gradle.api.file.ConfigurableFileCollection;
 import org.gradle.api.file.DirectoryProperty;
@@ -13,8 +14,6 @@ import org.gradle.api.tasks.InputFiles;
 import org.gradle.api.tasks.OutputDirectory;
 import org.gradle.api.tasks.TaskAction;
 import org.gradle.workers.WorkerExecutor;
-
-import javax.inject.Inject;
 
 /**
  * Submits parallel {@link CheckAccess} work items — one per compilation output directory —
@@ -93,9 +92,12 @@ public abstract class CheckAccessModifierTask extends DefaultTask {
     /** Submits one {@link CheckAccess} work item per compilation directory using classpath-isolated workers. */
     @TaskAction
     public void check() {
-        var queue = workerExecutor.classLoaderIsolation(spec -> spec.getClasspath().from(accessModifierClasspath));
+        var queue =
+                workerExecutor.classLoaderIsolation(spec -> spec.getClasspath().from(accessModifierClasspath));
         for (var compilationDir : compilationDirs) {
-            String parentName = compilationDir.getParentFile() == null ? "classes" : compilationDir.getParentFile().getName();
+            String parentName = compilationDir.getParentFile() == null
+                    ? "classes"
+                    : compilationDir.getParentFile().getName();
             String fileName = compilationDir.getName() + "-" + parentName + ".txt";
             queue.submit(CheckAccess.class, params -> {
                 params.getClasspathToScan().from(compilationDirs, compileClasspath);

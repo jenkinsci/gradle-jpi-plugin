@@ -1,5 +1,13 @@
 package org.jenkinsci.gradle.plugins.jpi2;
 
+import java.io.File;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.nio.file.Files;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.jar.Manifest;
 import org.gradle.api.DefaultTask;
 import org.gradle.api.file.ConfigurableFileCollection;
 import org.gradle.api.file.RegularFileProperty;
@@ -12,15 +20,6 @@ import org.gradle.api.tasks.OutputFile;
 import org.gradle.api.tasks.PathSensitive;
 import org.gradle.api.tasks.PathSensitivity;
 import org.gradle.api.tasks.TaskAction;
-
-import java.io.File;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
-import java.nio.file.Files;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.jar.Manifest;
 
 /**
  * Generates an HPL (Hudson Plugin Link) file for running Jenkins against local classes and resources.
@@ -52,10 +51,12 @@ public abstract class GenerateHplTask extends DefaultTask {
         File destination = getHpl().getAsFile().get();
         destination.getParentFile().mkdirs();
         Manifest manifest = new Manifest();
-        try (InputStream is = Files.newInputStream(getUpstreamManifest().getAsFile().get().toPath());
-             OutputStream os = Files.newOutputStream(destination.toPath())) {
+        try (InputStream is = Files.newInputStream(
+                        getUpstreamManifest().getAsFile().get().toPath());
+                OutputStream os = Files.newOutputStream(destination.toPath())) {
             manifest.read(is);
-            manifest.getMainAttributes().putValue("Resource-Path", getResourcePath().get().getAbsolutePath());
+            manifest.getMainAttributes()
+                    .putValue("Resource-Path", getResourcePath().get().getAbsolutePath());
 
             List<String> existing = new LinkedList<>();
             for (File file : getLibraries()) {

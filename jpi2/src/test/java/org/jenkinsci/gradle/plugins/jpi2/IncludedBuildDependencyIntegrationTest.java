@@ -1,13 +1,11 @@
 package org.jenkinsci.gradle.plugins.jpi2;
 
+import static org.assertj.core.api.Assertions.assertThat;
+
+import java.io.IOException;
 import java.nio.file.Files;
 import org.jenkinsci.gradle.plugins.jpi.IntegrationTestHelper;
 import org.junit.jupiter.api.Test;
-
-import java.io.IOException;
-import java.nio.charset.StandardCharsets;
-
-import static org.assertj.core.api.Assertions.assertThat;
 
 class IncludedBuildDependencyIntegrationTest extends V2IntegrationTestBase {
 
@@ -18,9 +16,7 @@ class IncludedBuildDependencyIntegrationTest extends V2IntegrationTestBase {
         configureBuildWithIncludedBuildLibraryDependency(ith);
 
         // when
-        var result = ith.gradleRunner()
-                .withArguments("prepareServer")
-                .build();
+        var result = ith.gradleRunner().withArguments("prepareServer").build();
 
         // then
         assertThat(result.getOutput()).contains("BUILD SUCCESSFUL");
@@ -38,7 +34,8 @@ class IncludedBuildDependencyIntegrationTest extends V2IntegrationTestBase {
                 includeBuild("included-build")
                 """);
 
-        Files.writeString(ith.inProjectDir("build.gradle.kts").toPath(), getBasePluginConfig() + /* language=kotlin */ """
+        Files.writeString(
+                ith.inProjectDir("build.gradle.kts").toPath(), getBasePluginConfig() + /* language=kotlin */ """
                 dependencies {
                     implementation("com.example:lib:1.0.0")
                 }
@@ -58,7 +55,8 @@ class IncludedBuildDependencyIntegrationTest extends V2IntegrationTestBase {
                 }
                 """);
 
-        Files.writeString(ith.inProjectDir("included-build/lib/build.gradle.kts").toPath(), /* language=kotlin */ """
+        Files.writeString(
+                ith.inProjectDir("included-build/lib/build.gradle.kts").toPath(), /* language=kotlin */ """
                 plugins {
                     id("java-library")
                 }
@@ -67,7 +65,10 @@ class IncludedBuildDependencyIntegrationTest extends V2IntegrationTestBase {
                 }
                 """);
 
-        Files.writeString(ith.inProjectDir("included-build/lib/src/main/java/com/example/lib/IncludedBuildLibrary.java").toPath(), /* language=java */ """
+        Files.writeString(
+                ith.inProjectDir("included-build/lib/src/main/java/com/example/lib/IncludedBuildLibrary.java")
+                        .toPath(), /* language=java */
+                """
                 package com.example.lib;
                 public class IncludedBuildLibrary {
                     public String hello() {

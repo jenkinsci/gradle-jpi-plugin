@@ -34,11 +34,7 @@ public final class GitVersion {
      * @throws InterruptedException if the thread is interrupted while waiting for git to finish
      */
     public static VersionResult compute(
-            Path gitRoot,
-            String versionFormat,
-            String versionPrefix,
-            int abbrevLength,
-            boolean allowDirty)
+            Path gitRoot, String versionFormat, String versionPrefix, int abbrevLength, boolean allowDirty)
             throws IOException, InterruptedException {
         if (!Files.isDirectory(gitRoot.resolve(".git"))) {
             throw new RuntimeException("Not a Git repository: " + gitRoot);
@@ -52,17 +48,17 @@ public final class GitVersion {
             }
         }
 
-        String depthStr =
-                runGit(gitRoot, "rev-list", "--count", "HEAD").stream().findFirst().orElse("0");
+        String depthStr = runGit(gitRoot, "rev-list", "--count", "HEAD").stream()
+                .findFirst()
+                .orElse("0");
         long depth = Long.parseLong(depthStr.trim());
-        String abbrev = runGit(gitRoot, "rev-parse", "--short=" + abbrevLength, "HEAD")
-                .stream()
+        String abbrev = runGit(gitRoot, "rev-parse", "--short=" + abbrevLength, "HEAD").stream()
                 .findFirst()
                 .orElse("");
-        String fullHash = runGit(gitRoot, "rev-parse", "HEAD").stream().findFirst().orElse("");
+        String fullHash =
+                runGit(gitRoot, "rev-parse", "HEAD").stream().findFirst().orElse("");
 
-        String versionString =
-                versionPrefix + String.format(versionFormat, depth, abbrev.trim());
+        String versionString = versionPrefix + String.format(versionFormat, depth, abbrev.trim());
         return new VersionResult(versionString, fullHash.trim());
     }
 

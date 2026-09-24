@@ -1,5 +1,7 @@
 package org.jenkinsci.gradle.plugins.jpi2.localization;
 
+import java.io.File;
+import java.io.IOException;
 import org.gradle.api.GradleException;
 import org.gradle.workers.WorkAction;
 import org.jvnet.localizer.ClassGenerator;
@@ -8,9 +10,6 @@ import org.jvnet.localizer.GeneratorConfig;
 import org.jvnet.localizer.Reporter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.io.File;
-import java.io.IOException;
 
 /**
  * Work action that runs the localizer generator.

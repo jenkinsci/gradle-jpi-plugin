@@ -1,14 +1,13 @@
 package org.jenkinsci.gradle.plugins.jpi2;
 
-import org.gradle.testkit.runner.GradleRunner;
-import org.jenkinsci.gradle.plugins.jpi.IntegrationTestHelper;
-import org.junit.jupiter.api.Test;
+import static org.assertj.core.api.Assertions.assertThat;
 
 import java.io.File;
 import java.io.IOException;
 import java.util.jar.Manifest;
-
-import static org.assertj.core.api.Assertions.assertThat;
+import org.gradle.testkit.runner.GradleRunner;
+import org.jenkinsci.gradle.plugins.jpi.IntegrationTestHelper;
+import org.junit.jupiter.api.Test;
 
 class OssLibraryDependencyIntegrationTest extends V2IntegrationTestBase {
 
@@ -41,8 +40,10 @@ class OssLibraryDependencyIntegrationTest extends V2IntegrationTestBase {
         assertThat(jpiLibsDir).exists();
 
         var jpiLibs = jpiLibsDir.list();
-        assertThat(jpiLibs).isNotNull()
-                .containsExactlyInAnyOrder("nothing-java-0.2.0.jar",
+        assertThat(jpiLibs)
+                .isNotNull()
+                .containsExactlyInAnyOrder(
+                        "nothing-java-0.2.0.jar",
                         "test-plugin-1.0.0.jar",
                         "commons-math3-3.6.1.jar",
                         "commons-lang3-3.12.0.jar");

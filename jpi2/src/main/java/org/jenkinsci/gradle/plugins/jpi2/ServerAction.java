@@ -1,5 +1,7 @@
 package org.jenkinsci.gradle.plugins.jpi2;
 
+import java.util.ArrayList;
+import java.util.List;
 import org.gradle.api.Action;
 import org.gradle.api.Task;
 import org.gradle.api.artifacts.Configuration;
@@ -9,14 +11,11 @@ import org.gradle.api.tasks.JavaExec;
 import org.gradle.api.tasks.TaskProvider;
 import org.jetbrains.annotations.NotNull;
 
-import java.util.ArrayList;
-import java.util.List;
-
 /**
  * Action to configure the JavaExec task for running the Jenkins server.
  */
 @SuppressWarnings({
-        "Convert2Lambda", // Gradle doesn't like lambdas
+    "Convert2Lambda", // Gradle doesn't like lambdas
 })
 class ServerAction implements Action<JavaExec> {
     private final Configuration serverTaskClasspath;
@@ -24,7 +23,11 @@ class ServerAction implements Action<JavaExec> {
     private final Provider<String> workDir;
     private final TaskProvider<?> prepareServer;
 
-    public ServerAction(Configuration serverTaskClasspath, String projectRoot, Provider<String> workDir, TaskProvider<?> prepareServer) {
+    public ServerAction(
+            Configuration serverTaskClasspath,
+            String projectRoot,
+            Provider<String> workDir,
+            TaskProvider<?> prepareServer) {
         this.serverTaskClasspath = serverTaskClasspath;
         this.projectRoot = projectRoot;
         this.workDir = workDir;
@@ -46,8 +49,7 @@ class ServerAction implements Action<JavaExec> {
                     "--pluginroot=" + projectRoot + "/build/jenkins/plugins",
                     "--extractedFilesFolder=" + projectRoot + "/build/jenkins/extracted",
                     "--commonLibFolder=" + resolvedWorkDir + "/lib",
-                    "--httpPort=" + (serverPort != null ? serverPort : "8080")
-            ));
+                    "--httpPort=" + (serverPort != null ? serverPort : "8080")));
             args.addAll(spec.getArgs());
             spec.setArgs(args);
             spec.environment("JENKINS_HOME", resolvedWorkDir);

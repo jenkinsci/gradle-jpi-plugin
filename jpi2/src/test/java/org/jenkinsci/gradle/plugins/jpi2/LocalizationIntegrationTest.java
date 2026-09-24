@@ -1,16 +1,14 @@
 package org.jenkinsci.gradle.plugins.jpi2;
 
+import static org.assertj.core.api.Assertions.assertThat;
+
+import java.io.IOException;
 import java.nio.file.Files;
+import java.util.jar.JarFile;
 import org.gradle.testkit.runner.BuildResult;
 import org.gradle.testkit.runner.TaskOutcome;
 import org.jenkinsci.gradle.plugins.jpi.IntegrationTestHelper;
 import org.junit.jupiter.api.Test;
-
-import java.io.IOException;
-import java.nio.charset.StandardCharsets;
-import java.util.jar.JarFile;
-
-import static org.assertj.core.api.Assertions.assertThat;
 
 class LocalizationIntegrationTest extends V2IntegrationTestBase {
 
@@ -21,7 +19,8 @@ class LocalizationIntegrationTest extends V2IntegrationTestBase {
         Files.writeString(ith.inProjectDir("build.gradle.kts").toPath(), getBasePluginConfig());
 
         ith.mkDirInProjectDir("src/main/java/org/example");
-        Files.writeString(ith.inProjectDir("src/main/java/org/example/UsesMessages.java").toPath(), /* language=java */ """
+        Files.writeString(
+                ith.inProjectDir("src/main/java/org/example/UsesMessages.java").toPath(), /* language=java */ """
                 package org.example;
 
                 public class UsesMessages {
@@ -31,7 +30,10 @@ class LocalizationIntegrationTest extends V2IntegrationTestBase {
                 }
                 """);
         ith.mkDirInProjectDir("src/main/resources/org/example");
-        Files.writeString(ith.inProjectDir("src/main/resources/org/example/Messages.properties").toPath(), /* language=properties */ """
+        Files.writeString(
+                ith.inProjectDir("src/main/resources/org/example/Messages.properties")
+                        .toPath(), /* language=properties */
+                """
                 displayName=Display Name
                 """);
 
@@ -41,28 +43,36 @@ class LocalizationIntegrationTest extends V2IntegrationTestBase {
         assertThat(result.task(":localizeMessages").getOutcome()).isIn(TaskOutcome.SUCCESS, TaskOutcome.FROM_CACHE);
         assertThat(result.task(":classes")).isNotNull();
         assertThat(result.task(":classes").getOutcome()).isIn(TaskOutcome.SUCCESS, TaskOutcome.FROM_CACHE);
-        assertThat(ith.inProjectDir("build/generated-src/localizer/org/example/Messages.java")).exists();
-        assertThat(ith.inProjectDir("build/classes/java/main/org/example/Messages.class")).exists();
-        assertThat(ith.inProjectDir("build/classes/java/main/org/example/UsesMessages.class")).exists();
+        assertThat(ith.inProjectDir("build/generated-src/localizer/org/example/Messages.java"))
+                .exists();
+        assertThat(ith.inProjectDir("build/classes/java/main/org/example/Messages.class"))
+                .exists();
+        assertThat(ith.inProjectDir("build/classes/java/main/org/example/UsesMessages.class"))
+                .exists();
     }
 
     @Test
     void localizeMessagesSupportsCustomOutputDirectory() throws IOException {
         var ith = new IntegrationTestHelper(tempDir, "8.14");
         initBuild(ith);
-        Files.writeString(ith.inProjectDir("build.gradle.kts").toPath(), getBasePluginConfig() + /* language=kotlin */ """
+        Files.writeString(
+                ith.inProjectDir("build.gradle.kts").toPath(), getBasePluginConfig() + /* language=kotlin */ """
                 tasks.named<org.jenkinsci.gradle.plugins.jpi2.localization.LocalizationTask>("localizeMessages") {
                     outputDir.set(layout.buildDirectory.dir("custom-localizer"))
                 }
                 """);
 
         ith.mkDirInProjectDir("src/main/resources/org/example");
-        Files.writeString(ith.inProjectDir("src/main/resources/org/example/Messages.properties").toPath(), /* language=properties */ """
+        Files.writeString(
+                ith.inProjectDir("src/main/resources/org/example/Messages.properties")
+                        .toPath(), /* language=properties */
+                """
                 key1=Value 1
                 key2=Value 2
                 """);
 
-        BuildResult result = ith.gradleRunner().withArguments("localizeMessages").build();
+        BuildResult result =
+                ith.gradleRunner().withArguments("localizeMessages").build();
 
         assertThat(result.task(":localizeMessages")).isNotNull();
         assertThat(result.task(":localizeMessages").getOutcome()).isIn(TaskOutcome.SUCCESS, TaskOutcome.FROM_CACHE);
@@ -80,7 +90,10 @@ class LocalizationIntegrationTest extends V2IntegrationTestBase {
         Files.writeString(ith.inProjectDir("build.gradle.kts").toPath(), getBasePluginConfig());
 
         ith.mkDirInProjectDir("src/main/resources/org/example");
-        Files.writeString(ith.inProjectDir("src/main/resources/org/example/Messages.properties").toPath(), /* language=properties */ """
+        Files.writeString(
+                ith.inProjectDir("src/main/resources/org/example/Messages.properties")
+                        .toPath(), /* language=properties */
+                """
                 greeting=Hello
                 """);
 
@@ -107,15 +120,20 @@ class LocalizationIntegrationTest extends V2IntegrationTestBase {
         ith.mkDirInProjectDir("plugin");
         Files.writeString(ith.inProjectDir("plugin/build.gradle.kts").toPath(), getBasePluginConfig());
         ith.mkDirInProjectDir("plugin/src/main/resources");
-        Files.writeString(ith.inProjectDir("plugin/src/main/resources/Messages.properties").toPath(), /* language=properties */ """
+        Files.writeString(
+                ith.inProjectDir("plugin/src/main/resources/Messages.properties")
+                        .toPath(), /* language=properties */
+                """
                 key3=Value 3
                 key4=Value 4
                 """);
 
-        BuildResult result = ith.gradleRunner().withArguments(":plugin:localizeMessages").build();
+        BuildResult result =
+                ith.gradleRunner().withArguments(":plugin:localizeMessages").build();
 
         assertThat(result.task(":plugin:localizeMessages")).isNotNull();
-        assertThat(result.task(":plugin:localizeMessages").getOutcome()).isIn(TaskOutcome.SUCCESS, TaskOutcome.FROM_CACHE);
+        assertThat(result.task(":plugin:localizeMessages").getOutcome())
+                .isIn(TaskOutcome.SUCCESS, TaskOutcome.FROM_CACHE);
         var generated = ith.inProjectDir("plugin/build/generated-src/localizer/Messages.java");
         assertThat(generated).exists();
         var generatedContent = Files.readString(generated.toPath());
@@ -130,13 +148,20 @@ class LocalizationIntegrationTest extends V2IntegrationTestBase {
         Files.writeString(ith.inProjectDir("build.gradle.kts").toPath(), getBasePluginConfig());
 
         ith.mkDirInProjectDir("src/main/resources/org/example");
-        Files.writeString(ith.inProjectDir("src/main/resources/org/example/Messages.properties").toPath(), /* language=properties */ """
+        Files.writeString(
+                ith.inProjectDir("src/main/resources/org/example/Messages.properties")
+                        .toPath(), /* language=properties */
+                """
                 greeting=Hello
                 """);
 
         var gradleRunner = ith.gradleRunner();
-        BuildResult firstRun = gradleRunner.withArguments("--configuration-cache", "localizeMessages", "-i").build();
-        BuildResult secondRun = gradleRunner.withArguments("--configuration-cache", "localizeMessages", "-i").build();
+        BuildResult firstRun = gradleRunner
+                .withArguments("--configuration-cache", "localizeMessages", "-i")
+                .build();
+        BuildResult secondRun = gradleRunner
+                .withArguments("--configuration-cache", "localizeMessages", "-i")
+                .build();
 
         assertThat(firstRun.task(":localizeMessages")).isNotNull();
         assertThat(firstRun.task(":localizeMessages").getOutcome()).isIn(TaskOutcome.SUCCESS, TaskOutcome.FROM_CACHE);
@@ -151,7 +176,8 @@ class LocalizationIntegrationTest extends V2IntegrationTestBase {
     void extensionLocalizerVersionOverridesGradleProperty() throws IOException {
         var ith = new IntegrationTestHelper(tempDir, "8.14");
         initBuild(ith);
-        Files.writeString(ith.inProjectDir("build.gradle.kts").toPath(), getBasePluginConfig() + /* language=kotlin */ """
+        Files.writeString(
+                ith.inProjectDir("build.gradle.kts").toPath(), getBasePluginConfig() + /* language=kotlin */ """
                 jenkinsPlugin {
                     localizerVersion.set("1.30")
                 }

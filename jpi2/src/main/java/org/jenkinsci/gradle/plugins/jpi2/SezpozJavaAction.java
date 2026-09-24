@@ -10,7 +10,7 @@ import org.jetbrains.annotations.NotNull;
  * Action to configure the Java compile task for SezPoz.
  */
 @SuppressWarnings({
-        "Convert2Lambda", // Gradle doesn't like lambdas
+    "Convert2Lambda", // Gradle doesn't like lambdas
 })
 class SezpozJavaAction implements Action<JavaBasePlugin> {
     private final Project project;

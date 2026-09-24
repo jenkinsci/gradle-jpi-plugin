@@ -1,5 +1,22 @@
 package org.jenkinsci.gradle.plugins.jpi2;
 
+import java.io.File;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+import javax.xml.XMLConstants;
+import javax.xml.parsers.DocumentBuilder;
+import javax.xml.parsers.DocumentBuilderFactory;
+import javax.xml.parsers.ParserConfigurationException;
+import javax.xml.transform.OutputKeys;
+import javax.xml.transform.Transformer;
+import javax.xml.transform.TransformerException;
+import javax.xml.transform.TransformerFactory;
+import javax.xml.transform.dom.DOMSource;
+import javax.xml.transform.stream.StreamResult;
 import org.gradle.api.DefaultTask;
 import org.gradle.api.file.ConfigurableFileCollection;
 import org.gradle.api.file.DirectoryProperty;
@@ -17,24 +34,6 @@ import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 import org.xml.sax.SAXException;
 
-import javax.xml.XMLConstants;
-import javax.xml.parsers.DocumentBuilder;
-import javax.xml.parsers.DocumentBuilderFactory;
-import javax.xml.parsers.ParserConfigurationException;
-import javax.xml.transform.OutputKeys;
-import javax.xml.transform.Transformer;
-import javax.xml.transform.TransformerException;
-import javax.xml.transform.TransformerFactory;
-import javax.xml.transform.dom.DOMSource;
-import javax.xml.transform.stream.StreamResult;
-import java.io.File;
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
-
 /**
  * Generates {@code licenses.xml} for libraries bundled into the plugin package.
  */
@@ -42,6 +41,7 @@ import java.util.Set;
 public abstract class GenerateLicenseInfoTask extends DefaultTask {
     /** Standard name under which this task is registered. */
     public static final String NAME = "generateLicenseInfo";
+
     private static final String LICENSE_NAMESPACE = "licenses";
 
     /** @return directory where {@code licenses.xml} is written */
@@ -118,29 +118,19 @@ public abstract class GenerateLicenseInfoTask extends DefaultTask {
         root.setAttribute("groupId", group);
         document.appendChild(root);
 
-        var projectDependency = appendDependency(document, root,
-                version,
-                name,
-                group,
-                description != null ? description : name,
-                url);
+        var projectDependency =
+                appendDependency(document, root, version, name, group, description != null ? description : name, url);
         appendDescription(document, projectDependency, description != null ? description : "");
 
-        pomFiles.stream()
-                .sorted(Comparator.comparing(File::getName))
-                .forEach(pomFile -> {
-                    var data = extractor.extractFrom(pomFile);
-                    var dependency = appendDependency(document, root,
-                            data.version(),
-                            data.artifactId(),
-                            data.groupId(),
-                            data.name(),
-                            data.url());
-                    appendDescription(document, dependency, data.description());
-                    for (var license : data.licenses()) {
-                        appendLicense(document, dependency, license);
-                    }
-                });
+        pomFiles.stream().sorted(Comparator.comparing(File::getName)).forEach(pomFile -> {
+            var data = extractor.extractFrom(pomFile);
+            var dependency = appendDependency(
+                    document, root, data.version(), data.artifactId(), data.groupId(), data.name(), data.url());
+            appendDescription(document, dependency, data.description());
+            for (var license : data.licenses()) {
+                appendLicense(document, dependency, license);
+            }
+        });
 
         writeDocument(document, outputFile);
     }
@@ -219,11 +209,16 @@ public abstract class GenerateLicenseInfoTask extends DefaultTask {
         }
     }
 
-    private record PomLicenseData(String groupId, String artifactId, String version, String name, String description, String url, List<LicenseInfo> licenses) {
-    }
+    private record PomLicenseData(
+            String groupId,
+            String artifactId,
+            String version,
+            String name,
+            String description,
+            String url,
+            List<LicenseInfo> licenses) {}
 
-    private record LicenseInfo(String name, String url) {
-    }
+    private record LicenseInfo(String name, String url) {}
 
     private static final class PomLicenseDataExtractor {
         private final DocumentBuilder builder;
@@ -259,8 +254,7 @@ public abstract class GenerateLicenseInfoTask extends DefaultTask {
                         var child = childNodes.item(i);
                         if (child instanceof Element licenseElement && "license".equals(licenseElement.getTagName())) {
                             licenses.add(new LicenseInfo(
-                                    directChildText(licenseElement, "name"),
-                                    directChildText(licenseElement, "url")));
+                                    directChildText(licenseElement, "name"), directChildText(licenseElement, "url")));
                         }
                     }
                 }

@@ -1,5 +1,10 @@
 package org.jenkinsci.gradle.plugins.jpi2.localization;
 
+import static org.gradle.api.attributes.Usage.JAVA_RUNTIME;
+import static org.gradle.api.attributes.Usage.USAGE_ATTRIBUTE;
+import static org.jenkinsci.gradle.plugins.jpi2.JenkinsPluginExtension.DEFAULT_LOCALIZER_VERSION;
+
+import java.lang.reflect.InvocationTargetException;
 import org.gradle.api.Action;
 import org.gradle.api.Plugin;
 import org.gradle.api.Project;
@@ -15,12 +20,6 @@ import org.gradle.api.tasks.SourceSetContainer;
 import org.gradle.api.tasks.TaskContainer;
 import org.gradle.api.tasks.TaskProvider;
 
-import java.lang.reflect.InvocationTargetException;
-
-import static org.gradle.api.attributes.Usage.JAVA_RUNTIME;
-import static org.gradle.api.attributes.Usage.USAGE_ATTRIBUTE;
-import static org.jenkinsci.gradle.plugins.jpi2.JenkinsPluginExtension.DEFAULT_LOCALIZER_VERSION;
-
 /**
  * Plugin that generates Java classes from Messages.properties files.
  */
@@ -33,7 +32,8 @@ public class LocalizationPlugin implements Plugin<Project> {
     @Override
     public void apply(Project target) {
         target.getPluginManager().apply(JavaPlugin.class);
-        var jenkinsPlugin = target.getExtensions().findByType(org.jenkinsci.gradle.plugins.jpi2.JenkinsPluginExtension.class);
+        var jenkinsPlugin =
+                target.getExtensions().findByType(org.jenkinsci.gradle.plugins.jpi2.JenkinsPluginExtension.class);
         JavaPluginExtension extension = target.getExtensions().getByType(JavaPluginExtension.class);
         SourceSetContainer sourceSets = extension.getSourceSets();
         SourceSet main = sourceSets.getByName(SourceSet.MAIN_SOURCE_SET_NAME);
@@ -45,8 +45,8 @@ public class LocalizationPlugin implements Plugin<Project> {
                 ? jenkinsPlugin.getLocalizerVersion()
                 : target.getProviders().provider(() -> DEFAULT_LOCALIZER_VERSION);
         Object localizeMessagesRuntimeClasspath = createRuntimeClasspath(target, objects);
-        target.getDependencies().addProvider(CONFIGURATION_NAME,
-                localizerVersion.map(version -> LOCALIZER_MAVEN_PLUGIN + version));
+        target.getDependencies()
+                .addProvider(CONFIGURATION_NAME, localizerVersion.map(version -> LOCALIZER_MAVEN_PLUGIN + version));
 
         TaskProvider<LocalizationTask> localizeMessages = tasks.register(
                 TASK_NAME,
@@ -76,17 +76,17 @@ public class LocalizationPlugin implements Plugin<Project> {
             task.setSource(source);
             task.getSourceRoots().from(source.getSrcDirs());
             task.getLocalizerClasspath().from(runtimeClasspath);
-            task.getOutputDir().convention(project.getLayout().getBuildDirectory().dir("generated-src/localizer"));
+            task.getOutputDir()
+                    .convention(project.getLayout().getBuildDirectory().dir("generated-src/localizer"));
         }
     }
 
     private static Object createRuntimeClasspath(Project target, ObjectFactory objects) {
-        Action<Configuration> configure = c ->
-                c.getAttributes().attribute(USAGE_ATTRIBUTE, objects.named(Usage.class, JAVA_RUNTIME));
+        Action<Configuration> configure =
+                c -> c.getAttributes().attribute(USAGE_ATTRIBUTE, objects.named(Usage.class, JAVA_RUNTIME));
 
         try {
-            var resolvable = target.getConfigurations().getClass()
-                    .getMethod("resolvable", String.class, Action.class);
+            var resolvable = target.getConfigurations().getClass().getMethod("resolvable", String.class, Action.class);
             return resolvable.invoke(target.getConfigurations(), CONFIGURATION_NAME, configure);
         } catch (NoSuchMethodException ignored) {
             return target.getConfigurations().create(CONFIGURATION_NAME, c -> {

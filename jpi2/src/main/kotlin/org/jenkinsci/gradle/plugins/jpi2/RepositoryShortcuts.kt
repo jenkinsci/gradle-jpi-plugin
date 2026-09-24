@@ -44,27 +44,34 @@ private const val PROJECT_EXTRA_KEY = "org.jenkinsci.gradle.plugins.jpi2.project
 
 fun RepositoryHandler.publishToJenkins(): MavenArtifactRepository {
     val project = (this as ExtensionAware).extensions.extraProperties[PROJECT_EXTRA_KEY] as Project
-    val repo = maven {
-        name = JENKINS_PUBLISH_REPO_NAME
-        // URL is updated in afterEvaluate based on the version; a default is required so that
-        // init scripts that iterate repositories don't encounter a null URL before afterEvaluate runs.
-        url = JENKINS_RELEASES_REPO_URL
-        credentials(PasswordCredentials::class.java)
-    }
-    project.afterEvaluate(object : Action<Project> {
-        override fun execute(p: Project) {
-            val version = p.version.toString()
-            repo.url = when {
-                version.endsWith("-SNAPSHOT") -> JENKINS_SNAPSHOTS_REPO_URL
-                INCREMENTALS_PATTERN.matches(version) -> JENKINS_INCREMENTALS_REPO_URL
-                else -> JENKINS_RELEASES_REPO_URL
-            }
+    val repo =
+        maven {
+            name = JENKINS_PUBLISH_REPO_NAME
+            // URL is updated in afterEvaluate based on the version; a default is required so that
+            // init scripts that iterate repositories don't encounter a null URL before afterEvaluate runs.
+            url = JENKINS_RELEASES_REPO_URL
+            credentials(PasswordCredentials::class.java)
         }
-    })
+    project.afterEvaluate(
+        object : Action<Project> {
+            override fun execute(p: Project) {
+                val version = p.version.toString()
+                repo.url =
+                    when {
+                        version.endsWith("-SNAPSHOT") -> JENKINS_SNAPSHOTS_REPO_URL
+                        INCREMENTALS_PATTERN.matches(version) -> JENKINS_INCREMENTALS_REPO_URL
+                        else -> JENKINS_RELEASES_REPO_URL
+                    }
+            }
+        },
+    )
     return repo
 }
 
-fun registerRepositoryShortcuts(repositories: RepositoryHandler, project: Project) {
+fun registerRepositoryShortcuts(
+    repositories: RepositoryHandler,
+    project: Project,
+) {
     if (repositories is ExtensionAware) {
         repositories.extensions.extraProperties[PROJECT_EXTRA_KEY] = project
         if (repositories.extensions.findByName("publishToJenkins") == null) {
@@ -72,10 +79,8 @@ fun registerRepositoryShortcuts(repositories: RepositoryHandler, project: Projec
                 "publishToJenkins",
                 object : Closure<MavenArtifactRepository>(repositories, repositories) {
                     @Suppress("unused")
-                    fun doCall(): MavenArtifactRepository {
-                        return repositories.publishToJenkins()
-                    }
-                }
+                    fun doCall(): MavenArtifactRepository = repositories.publishToJenkins()
+                },
             )
         }
     }
@@ -86,28 +91,31 @@ fun registerRepositoryShortcuts(repositories: RepositoryHandler) {
     if (repositories is ExtensionAware) {
         val extensions = repositories.extensions
         if (extensions.findByName("jenkinsPublic") == null) {
-            extensions.add("jenkinsPublic", object : Closure<MavenArtifactRepository>(repositories, repositories) {
-                @Suppress("unused")
-                fun doCall(): MavenArtifactRepository {
-                    return repositories.jenkinsPublic()
-                }
-            })
+            extensions.add(
+                "jenkinsPublic",
+                object : Closure<MavenArtifactRepository>(repositories, repositories) {
+                    @Suppress("unused")
+                    fun doCall(): MavenArtifactRepository = repositories.jenkinsPublic()
+                },
+            )
         }
         if (extensions.findByName("jenkinsIncrementals") == null) {
-            extensions.add("jenkinsIncrementals", object : Closure<MavenArtifactRepository>(repositories, repositories) {
-                @Suppress("unused")
-                fun doCall(): MavenArtifactRepository {
-                    return repositories.jenkinsIncrementals()
-                }
-            })
+            extensions.add(
+                "jenkinsIncrementals",
+                object : Closure<MavenArtifactRepository>(repositories, repositories) {
+                    @Suppress("unused")
+                    fun doCall(): MavenArtifactRepository = repositories.jenkinsIncrementals()
+                },
+            )
         }
         if (extensions.findByName("jenkinsSnapshots") == null) {
-            extensions.add("jenkinsSnapshots", object : Closure<MavenArtifactRepository>(repositories, repositories) {
-                @Suppress("unused")
-                fun doCall(): MavenArtifactRepository {
-                    return repositories.jenkinsSnapshots()
-                }
-            })
+            extensions.add(
+                "jenkinsSnapshots",
+                object : Closure<MavenArtifactRepository>(repositories, repositories) {
+                    @Suppress("unused")
+                    fun doCall(): MavenArtifactRepository = repositories.jenkinsSnapshots()
+                },
+            )
         }
     }
 }

@@ -1,5 +1,12 @@
 package org.jenkinsci.gradle.plugins.jpi2;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
+
+import java.io.IOException;
+import java.io.StringReader;
+import java.util.Set;
 import org.apache.maven.model.Dependency;
 import org.apache.maven.model.Developer;
 import org.apache.maven.model.License;
@@ -15,14 +22,6 @@ import org.gradle.internal.xml.XmlTransformer;
 import org.gradle.testfixtures.ProjectBuilder;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-
-import java.io.IOException;
-import java.io.StringReader;
-import java.util.Set;
-
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
 
 class PomBuilderTest {
     private static final String POM = """
@@ -133,8 +132,7 @@ class PomBuilderTest {
         assertThat(license.getComments()).isEqualTo("Example license comment");
     }
 
-    private Model transform(Configuration runtimeClasspath)
-            throws IOException, XmlPullParserException {
+    private Model transform(Configuration runtimeClasspath) throws IOException, XmlPullParserException {
         var transformer = new XmlTransformer();
         transformer.addAction(new PomBuilder(runtimeClasspath, project, extension, project.getLogger()));
         return new MavenXpp3Reader().read(new StringReader(transformer.transform(POM)));

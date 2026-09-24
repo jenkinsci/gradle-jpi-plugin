@@ -1,5 +1,7 @@
 package org.jenkinsci.gradle.plugins.jpi2;
 
+import java.util.ArrayList;
+import java.util.Optional;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 import org.gradle.api.Action;
@@ -14,9 +16,6 @@ import org.w3c.dom.Element;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 
-import java.util.ArrayList;
-import java.util.Optional;
-
 /**
  * Action to update the POM file with resolved dependencies, repositories, plugin metadata,
  * developers, and licenses.
@@ -27,7 +26,8 @@ class PomBuilder implements Action<XmlProvider> {
     private final JenkinsPluginExtension extension;
     private final Logger logger;
 
-    public PomBuilder(Configuration runtimeClasspath, Project project, JenkinsPluginExtension extension, Logger logger) {
+    public PomBuilder(
+            Configuration runtimeClasspath, Project project, JenkinsPluginExtension extension, Logger logger) {
         this.runtimeClasspath = runtimeClasspath;
         this.project = project;
         this.extension = extension;
@@ -35,9 +35,7 @@ class PomBuilder implements Action<XmlProvider> {
     }
 
     private static Optional<String> getNodeElement(Element dependencyNode, String elementName) {
-        return firstChild(dependencyNode, elementName)
-                .map(Node::getTextContent)
-                .filter(value -> !value.isBlank());
+        return firstChild(dependencyNode, elementName).map(Node::getTextContent).filter(value -> !value.isBlank());
     }
 
     private static final String POM_NS = "http://maven.apache.org/POM/4.0.0";
@@ -53,8 +51,7 @@ class PomBuilder implements Action<XmlProvider> {
     }
 
     private void resolveDependencyVersions(Element root) {
-        var resolvedDependencies = runtimeClasspath.getResolvedConfiguration()
-                .getFirstLevelModuleDependencies();
+        var resolvedDependencies = runtimeClasspath.getResolvedConfiguration().getFirstLevelModuleDependencies();
 
         final var dependencies = firstChildOrAppend(root, "dependencies");
         final var dependencyNodes = new ArrayList<Element>();
@@ -62,7 +59,8 @@ class PomBuilder implements Action<XmlProvider> {
         final var dependencyManagement = firstChild(root, "dependencyManagement");
         dependencyManagement.ifPresent(dm -> {
             var dmDependencies = firstChild(dm, "dependencies");
-            dmDependencies.ifPresent(element -> childElements(element, "dependency").forEach(dependencyNodes::add));
+            dmDependencies.ifPresent(
+                    element -> childElements(element, "dependency").forEach(dependencyNodes::add));
         });
 
         dependencyNodes.forEach(dependencyNode -> {
@@ -74,15 +72,16 @@ class PomBuilder implements Action<XmlProvider> {
             assert artifactId.isPresent();
 
             var resolvedDependency = resolvedDependencies.stream()
-                    .filter(it -> it.getModuleGroup().equals(groupId.get()) && it.getModuleName().equals(artifactId.get()))
+                    .filter(it -> it.getModuleGroup().equals(groupId.get())
+                            && it.getModuleName().equals(artifactId.get()))
                     .findFirst();
 
             if (resolvedDependency.isPresent()) {
                 if (version.isPresent()) {
-                    firstChild(dependencyNode, "version")
-                            .ifPresent(dependencyNode::removeChild);
+                    firstChild(dependencyNode, "version").ifPresent(dependencyNode::removeChild);
                 }
-                appendChildElement(dependencyNode, "version", resolvedDependency.get().getModuleVersion());
+                appendChildElement(
+                        dependencyNode, "version", resolvedDependency.get().getModuleVersion());
             } else {
                 logger.warn("Dependency not found: {}:{}", groupId, artifactId);
             }
@@ -114,7 +113,8 @@ class PomBuilder implements Action<XmlProvider> {
             appendIfPresent(developerNode, "email", dev.getEmail().getOrNull());
             appendIfPresent(developerNode, "url", dev.getUrl().getOrNull());
             appendIfPresent(developerNode, "organization", dev.getOrganization().getOrNull());
-            appendIfPresent(developerNode, "organizationUrl", dev.getOrganizationUrl().getOrNull());
+            appendIfPresent(
+                    developerNode, "organizationUrl", dev.getOrganizationUrl().getOrNull());
             appendIfPresent(developerNode, "timezone", dev.getTimezone().getOrNull());
             addDeveloperRoles(developerNode, dev);
             addDeveloperProperties(developerNode, dev);
@@ -153,7 +153,8 @@ class PomBuilder implements Action<XmlProvider> {
             var licenseNode = appendChildElement(licensesNode, "license");
             appendIfPresent(licenseNode, "name", license.getName().getOrNull());
             appendIfPresent(licenseNode, "url", license.getUrl().getOrNull());
-            appendIfPresent(licenseNode, "distribution", license.getDistribution().getOrNull());
+            appendIfPresent(
+                    licenseNode, "distribution", license.getDistribution().getOrNull());
             appendIfPresent(licenseNode, "comments", license.getComments().getOrNull());
         }
     }

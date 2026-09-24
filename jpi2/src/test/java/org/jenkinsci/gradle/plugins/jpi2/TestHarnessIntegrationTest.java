@@ -1,14 +1,13 @@
 package org.jenkinsci.gradle.plugins.jpi2;
 
+import static org.assertj.core.api.Assertions.assertThat;
+
+import java.io.IOException;
 import java.nio.file.Files;
+import java.util.jar.Manifest;
 import org.gradle.testkit.runner.GradleRunner;
 import org.jenkinsci.gradle.plugins.jpi.IntegrationTestHelper;
 import org.junit.jupiter.api.Test;
-
-import java.io.IOException;
-import java.util.jar.Manifest;
-
-import static org.assertj.core.api.Assertions.assertThat;
 
 class TestHarnessIntegrationTest extends V2IntegrationTestBase {
 
@@ -19,7 +18,10 @@ class TestHarnessIntegrationTest extends V2IntegrationTestBase {
         initBuild(ith);
         Files.writeString(ith.inProjectDir("build.gradle.kts").toPath(), getBasePluginConfig());
         ith.mkDirInProjectDir("src/test/java/com/example/plugin");
-        Files.writeString(ith.inProjectDir("src/test/java/com/example/plugin/PluginTest.java").toPath(), /* language=java */ """
+        Files.writeString(
+                ith.inProjectDir("src/test/java/com/example/plugin/PluginTest.java")
+                        .toPath(), /* language=java */
+                """
                 package com.example.plugin;
                 import org.junit.jupiter.api.Test;
                 import org.jvnet.hudson.test.JenkinsRule;
@@ -46,7 +48,9 @@ class TestHarnessIntegrationTest extends V2IntegrationTestBase {
         assertThat(result.getOutput()).contains("BUILD SUCCESSFUL");
 
         // when
-        result = gradleRunner.withArguments("dependencies", "--configuration=testCompileClasspath").build();
+        result = gradleRunner
+                .withArguments("dependencies", "--configuration=testCompileClasspath")
+                .build();
 
         // then
         assertThat(result.getOutput())
@@ -59,13 +63,17 @@ class TestHarnessIntegrationTest extends V2IntegrationTestBase {
         // given
         var ith = new IntegrationTestHelper(tempDir, "8.14");
         initBuild(ith);
-        Files.writeString(ith.inProjectDir("build.gradle.kts").toPath(), getBasePluginConfig() + /* language=kotlin */ """
+        Files.writeString(
+                ith.inProjectDir("build.gradle.kts").toPath(), getBasePluginConfig() + /* language=kotlin */ """
                 dependencies {
                     implementation("org.jenkins-ci.plugins:git:5.7.0")
                 }
                 """);
         ith.mkDirInProjectDir("src/test/java/com/example/plugin");
-        Files.writeString(ith.inProjectDir("src/test/java/com/example/plugin/PluginTest.java").toPath(), /* language=java */ """
+        Files.writeString(
+                ith.inProjectDir("src/test/java/com/example/plugin/PluginTest.java")
+                        .toPath(), /* language=java */
+                """
                 package com.example.plugin;
                 import org.junit.jupiter.api.Test;
                 import static org.junit.jupiter.api.Assertions.*;
@@ -88,7 +96,9 @@ class TestHarnessIntegrationTest extends V2IntegrationTestBase {
         assertThat(result.getOutput()).contains("BUILD SUCCESSFUL");
 
         // when
-        result = gradleRunner.withArguments("dependencies", "--configuration=testCompileClasspath").build();
+        result = gradleRunner
+                .withArguments("dependencies", "--configuration=testCompileClasspath")
+                .build();
 
         // then
         assertThat(result.getOutput())
@@ -107,7 +117,10 @@ class TestHarnessIntegrationTest extends V2IntegrationTestBase {
                 """);
         Files.writeString(ith.inProjectDir("build.gradle.kts").toPath(), getBasePluginConfig());
         ith.mkDirInProjectDir("src/test/java/com/example/plugin");
-        Files.writeString(ith.inProjectDir("src/test/java/com/example/plugin/PluginTest.java").toPath(), /* language=java */ """
+        Files.writeString(
+                ith.inProjectDir("src/test/java/com/example/plugin/PluginTest.java")
+                        .toPath(), /* language=java */
+                """
                 package com.example.plugin;
                 import org.junit.jupiter.api.Test;
                 import org.jvnet.hudson.test.JenkinsRule;
@@ -134,7 +147,9 @@ class TestHarnessIntegrationTest extends V2IntegrationTestBase {
         assertThat(result.getOutput()).contains("BUILD SUCCESSFUL");
 
         // when
-        result = gradleRunner.withArguments("dependencies", "--configuration=testCompileClasspath").build();
+        result = gradleRunner
+                .withArguments("dependencies", "--configuration=testCompileClasspath")
+                .build();
 
         // then
         assertThat(result.getOutput())
@@ -147,7 +162,8 @@ class TestHarnessIntegrationTest extends V2IntegrationTestBase {
         // given
         var ith = new IntegrationTestHelper(tempDir, "8.14");
         initBuild(ith);
-        Files.writeString(ith.inProjectDir("build.gradle.kts").toPath(), getBasePluginConfig() + /* language=kotlin */ """
+        Files.writeString(
+                ith.inProjectDir("build.gradle.kts").toPath(), getBasePluginConfig() + /* language=kotlin */ """
                 jenkinsPlugin {
                     jenkinsVersion.set("2.492.1")
                     testHarnessVersion.set("2411.v1e79b_0dc94b_7")
@@ -174,7 +190,9 @@ class TestHarnessIntegrationTest extends V2IntegrationTestBase {
         assertThat(manifestData.getValue("Long-Name")).isEqualTo("Custom Plugin Name");
 
         // when
-        result = gradleRunner.withArguments("dependencies", "--configuration=testCompileClasspath").build();
+        result = gradleRunner
+                .withArguments("dependencies", "--configuration=testCompileClasspath")
+                .build();
 
         // then
         assertThat(result.getOutput())
@@ -187,7 +205,8 @@ class TestHarnessIntegrationTest extends V2IntegrationTestBase {
         // given
         var ith = new IntegrationTestHelper(tempDir, "8.14");
         initBuild(ith);
-        Files.writeString(ith.inProjectDir("build.gradle.kts").toPath(), getBasePluginConfig() + /* language=kotlin */ """
+        Files.writeString(
+                ith.inProjectDir("build.gradle.kts").toPath(), getBasePluginConfig() + /* language=kotlin */ """
                 jenkinsPlugin {
                     jenkinsVersion = "2.492.1"
                     testHarnessVersion = "2411.v1e79b_0dc94b_7"
@@ -214,7 +233,9 @@ class TestHarnessIntegrationTest extends V2IntegrationTestBase {
         assertThat(manifestData.getValue("Long-Name")).isEqualTo("Custom Plugin Name");
 
         // when
-        result = gradleRunner.withArguments("dependencies", "--configuration=testCompileClasspath").build();
+        result = gradleRunner
+                .withArguments("dependencies", "--configuration=testCompileClasspath")
+                .build();
 
         // then
         assertThat(result.getOutput())
@@ -267,7 +288,9 @@ class TestHarnessIntegrationTest extends V2IntegrationTestBase {
         assertThat(manifestData.getValue("Long-Name")).isEqualTo("Custom Plugin Name");
 
         // when
-        result = gradleRunner.withArguments("dependencies", "--configuration=testCompileClasspath").build();
+        result = gradleRunner
+                .withArguments("dependencies", "--configuration=testCompileClasspath")
+                .build();
 
         // then
         assertThat(result.getOutput())
@@ -280,13 +303,17 @@ class TestHarnessIntegrationTest extends V2IntegrationTestBase {
         // given
         var ith = new IntegrationTestHelper(tempDir, "8.14");
         initBuild(ith);
-        Files.writeString(ith.inProjectDir("build.gradle.kts").toPath(), getBasePluginConfig() + /* language=kotlin */ """
+        Files.writeString(
+                ith.inProjectDir("build.gradle.kts").toPath(), getBasePluginConfig() + /* language=kotlin */ """
                 dependencies {
                     implementation("org.jenkins-ci.plugins:git:5.7.0")
                 }
                 """);
         ith.mkDirInProjectDir("src/test/java/com/example/plugin");
-        Files.writeString(ith.inProjectDir("src/test/java/com/example/plugin/PluginTest.java").toPath(), /* language=java */ """
+        Files.writeString(
+                ith.inProjectDir("src/test/java/com/example/plugin/PluginTest.java")
+                        .toPath(), /* language=java */
+                """
                 package com.example.plugin;
                 import org.junit.jupiter.api.Test;
                 import org.jvnet.hudson.test.JenkinsRule;

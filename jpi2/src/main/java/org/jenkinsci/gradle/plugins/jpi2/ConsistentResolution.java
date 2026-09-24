@@ -1,5 +1,6 @@
 package org.jenkinsci.gradle.plugins.jpi2;
 
+import java.util.Objects;
 import org.gradle.api.Action;
 import org.gradle.api.Project;
 import org.gradle.api.artifacts.Configuration;
@@ -9,8 +10,6 @@ import org.gradle.api.artifacts.result.ResolvedComponentResult;
 import org.gradle.api.artifacts.result.ResolvedVariantResult;
 import org.gradle.api.attributes.Category;
 import org.jetbrains.annotations.NotNull;
-
-import java.util.Objects;
 
 /**
  * Pins configurations to the module versions Jenkins core resolves, so that a plugin is built and
@@ -29,8 +28,7 @@ import java.util.Objects;
  */
 final class ConsistentResolution {
 
-    private ConsistentResolution() {
-    }
+    private ConsistentResolution() {}
 
     /**
      * Creates the configuration that carries Jenkins core's resolved versions as strict
@@ -61,8 +59,9 @@ final class ConsistentResolution {
                         .filter(component -> !isPlatform(component))
                         .map(ResolvedComponentResult::getModuleVersion)
                         .filter(Objects::nonNull)
-                        .forEach(module -> alignment.getDependencyConstraints().add(
-                                constraints.create(module.getGroup() + ":" + module.getName(), constraint -> {
+                        .forEach(module -> alignment
+                                .getDependencyConstraints()
+                                .add(constraints.create(module.getGroup() + ":" + module.getName(), constraint -> {
                                     constraint.version(version -> version.strictly(module.getVersion()));
                                     constraint.because(reason);
                                 })));
@@ -81,7 +80,7 @@ final class ConsistentResolution {
         return attributes.keySet().stream()
                 .filter(key -> Category.CATEGORY_ATTRIBUTE.getName().equals(key.getName()))
                 .map(key -> String.valueOf(attributes.getAttribute(key)))
-                .anyMatch(category -> Category.REGULAR_PLATFORM.equals(category)
-                        || Category.ENFORCED_PLATFORM.equals(category));
+                .anyMatch(category ->
+                        Category.REGULAR_PLATFORM.equals(category) || Category.ENFORCED_PLATFORM.equals(category));
     }
 }

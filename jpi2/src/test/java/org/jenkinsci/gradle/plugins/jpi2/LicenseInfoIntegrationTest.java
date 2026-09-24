@@ -1,12 +1,11 @@
 package org.jenkinsci.gradle.plugins.jpi2;
 
-import org.jenkinsci.gradle.plugins.jpi.IntegrationTestHelper;
-import org.junit.jupiter.api.Test;
+import static org.assertj.core.api.Assertions.assertThat;
 
 import java.io.IOException;
 import java.nio.file.Files;
-
-import static org.assertj.core.api.Assertions.assertThat;
+import org.jenkinsci.gradle.plugins.jpi.IntegrationTestHelper;
+import org.junit.jupiter.api.Test;
 
 class LicenseInfoIntegrationTest extends V2IntegrationTestBase {
 

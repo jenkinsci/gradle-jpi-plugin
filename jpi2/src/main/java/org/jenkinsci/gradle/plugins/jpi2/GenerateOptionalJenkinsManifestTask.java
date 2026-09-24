@@ -1,5 +1,13 @@
 package org.jenkinsci.gradle.plugins.jpi2;
 
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.util.List;
+import java.util.jar.Attributes;
+import java.util.jar.Manifest;
+import java.util.stream.Stream;
 import org.gradle.api.DefaultTask;
 import org.gradle.api.GradleException;
 import org.gradle.api.file.ConfigurableFileCollection;
@@ -11,15 +19,6 @@ import org.gradle.api.tasks.PathSensitive;
 import org.gradle.api.tasks.PathSensitivity;
 import org.gradle.api.tasks.TaskAction;
 
-import java.io.File;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.nio.file.Files;
-import java.util.List;
-import java.util.jar.Attributes;
-import java.util.jar.Manifest;
-import java.util.stream.Stream;
-
 /**
  * Generates the optional Jenkins manifest fragment that declares whether a plugin supports
  * dynamic loading, derived from the {@code dynamicLoadable} attribute of Sezpoz extension entries.
@@ -28,6 +27,7 @@ import java.util.stream.Stream;
 public abstract class GenerateOptionalJenkinsManifestTask extends DefaultTask {
     /** Standard name under which this task is registered. */
     public static final String NAME = "generateOptionalJenkinsManifest";
+
     private static final String EXTENSION_INDEX = "META-INF/annotations/hudson.Extension.txt";
 
     /** @return directories containing Sezpoz-generated annotation index files to inspect */
@@ -102,7 +102,8 @@ public abstract class GenerateOptionalJenkinsManifestTask extends DefaultTask {
             // SezPoz currently emits entries like `com.example.Extension{dynamicLoadable=YES}`.
             int start = marker + "dynamicLoadable=".length();
             int end = line.indexOf('}', start);
-            return new ExtensionEntry(line.substring(start, end < 0 ? line.length() : end).trim());
+            return new ExtensionEntry(
+                    line.substring(start, end < 0 ? line.length() : end).trim());
         }
     }
 }

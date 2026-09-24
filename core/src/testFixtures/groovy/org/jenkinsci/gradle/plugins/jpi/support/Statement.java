@@ -72,8 +72,7 @@ class Statement implements Emitable {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         Statement statement = (Statement) o;
-        return Objects.equals(template, statement.template) &&
-                Objects.equals(rendered, statement.rendered);
+        return Objects.equals(template, statement.template) && Objects.equals(rendered, statement.rendered);
     }
 
     @Override

@@ -1,10 +1,5 @@
 package org.jenkinsci.gradle.plugins.jpi2.accmod;
 
-import org.kohsuke.accmod.impl.ErrorListener;
-import org.kohsuke.accmod.impl.Location;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -12,6 +7,10 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import org.kohsuke.accmod.impl.ErrorListener;
+import org.kohsuke.accmod.impl.Location;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 class InternalErrorListener implements ErrorListener {
     private static final Logger LOGGER = LoggerFactory.getLogger(InternalErrorListener.class);
@@ -57,6 +56,5 @@ class InternalErrorListener implements ErrorListener {
         LOGGER.warn("{} {}", loc, msg, t);
     }
 
-    private record CallSite(String className, Integer line) {
-    }
+    private record CallSite(String className, Integer line) {}
 }

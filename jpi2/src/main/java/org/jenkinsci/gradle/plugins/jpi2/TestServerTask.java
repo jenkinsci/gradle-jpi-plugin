@@ -1,5 +1,15 @@
 package org.jenkinsci.gradle.plugins.jpi2;
 
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.List;
 import org.gradle.api.DefaultTask;
 import org.gradle.api.GradleException;
 import org.gradle.api.file.ConfigurableFileCollection;
@@ -17,17 +27,6 @@ import org.gradle.api.tasks.PathSensitive;
 import org.gradle.api.tasks.PathSensitivity;
 import org.gradle.api.tasks.TaskAction;
 import org.jetbrains.annotations.NotNull;
-
-import java.io.BufferedReader;
-import java.io.File;
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.util.Comparator;
-import java.util.ArrayList;
-import java.util.List;
 
 /**
  * Task that launches a Jenkins server and terminates after success or first error.
@@ -59,11 +58,8 @@ import java.util.List;
 @CacheableTask
 public abstract class TestServerTask extends DefaultTask {
 
-    private static final List<String> FAILURE_MESSAGES = List.of(
-            "Failed Loading plugin",
-            "Jenkins stopped",
-            "java.io.IOException: Failed to load"
-    );
+    private static final List<String> FAILURE_MESSAGES =
+            List.of("Failed Loading plugin", "Jenkins stopped", "java.io.IOException: Failed to load");
 
     /** @return root directory of the plugin project, used as the working directory for the spawned Gradle process */
     @Input
@@ -240,12 +236,14 @@ public abstract class TestServerTask extends DefaultTask {
                     }
                     // A real startup failure is deterministic; retrying only repeats it, so fail fast.
                     case CRASH -> throw new GradleException("Jenkins failed to start: " + result.detail());
-                    case EXITED -> throw new GradleException(
-                            "Jenkins failed to report a successful start (exit code " + result.exitCode() + ")");
+                    case EXITED ->
+                        throw new GradleException(
+                                "Jenkins failed to report a successful start (exit code " + result.exitCode() + ")");
                     case TIMEOUT -> {
-                        getLogger().warn("testServer: Jenkins did not start within " + timeout
-                                + "s (attempt " + attempt + " of " + maxAttempts + ")"
-                                + (attempt < maxAttempts ? "; retrying" : ""));
+                        getLogger()
+                                .warn("testServer: Jenkins did not start within " + timeout
+                                        + "s (attempt " + attempt + " of " + maxAttempts + ")"
+                                        + (attempt < maxAttempts ? "; retrying" : ""));
                         if (attempt == maxAttempts) {
                             throw new GradleException(timeoutMessage(timeout, maxAttempts));
                         }
@@ -298,9 +296,10 @@ public abstract class TestServerTask extends DefaultTask {
             return switch (verdict.status()) {
                 case SUCCESS, CRASH -> verdict;
                 // EOF without a reported verdict: either our timer killed it, or it exited on its own.
-                default -> timedOut.get()
-                        ? new LaunchResult(Status.TIMEOUT, process.exitValue(), null)
-                        : new LaunchResult(Status.EXITED, process.exitValue(), null);
+                default ->
+                    timedOut.get()
+                            ? new LaunchResult(Status.TIMEOUT, process.exitValue(), null)
+                            : new LaunchResult(Status.EXITED, process.exitValue(), null);
             };
         } finally {
             // Stop the timer promptly so a fast start doesn't leave a thread sleeping for the full timeout.
@@ -329,7 +328,10 @@ public abstract class TestServerTask extends DefaultTask {
 
     @NotNull
     private Process launchProcess(List<String> commandLine) throws IOException {
-        return new ProcessBuilder(commandLine).directory(new File(getRootDir().get())).redirectErrorStream(true).start();
+        return new ProcessBuilder(commandLine)
+                .directory(new File(getRootDir().get()))
+                .redirectErrorStream(true)
+                .start();
     }
 
     /**
@@ -388,7 +390,8 @@ public abstract class TestServerTask extends DefaultTask {
     }
 
     private String timeoutMessage(int timeout, int maxAttempts) {
-        var message = new StringBuilder("Jenkins did not start within ").append(timeout)
+        var message = new StringBuilder("Jenkins did not start within ")
+                .append(timeout)
                 .append("s and was terminated (exit code 143)");
         if (maxAttempts > 1) {
             message.append(" after ").append(maxAttempts).append(" attempts");
@@ -396,7 +399,8 @@ public abstract class TestServerTask extends DefaultTask {
         message.append(".\nThis usually means too many Jenkins servers were launching at once. ");
         var cap = getMaxParallelLaunches().getOrElse(0);
         if (cap > 0) {
-            message.append("The plugin limits concurrent launches to ").append(cap)
+            message.append("The plugin limits concurrent launches to ")
+                    .append(cap)
                     .append(" (override with -DtestServer.maxParallelLaunches=N or =C/D). ");
         }
         message.append("You can also raise the startup timeout with -DtestServer.timeoutSeconds=N ")
@@ -416,9 +420,7 @@ public abstract class TestServerTask extends DefaultTask {
         }
 
         try (var paths = Files.walk(workDir)) {
-            paths.sorted(Comparator.reverseOrder())
-                    .map(Path::toFile)
-                    .forEach(File::delete);
+            paths.sorted(Comparator.reverseOrder()).map(Path::toFile).forEach(File::delete);
         } catch (IOException e) {
             throw new GradleException("Failed to clean temporary Jenkins work directory " + workDir, e);
         }
@@ -463,7 +465,8 @@ public abstract class TestServerTask extends DefaultTask {
 
         commandLine.add(getServerTaskPath().get());
         commandLine.add("-Pserver.port=" + serverPort);
-        commandLine.add("-P" + WorkDirectorySettings.PROPERTY + "=" + slashify(workDir.toAbsolutePath().toString()));
+        commandLine.add("-P" + WorkDirectorySettings.PROPERTY + "="
+                + slashify(workDir.toAbsolutePath().toString()));
         getLogger().info("Command: {}", commandLine);
         return commandLine;
     }

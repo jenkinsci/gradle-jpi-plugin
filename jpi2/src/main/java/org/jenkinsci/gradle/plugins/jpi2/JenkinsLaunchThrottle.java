@@ -1,9 +1,8 @@
 package org.jenkinsci.gradle.plugins.jpi2;
 
+import java.util.Locale;
 import org.gradle.api.services.BuildService;
 import org.gradle.api.services.BuildServiceParameters;
-
-import java.util.Locale;
 
 /**
  * A shared Gradle build service used purely as a concurrency gate for launching Jenkins.

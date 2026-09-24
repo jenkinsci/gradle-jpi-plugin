@@ -1,18 +1,17 @@
 package org.jenkinsci.gradle.plugins.jpi2;
 
+import static org.assertj.core.api.Assertions.assertThat;
+
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.util.Arrays;
+import java.util.List;
 import org.apache.commons.io.IOUtils;
 import org.gradle.testkit.runner.GradleRunner;
 import org.jenkinsci.gradle.plugins.jpi.IntegrationTestHelper;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
-
-import java.io.IOException;
-import java.nio.charset.StandardCharsets;
-import java.util.Arrays;
-import java.util.List;
-
-import static org.assertj.core.api.Assertions.assertThat;
 
 class DependencyResolutionIntegrationTest extends V2IntegrationTestBase {
 
@@ -23,7 +22,10 @@ class DependencyResolutionIntegrationTest extends V2IntegrationTestBase {
         initBuild(ith);
         Files.writeString(ith.inProjectDir("build.gradle.kts").toPath(), getBasePluginConfig());
         ith.mkDirInProjectDir("src/main/java/com/example/plugin");
-        Files.writeString(ith.inProjectDir("src/main/java/com/example/plugin/SomeExtension.java").toPath(), /* language=java */ """
+        Files.writeString(
+                ith.inProjectDir("src/main/java/com/example/plugin/SomeExtension.java")
+                        .toPath(), /* language=java */
+                """
                 package com.example.plugin;
                 @hudson.Extension
                 public class SomeExtension {
@@ -51,7 +53,8 @@ class DependencyResolutionIntegrationTest extends V2IntegrationTestBase {
         // given
         var ith = new IntegrationTestHelper(tempDir, "8.14");
         initBuild(ith);
-        Files.writeString(ith.inProjectDir("build.gradle.kts").toPath(), getBasePluginConfig() +/* language=kotlin */ """
+        Files.writeString(
+                ith.inProjectDir("build.gradle.kts").toPath(), getBasePluginConfig() + /* language=kotlin */ """
                 dependencies {
                     annotationProcessor("org.projectlombok:lombok:1.18.38")
                     compileOnly("org.projectlombok:lombok:1.18.38")
@@ -60,7 +63,10 @@ class DependencyResolutionIntegrationTest extends V2IntegrationTestBase {
                 configurations.getByName("compileClasspath").shouldResolveConsistentlyWith(configurations.getByName("runtimeClasspath"))
                 """);
         ith.mkDirInProjectDir("src/main/java/com/example/plugin");
-        Files.writeString(ith.inProjectDir("src/main/java/com/example/plugin/PluginAction.java").toPath(), /* language=java */ """
+        Files.writeString(
+                ith.inProjectDir("src/main/java/com/example/plugin/PluginAction.java")
+                        .toPath(), /* language=java */
+                """
                 package com.example.plugin;
                 import lombok.*;
                 import hudson.Extension;
@@ -82,30 +88,28 @@ class DependencyResolutionIntegrationTest extends V2IntegrationTestBase {
 
         // when
         var gradleRunner = ith.gradleRunner();
-        var result = gradleRunner.withArguments("dependencies", "--configuration=defaultRuntime").build();
+        var result = gradleRunner
+                .withArguments("dependencies", "--configuration=defaultRuntime")
+                .build();
 
         // then
-        assertThat(result.getOutput())
-                .contains("BUILD SUCCESSFUL")
-                .contains("com.google.inject:guice:5.1.0 -> 6.0.0");
+        assertThat(result.getOutput()).contains("BUILD SUCCESSFUL").contains("com.google.inject:guice:5.1.0 -> 6.0.0");
 
         // when
-        result = gradleRunner.withArguments("dependencies", "--configuration=compileClasspath").build();
+        result = gradleRunner
+                .withArguments("dependencies", "--configuration=compileClasspath")
+                .build();
 
         // then
-        assertThat(result.getOutput())
-                .contains("BUILD SUCCESSFUL")
-                .contains("com.google.inject:guice:6.0.0");
-
+        assertThat(result.getOutput()).contains("BUILD SUCCESSFUL").contains("com.google.inject:guice:6.0.0");
 
         // when
-        result = gradleRunner.withArguments("dependencies", "--configuration=runtimeClasspath").build();
+        result = gradleRunner
+                .withArguments("dependencies", "--configuration=runtimeClasspath")
+                .build();
 
         // then
-        assertThat(result.getOutput())
-                .contains("BUILD SUCCESSFUL")
-                .contains("com.google.inject:guice:5.1.0 -> 6.0.0");
-
+        assertThat(result.getOutput()).contains("BUILD SUCCESSFUL").contains("com.google.inject:guice:5.1.0 -> 6.0.0");
     }
 
     @Test
@@ -113,7 +117,8 @@ class DependencyResolutionIntegrationTest extends V2IntegrationTestBase {
         // given
         var ith = new IntegrationTestHelper(tempDir, "8.14");
         initBuild(ith);
-        Files.writeString(ith.inProjectDir("build.gradle.kts").toPath(), getBasePluginConfig() + /* language=kotlin */ """
+        Files.writeString(
+                ith.inProjectDir("build.gradle.kts").toPath(), getBasePluginConfig() + /* language=kotlin */ """
                 dependencies {
                     implementation("org.jenkins-ci.plugins:git:5.7.0")
                     implementation("com.github.rahulsom:nothing-java:0.2.0")
@@ -123,10 +128,14 @@ class DependencyResolutionIntegrationTest extends V2IntegrationTestBase {
         var gradleRunner = ith.gradleRunner();
 
         // when
-        var result = gradleRunner.withArguments("dependencies", "--configuration=runtimeClasspath").build();
+        var result = gradleRunner
+                .withArguments("dependencies", "--configuration=runtimeClasspath")
+                .build();
 
         // then
-        var expected = getClass().getClassLoader().getResourceAsStream("org/jenkinsci/gradle/plugins/jpi2/runtimeClasspath.txt");
+        var expected = getClass()
+                .getClassLoader()
+                .getResourceAsStream("org/jenkinsci/gradle/plugins/jpi2/runtimeClasspath.txt");
 
         List<String> actualList = Arrays.stream(result.getOutput().split("\n")).toList();
         Assertions.assertNotNull(expected);
@@ -140,7 +149,8 @@ class DependencyResolutionIntegrationTest extends V2IntegrationTestBase {
         // given
         var ith = new IntegrationTestHelper(tempDir, "8.14");
         initBuild(ith);
-        Files.writeString(ith.inProjectDir("build.gradle.kts").toPath(), getBasePluginConfig() + /* language=kotlin */ """
+        Files.writeString(
+                ith.inProjectDir("build.gradle.kts").toPath(), getBasePluginConfig() + /* language=kotlin */ """
                 dependencies {
                     implementation("org.jenkins-ci.plugins:git:5.7.0")
                     implementation("com.github.rahulsom:nothing-java:0.2.0")
@@ -150,10 +160,14 @@ class DependencyResolutionIntegrationTest extends V2IntegrationTestBase {
         var gradleRunner = ith.gradleRunner();
 
         // when
-        var result = gradleRunner.withArguments("dependencies", "--configuration=compileClasspath").build();
+        var result = gradleRunner
+                .withArguments("dependencies", "--configuration=compileClasspath")
+                .build();
 
         // then
-        var expected = getClass().getClassLoader().getResourceAsStream("org/jenkinsci/gradle/plugins/jpi2/compileClasspath.txt");
+        var expected = getClass()
+                .getClassLoader()
+                .getResourceAsStream("org/jenkinsci/gradle/plugins/jpi2/compileClasspath.txt");
 
         List<String> actualList = Arrays.stream(result.getOutput().split("\n")).toList();
         Assertions.assertNotNull(expected);
@@ -167,7 +181,8 @@ class DependencyResolutionIntegrationTest extends V2IntegrationTestBase {
         // given
         var ith = new IntegrationTestHelper(tempDir, "8.14");
         initBuild(ith);
-        Files.writeString(ith.inProjectDir("build.gradle.kts").toPath(), getBasePluginConfig() + /* language=kotlin */ """
+        Files.writeString(
+                ith.inProjectDir("build.gradle.kts").toPath(), getBasePluginConfig() + /* language=kotlin */ """
                 dependencies {
                     implementation("com.github.rahulsom:nothing-java:0.2.0") {
                         exclude(group = "org.apache.commons", module = "commons-lang3")
@@ -187,10 +202,10 @@ class DependencyResolutionIntegrationTest extends V2IntegrationTestBase {
         assertThat(libs).exists();
 
         var jpiLibs = libs.list();
-        assertThat(jpiLibs).isNotNull()
-                .containsExactlyInAnyOrder("nothing-java-0.2.0.jar",
-                        "test-plugin-1.0.0.jar",
-                        "commons-math3-3.6.1.jar");
+        assertThat(jpiLibs)
+                .isNotNull()
+                .containsExactlyInAnyOrder(
+                        "nothing-java-0.2.0.jar", "test-plugin-1.0.0.jar", "commons-math3-3.6.1.jar");
     }
 
     /**
@@ -219,9 +234,8 @@ class DependencyResolutionIntegrationTest extends V2IntegrationTestBase {
                 }
                 """);
 
-        var result = ith.gradleRunner()
-                .withArguments("copyTestPluginDependencies")
-                .buildAndFail();
+        var result =
+                ith.gradleRunner().withArguments("copyTestPluginDependencies").buildAndFail();
 
         assertThat(result.getOutput())
                 .contains("Cannot find a version of 'commons-io:commons-io' that satisfies the version constraints")

@@ -1,5 +1,12 @@
 package org.jenkinsci.gradle.plugins.jpi2;
 
+import java.io.BufferedWriter;
+import java.io.IOException;
+import java.io.UncheckedIOException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.util.LinkedHashSet;
+import javax.inject.Inject;
 import org.gradle.api.DefaultTask;
 import org.gradle.api.file.ConfigurableFileCollection;
 import org.gradle.api.file.DirectoryProperty;
@@ -12,14 +19,6 @@ import org.gradle.api.tasks.OutputDirectory;
 import org.gradle.api.tasks.PathSensitive;
 import org.gradle.api.tasks.PathSensitivity;
 import org.gradle.api.tasks.TaskAction;
-
-import javax.inject.Inject;
-import java.io.BufferedWriter;
-import java.io.IOException;
-import java.io.UncheckedIOException;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.util.LinkedHashSet;
 
 /**
  * Copies the Jenkins plugin ({@code .hpi}/{@code .jpi}) dependencies resolved on the test
@@ -71,7 +70,8 @@ public abstract class CopyTestPluginDependenciesTask extends DefaultTask {
             }
         });
 
-        try (BufferedWriter writer = Files.newBufferedWriter(outputDir.toPath().resolve("index"), StandardCharsets.UTF_8)) {
+        try (BufferedWriter writer =
+                Files.newBufferedWriter(outputDir.toPath().resolve("index"), StandardCharsets.UTF_8)) {
             for (String pluginId : pluginIds) {
                 writer.write(pluginId);
                 writer.newLine();

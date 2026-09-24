@@ -1,14 +1,12 @@
 package org.jenkinsci.gradle.plugins.jpi2;
 
+import static org.assertj.core.api.Assertions.assertThat;
+
+import java.io.IOException;
 import java.nio.file.Files;
 import org.gradle.testkit.runner.TaskOutcome;
 import org.jenkinsci.gradle.plugins.jpi.IntegrationTestHelper;
 import org.junit.jupiter.api.Test;
-
-import java.io.IOException;
-import java.nio.charset.StandardCharsets;
-
-import static org.assertj.core.api.Assertions.assertThat;
 
 class CheckOverlappingSourcesIntegrationTest extends V2IntegrationTestBase {
 
@@ -29,7 +27,8 @@ class CheckOverlappingSourcesIntegrationTest extends V2IntegrationTestBase {
     void checkOverlappingSourcesFailsForMultiplePluginImplementations() throws IOException {
         var ith = new IntegrationTestHelper(tempDir, "8.14");
         initBuild(ith);
-        Files.writeString(ith.inProjectDir("build.gradle.kts").toPath(), getBasePluginConfig() + /* language=kotlin */ """
+        Files.writeString(
+                ith.inProjectDir("build.gradle.kts").toPath(), getBasePluginConfig() + /* language=kotlin */ """
                 apply(plugin = "groovy")
                 dependencies {
                     implementation(localGroovy())
@@ -37,12 +36,16 @@ class CheckOverlappingSourcesIntegrationTest extends V2IntegrationTestBase {
                 """);
         ith.mkDirInProjectDir("src/main/java/com/example");
         ith.mkDirInProjectDir("src/main/groovy/com/example");
-        Files.writeString(ith.inProjectDir("src/main/java/com/example/JavaPlugin.java").toPath(), /* language=java */ """
+        Files.writeString(
+                ith.inProjectDir("src/main/java/com/example/JavaPlugin.java").toPath(), /* language=java */ """
                 package com.example;
                 public class JavaPlugin extends hudson.Plugin {
                 }
                 """);
-        Files.writeString(ith.inProjectDir("src/main/groovy/com/example/GroovyPlugin.groovy").toPath(), /* language=groovy */ """
+        Files.writeString(
+                ith.inProjectDir("src/main/groovy/com/example/GroovyPlugin.groovy")
+                        .toPath(), /* language=groovy */
+                """
                 package com.example
                 class GroovyPlugin extends hudson.Plugin {
                 }
@@ -59,7 +62,8 @@ class CheckOverlappingSourcesIntegrationTest extends V2IntegrationTestBase {
     void checkOverlappingSourcesFailsForOverlappingSezpozFiles() throws IOException {
         var ith = new IntegrationTestHelper(tempDir, "8.14");
         initBuild(ith);
-        Files.writeString(ith.inProjectDir("build.gradle.kts").toPath(), getBasePluginConfig() + /* language=kotlin */ """
+        Files.writeString(
+                ith.inProjectDir("build.gradle.kts").toPath(), getBasePluginConfig() + /* language=kotlin */ """
                 apply(plugin = "groovy")
                 dependencies {
                     implementation(localGroovy())
@@ -67,13 +71,17 @@ class CheckOverlappingSourcesIntegrationTest extends V2IntegrationTestBase {
                 """);
         ith.mkDirInProjectDir("src/main/java/com/example");
         ith.mkDirInProjectDir("src/main/groovy/com/example");
-        Files.writeString(ith.inProjectDir("src/main/java/com/example/JavaExtension.java").toPath(), /* language=java */ """
+        Files.writeString(
+                ith.inProjectDir("src/main/java/com/example/JavaExtension.java").toPath(), /* language=java */ """
                 package com.example;
                 @hudson.Extension
                 public class JavaExtension {
                 }
                 """);
-        Files.writeString(ith.inProjectDir("src/main/groovy/com/example/GroovyExtension.groovy").toPath(), /* language=groovy */ """
+        Files.writeString(
+                ith.inProjectDir("src/main/groovy/com/example/GroovyExtension.groovy")
+                        .toPath(), /* language=groovy */
+                """
                 package com.example
                 @hudson.Extension
                 class GroovyExtension {
