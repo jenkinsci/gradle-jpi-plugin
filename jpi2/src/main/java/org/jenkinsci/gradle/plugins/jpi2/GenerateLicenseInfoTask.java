@@ -209,7 +209,7 @@ public abstract class GenerateLicenseInfoTask extends DefaultTask {
         }
     }
 
-    private record PomLicenseData(
+    record PomLicenseData(
             String groupId,
             String artifactId,
             String version,
@@ -218,16 +218,16 @@ public abstract class GenerateLicenseInfoTask extends DefaultTask {
             String url,
             List<LicenseInfo> licenses) {}
 
-    private record LicenseInfo(String name, String url) {}
+    record LicenseInfo(String name, String url) {}
 
-    private static final class PomLicenseDataExtractor {
+    static final class PomLicenseDataExtractor {
         private final DocumentBuilder builder;
 
-        private PomLicenseDataExtractor() {
+        PomLicenseDataExtractor() {
             this.builder = createDocumentBuilder();
         }
 
-        private PomLicenseData extractFrom(File pomFile) {
+        PomLicenseData extractFrom(File pomFile) {
             try {
                 var document = builder.parse(pomFile);
                 var root = document.getDocumentElement();

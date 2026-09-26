@@ -61,8 +61,21 @@ public abstract class GenerateOptionalJenkinsManifestTask extends DefaultTask {
     }
 
     private Boolean resolveDynamicLoadingSupport() {
+        return resolveDynamicLoadingSupport(findExtensionEntries());
+    }
+
+    /**
+     * Resolves {@code Support-Dynamic-Loading} from Sezpoz extension entries.
+     *
+     * <ul>
+     *   <li>any {@code NO} → {@code false}
+     *   <li>any {@code MAYBE} (and no {@code NO}) → {@code null} (omit the attribute)
+     *   <li>otherwise → {@code true}
+     * </ul>
+     */
+    static Boolean resolveDynamicLoadingSupport(List<ExtensionEntry> extensionEntries) {
         boolean sawMaybe = false;
-        for (var extensionEntry : findExtensionEntries()) {
+        for (var extensionEntry : extensionEntries) {
             if ("NO".equals(extensionEntry.dynamicLoadable())) {
                 return false;
             }
@@ -93,8 +106,8 @@ public abstract class GenerateOptionalJenkinsManifestTask extends DefaultTask {
         }
     }
 
-    private record ExtensionEntry(String dynamicLoadable) {
-        private static ExtensionEntry parse(String line) {
+    record ExtensionEntry(String dynamicLoadable) {
+        static ExtensionEntry parse(String line) {
             int marker = line.indexOf("dynamicLoadable=");
             if (marker < 0) {
                 return new ExtensionEntry("MAYBE");
