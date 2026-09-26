@@ -52,6 +52,7 @@ spotless {
     }
     kotlinGradle {
         ktlint()
+        target("**/*.gradle.kts")
     }
     yaml {
         prettier()

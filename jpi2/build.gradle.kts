@@ -108,17 +108,21 @@ val javaVersions = listOf(17)
 val umbrellaPattern = Regex("^testGradle([0-9]+(?:\\.[0-9]+)*)$")
 val perJavaPattern = Regex("^testGradle([0-9]+(?:\\.[0-9]+)*)onJava([0-9]+)$")
 
-fun Project.registerJavaSpecificTestGradleTask(gradleVersion: String, javaVersion: Int) =
-    tasks.register<Test>("testGradle${gradleVersion}onJava${javaVersion}") {
-        val testSourceSet = sourceSets.test.get()
-        testClassesDirs = testSourceSet.output.classesDirs
-        classpath = testSourceSet.runtimeClasspath
-        systemProperty("gradle.under.test", gradleVersion)
-        setTestNameIncludePatterns(listOf("*IntegrationTest"))
-        javaLauncher.set(javaToolchains.launcherFor {
+fun Project.registerJavaSpecificTestGradleTask(
+    gradleVersion: String,
+    javaVersion: Int,
+) = tasks.register<Test>("testGradle${gradleVersion}onJava$javaVersion") {
+    val testSourceSet = sourceSets.test.get()
+    testClassesDirs = testSourceSet.output.classesDirs
+    classpath = testSourceSet.runtimeClasspath
+    systemProperty("gradle.under.test", gradleVersion)
+    setTestNameIncludePatterns(listOf("*IntegrationTest"))
+    javaLauncher.set(
+        javaToolchains.launcherFor {
             languageVersion.set(JavaLanguageVersion.of(javaVersion))
-        })
-    }
+        },
+    )
+}
 
 tasks.addRule("Pattern: testGradle<ID>[onJava<Version>]") {
     val taskName = this
