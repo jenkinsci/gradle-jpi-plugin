@@ -43,16 +43,14 @@ public class CodeBlock implements Comparable<CodeBlock>, Emitable {
 
     @Override
     public int compareTo(CodeBlock o) {
-        return Comparator.comparing(CodeBlock::filePosition)
-                .compare(this, o);
+        return Comparator.comparing(CodeBlock::filePosition).compare(this, o);
     }
 
     public static class Builder {
         private String name;
         private final List<Statement> statements = new LinkedList<>();
 
-        public Builder() {
-        }
+        public Builder() {}
 
         public Builder(String name) {
             this.name = name;

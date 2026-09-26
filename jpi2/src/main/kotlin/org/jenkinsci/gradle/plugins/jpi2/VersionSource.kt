@@ -16,5 +16,5 @@ enum class VersionSource {
     FIXED,
 
     /** Use a version derived from Git (commit depth + abbreviated hash). */
-    GIT
+    GIT,
 }

@@ -1,10 +1,6 @@
 package org.jenkinsci.gradle.plugins.jpi2;
 
-import org.gradle.testkit.runner.GradleRunner;
-import org.gradle.testkit.runner.TaskOutcome;
-import org.jenkinsci.gradle.plugins.jpi.IntegrationTestHelper;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.Timeout;
+import static org.assertj.core.api.Assertions.assertThat;
 
 import java.io.File;
 import java.io.IOException;
@@ -13,8 +9,11 @@ import java.nio.file.Files;
 import java.nio.file.StandardOpenOption;
 import java.util.concurrent.TimeUnit;
 import java.util.jar.Manifest;
-
-import static org.assertj.core.api.Assertions.assertThat;
+import org.gradle.testkit.runner.GradleRunner;
+import org.gradle.testkit.runner.TaskOutcome;
+import org.jenkinsci.gradle.plugins.jpi.IntegrationTestHelper;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 class SimpleBuildIntegrationTest extends V2IntegrationTestBase {
 
@@ -41,15 +40,13 @@ class SimpleBuildIntegrationTest extends V2IntegrationTestBase {
         var manifestData = new Manifest(manifest.toURI().toURL().openStream()).getMainAttributes();
         assertThat(manifest).isNotNull().isNotEmpty();
 
-        assertThat(manifestData.getValue("Jenkins-Version"))
-                .isEqualTo("2.492.3");
+        assertThat(manifestData.getValue("Jenkins-Version")).isEqualTo("2.492.3");
 
         var jpiLibsDir = new File(explodedWar, "WEB-INF/lib");
         assertThat(jpiLibsDir).exists();
 
         var jpiLibs = jpiLibsDir.list();
-        assertThat(jpiLibs).isNotNull()
-                .containsExactlyInAnyOrder("test-plugin-1.0.0.jar");
+        assertThat(jpiLibs).isNotNull().containsExactlyInAnyOrder("test-plugin-1.0.0.jar");
     }
 
     @Test
@@ -116,7 +113,8 @@ class SimpleBuildIntegrationTest extends V2IntegrationTestBase {
         var ith = new IntegrationTestHelper(tempDir, "8.14");
         configureSimpleBuild(ith);
 
-        Files.writeString(ith.inProjectDir("build.gradle.kts").toPath(), /* language=kotlin */ """
+        Files.writeString(
+                ith.inProjectDir("build.gradle.kts").toPath(), /* language=kotlin */ """
                 jenkinsPlugin {
                     workDir = layout.projectDirectory.dir("custom-work")
                 }
@@ -153,8 +151,7 @@ class SimpleBuildIntegrationTest extends V2IntegrationTestBase {
                 .buildAndFail();
 
         // then — the transient timeout is retried before the task gives up...
-        assertThat(result.getOutput())
-                .contains("Jenkins did not start within 5s (attempt 1 of 2); retrying");
+        assertThat(result.getOutput()).contains("Jenkins did not start within 5s (attempt 1 of 2); retrying");
         // ...and the final failure is actionable rather than a bare "exit code 143"
         assertThat(result.getOutput())
                 .contains("Jenkins did not start within 5s and was terminated (exit code 143) after 2 attempts")
@@ -198,15 +195,23 @@ class SimpleBuildIntegrationTest extends V2IntegrationTestBase {
         // project tree so only the init-script inputs (not the build-config fileTree) can invalidate
         // the cache, isolating that getInitScriptFiles (content) and getInitScriptPaths (order) work.
         var initDir = Files.createTempDirectory("jpi2-init-scripts");
-        var scriptA = Files.writeString(initDir.resolve("a.gradle"), "// init script a v1\n").toAbsolutePath().toString();
-        var scriptB = Files.writeString(initDir.resolve("b.gradle"), "// init script b\n").toAbsolutePath().toString();
+        var scriptA = Files.writeString(initDir.resolve("a.gradle"), "// init script a v1\n")
+                .toAbsolutePath()
+                .toString();
+        var scriptB = Files.writeString(initDir.resolve("b.gradle"), "// init script b\n")
+                .toAbsolutePath()
+                .toString();
 
         GradleRunner runner = ith.gradleRunner();
 
-        var first = runner.withArguments("testServer", "--init-script", scriptA, "--init-script", scriptB, "--build-cache").build();
+        var first = runner.withArguments(
+                        "testServer", "--init-script", scriptA, "--init-script", scriptB, "--build-cache")
+                .build();
         assertThat(first.task(":testServer").getOutcome()).isEqualTo(TaskOutcome.SUCCESS);
 
-        var unchanged = runner.withArguments("testServer", "--init-script", scriptA, "--init-script", scriptB, "--build-cache").build();
+        var unchanged = runner.withArguments(
+                        "testServer", "--init-script", scriptA, "--init-script", scriptB, "--build-cache")
+                .build();
         assertThat(unchanged.task(":testServer").getOutcome())
                 .as("unchanged init scripts should hit the cache")
                 .isEqualTo(TaskOutcome.UP_TO_DATE);
@@ -214,14 +219,18 @@ class SimpleBuildIntegrationTest extends V2IntegrationTestBase {
         // Edit an init script's content without changing its path: the content fingerprint
         // (getInitScriptFiles, PathSensitivity.NONE) must invalidate the cache.
         Files.writeString(initDir.resolve("a.gradle"), "// init script a v2\n");
-        var afterContentEdit = runner.withArguments("testServer", "--init-script", scriptA, "--init-script", scriptB, "--build-cache").build();
+        var afterContentEdit = runner.withArguments(
+                        "testServer", "--init-script", scriptA, "--init-script", scriptB, "--build-cache")
+                .build();
         assertThat(afterContentEdit.task(":testServer").getOutcome())
                 .as("editing an init script's content must invalidate the cache")
                 .isEqualTo(TaskOutcome.SUCCESS);
 
         // Swap the order of two unchanged scripts: Gradle applies init scripts in command-line order,
         // so the ordered path input (getInitScriptPaths) must invalidate the cache.
-        var afterReorder = runner.withArguments("testServer", "--init-script", scriptB, "--init-script", scriptA, "--build-cache").build();
+        var afterReorder = runner.withArguments(
+                        "testServer", "--init-script", scriptB, "--init-script", scriptA, "--build-cache")
+                .build();
         assertThat(afterReorder.task(":testServer").getOutcome())
                 .as("reordering init scripts must invalidate the cache")
                 .isEqualTo(TaskOutcome.SUCCESS);
@@ -243,9 +252,11 @@ class SimpleBuildIntegrationTest extends V2IntegrationTestBase {
                 .isEqualTo(TaskOutcome.UP_TO_DATE);
 
         // Append a comment to build.gradle.kts — changes file content without affecting behavior.
-        Files.writeString(ith.inProjectDir("build.gradle.kts").toPath(),
+        Files.writeString(
+                ith.inProjectDir("build.gradle.kts").toPath(),
                 "\n// cache-invalidation marker\n",
-                StandardCharsets.UTF_8, StandardOpenOption.APPEND);
+                StandardCharsets.UTF_8,
+                StandardOpenOption.APPEND);
         var afterBuildScriptEdit = runner.withArguments(task).build();
         assertThat(afterBuildScriptEdit.task(taskPath).getOutcome())
                 .as("editing build.gradle.kts must invalidate the cache")
@@ -261,7 +272,8 @@ class SimpleBuildIntegrationTest extends V2IntegrationTestBase {
         // the cache (the .hpl text only references paths, not content).
         ith.mkDirInProjectDir("src/main/java/com/example");
         var source = ith.inProjectDir("src/main/java/com/example/Example.java").toPath();
-        Files.writeString(source,
+        Files.writeString(
+                source,
                 "package com.example; public class Example { public String hello() { return \"v1\"; } }\n",
                 StandardCharsets.UTF_8);
 
@@ -289,12 +301,14 @@ class SimpleBuildIntegrationTest extends V2IntegrationTestBase {
         // Edit-in-place: the .class file's content changes but its path does not. For
         // testHplRun, the .hpl manifest's Libraries attribute lists paths (filtered by
         // File.exists), so editing alone does NOT change the .hpl bytes.
-        Files.writeString(source,
+        Files.writeString(
+                source,
                 "package com.example; public class Example { public String hello() { return \"v2\"; } }\n",
                 StandardCharsets.UTF_8);
         var afterEdit = runner.withArguments(task).build();
         assertThat(afterEdit.task(taskPath).getOutcome())
-                .as("editing main source must invalidate the cache (catches missing referencedFiles wiring on testHplRun)")
+                .as(
+                        "editing main source must invalidate the cache (catches missing referencedFiles wiring on testHplRun)")
                 .isEqualTo(TaskOutcome.SUCCESS);
         assertThat(afterEdit.getOutput()).contains("Jenkins is fully up and running");
 

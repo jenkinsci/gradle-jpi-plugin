@@ -1,5 +1,7 @@
 package org.jenkinsci.gradle.plugins.jpi2;
 
+import java.util.Set;
+import javax.inject.Inject;
 import org.gradle.api.Action;
 import org.gradle.api.artifacts.ComponentMetadataContext;
 import org.gradle.api.artifacts.ComponentMetadataDetails;
@@ -10,14 +12,11 @@ import org.gradle.api.artifacts.maven.PomModuleDescriptor;
 import org.gradle.api.model.ObjectFactory;
 import org.jetbrains.annotations.NotNull;
 
-import javax.inject.Inject;
-import java.util.Set;
-
 /**
  * Rule to make compile configurations use jar instead of hpi/jpi.
  */
 @SuppressWarnings({
-        "Convert2Lambda", // Gradle doesn't like lambdas
+    "Convert2Lambda", // Gradle doesn't like lambdas
 })
 abstract class HpiMetadataRule implements ComponentMetadataRule {
 
@@ -25,8 +24,7 @@ abstract class HpiMetadataRule implements ComponentMetadataRule {
     public static final String DEFAULT_RUNTIME_VARIANT = "defaultRuntime";
 
     @Inject
-    public HpiMetadataRule() {
-    }
+    public HpiMetadataRule() {}
 
     @Inject
     public abstract ObjectFactory getObjects();
@@ -39,12 +37,19 @@ abstract class HpiMetadataRule implements ComponentMetadataRule {
         }
         var details = componentMetadataContext.getDetails();
         if (PLUGIN_PACKAGINGS.contains(pom.getPackaging())) {
-            details.withVariant("compile",
-                    new DefaultSelectionAction(details, "jar", getObjects().named(ArtifactType.class, ArtifactType.PLUGIN_JAR)));
-            details.withVariant("runtime",
-                    new DefaultSelectionAction(details, "jar", getObjects().named(ArtifactType.class, ArtifactType.PLUGIN_JAR)));
-            details.addVariant(DEFAULT_RUNTIME_VARIANT, "runtime",
-                    new DefaultSelectionAction(details, pom.getPackaging(), getObjects().named(ArtifactType.class, ArtifactType.DEFAULT)));
+            details.withVariant(
+                    "compile",
+                    new DefaultSelectionAction(
+                            details, "jar", getObjects().named(ArtifactType.class, ArtifactType.PLUGIN_JAR)));
+            details.withVariant(
+                    "runtime",
+                    new DefaultSelectionAction(
+                            details, "jar", getObjects().named(ArtifactType.class, ArtifactType.PLUGIN_JAR)));
+            details.addVariant(
+                    DEFAULT_RUNTIME_VARIANT,
+                    "runtime",
+                    new DefaultSelectionAction(
+                            details, pom.getPackaging(), getObjects().named(ArtifactType.class, ArtifactType.DEFAULT)));
         }
     }
 
@@ -65,7 +70,8 @@ abstract class HpiMetadataRule implements ComponentMetadataRule {
                 @Override
                 public void execute(@NotNull MutableVariantFilesMetadata mutableVariantFilesMetadata) {
                     mutableVariantFilesMetadata.removeAllFiles();
-                    mutableVariantFilesMetadata.addFile(details.getId().getName() + "-" + details.getId().getVersion() + "." + extension);
+                    mutableVariantFilesMetadata.addFile(
+                            details.getId().getName() + "-" + details.getId().getVersion() + "." + extension);
                 }
             });
             if (artifactType != null) {

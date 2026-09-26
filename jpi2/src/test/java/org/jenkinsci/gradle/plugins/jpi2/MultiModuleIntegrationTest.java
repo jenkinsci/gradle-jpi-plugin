@@ -1,5 +1,14 @@
 package org.jenkinsci.gradle.plugins.jpi2;
 
+import static org.assertj.core.api.Assertions.assertThat;
+
+import java.io.File;
+import java.io.FileReader;
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.util.concurrent.TimeUnit;
+import java.util.jar.Manifest;
 import org.apache.maven.model.Dependency;
 import org.apache.maven.model.Model;
 import org.apache.maven.model.io.xpp3.MavenXpp3Reader;
@@ -11,16 +20,6 @@ import org.jenkinsci.gradle.plugins.jpi.IntegrationTestHelper;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 
-import java.io.File;
-import java.io.FileReader;
-import java.io.IOException;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.util.concurrent.TimeUnit;
-import java.util.jar.Manifest;
-
-import static org.assertj.core.api.Assertions.assertThat;
-
 class MultiModuleIntegrationTest extends V2IntegrationTestBase {
 
     @Test
@@ -30,9 +29,7 @@ class MultiModuleIntegrationTest extends V2IntegrationTestBase {
         configureModuleWithNestedDependencies(ith);
 
         // when
-        ith.gradleRunner()
-                .withArguments("build", "publish")
-                .build();
+        ith.gradleRunner().withArguments("build", "publish").build();
 
         // then
         var jpi = ith.inProjectDir("plugin-four/build/libs/plugin-four-1.0.0.jpi");
@@ -55,8 +52,7 @@ class MultiModuleIntegrationTest extends V2IntegrationTestBase {
         assertThat(jpiLibsDir).exists();
 
         var jpiLibs = jpiLibsDir.list();
-        assertThat(jpiLibs).isNotNull()
-                .containsExactlyInAnyOrder("plugin-four-1.0.0.jar");
+        assertThat(jpiLibs).isNotNull().containsExactlyInAnyOrder("plugin-four-1.0.0.jar");
 
         var pom = ith.inProjectDir("build/repo/com/example/plugin-four/1.0.0/plugin-four-1.0.0.pom");
 
@@ -72,11 +68,9 @@ class MultiModuleIntegrationTest extends V2IntegrationTestBase {
 
         var dependencies = model.getDependencies();
         assertThat(dependencies)
-                .extracting(Dependency::getGroupId, Dependency::getArtifactId, Dependency::getVersion, Dependency::getScope)
-                .containsExactlyInAnyOrder(
-                        new Tuple("com.example", "plugin-three", "1.0.0", "runtime")
-                );
-
+                .extracting(
+                        Dependency::getGroupId, Dependency::getArtifactId, Dependency::getVersion, Dependency::getScope)
+                .containsExactlyInAnyOrder(new Tuple("com.example", "plugin-three", "1.0.0", "runtime"));
     }
 
     @Test
@@ -104,17 +98,20 @@ class MultiModuleIntegrationTest extends V2IntegrationTestBase {
         GradleRunner runner = ith.gradleRunner();
         var taskPath = ":downstream:testHplRun";
 
-        var first = runner.withArguments(":downstream:testHplRun", "--build-cache").build();
+        var first =
+                runner.withArguments(":downstream:testHplRun", "--build-cache").build();
         assertThat(first.task(taskPath).getOutcome()).isEqualTo(TaskOutcome.SUCCESS);
         assertThat(first.getOutput()).contains("Jenkins is fully up and running");
 
-        var noChange = runner.withArguments(":downstream:testHplRun", "--build-cache").build();
+        var noChange =
+                runner.withArguments(":downstream:testHplRun", "--build-cache").build();
         assertThat(noChange.task(taskPath).getOutcome())
                 .as("unchanged inputs should hit the cache and skip launching Jenkins")
                 .isEqualTo(TaskOutcome.UP_TO_DATE);
 
         deleteDirectory(ith.inProjectDir("downstream/build"));
-        var fromCache = runner.withArguments(":downstream:testHplRun", "--build-cache").build();
+        var fromCache =
+                runner.withArguments(":downstream:testHplRun", "--build-cache").build();
         assertThat(fromCache.task(taskPath).getOutcome())
                 .as("after build dir is deleted, the task must be restored FROM_CACHE rather than re-executing")
                 .isEqualTo(TaskOutcome.FROM_CACHE);
@@ -123,12 +120,14 @@ class MultiModuleIntegrationTest extends V2IntegrationTestBase {
         // load the new class via upstream's HPL (which only references paths, not content).
         // The downstream testHplRun must therefore re-execute, not silently reuse the
         // cached pass that no longer reflects current behavior.
-        var upstreamSrc = ith.inProjectDir("upstream/src/main/java/com/example/upstream/Example.java").toPath();
+        var upstreamSrc = ith.inProjectDir("upstream/src/main/java/com/example/upstream/Example.java")
+                .toPath();
         Files.writeString(upstreamSrc, /* language=java */ """
                 package com.example.upstream;
                 public class Example { public String hello() { return "v2"; } }
                 """, StandardCharsets.UTF_8);
-        var afterUpstreamEdit = runner.withArguments(":downstream:testHplRun", "--build-cache").build();
+        var afterUpstreamEdit =
+                runner.withArguments(":downstream:testHplRun", "--build-cache").build();
         assertThat(afterUpstreamEdit.task(taskPath).getOutcome())
                 .as("editing an upstream module's source must invalidate the downstream testHplRun cache")
                 .isEqualTo(TaskOutcome.SUCCESS);
@@ -168,7 +167,8 @@ class MultiModuleIntegrationTest extends V2IntegrationTestBase {
         // then
         var pluginThreeHpl = ith.inProjectDir("plugin-four/work/plugins/plugin-three.hpl");
         assertThat(pluginThreeHpl).exists();
-        assertThat(ith.inProjectDir("plugin-four/work/plugins/plugin-three.jpi")).doesNotExist();
+        assertThat(ith.inProjectDir("plugin-four/work/plugins/plugin-three.jpi"))
+                .doesNotExist();
         assertThat(ith.inProjectDir("plugin-four/work/plugins/plugin-four.hpl")).exists();
     }
 }

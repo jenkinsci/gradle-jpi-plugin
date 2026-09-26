@@ -1,13 +1,12 @@
 package org.jenkinsci.gradle.plugins.jpi2;
 
+import java.util.stream.Collectors;
 import org.gradle.api.Action;
 import org.gradle.api.Project;
 import org.gradle.api.java.archives.Manifest;
 import org.gradle.api.plugins.JavaPluginExtension;
 import org.gradle.jvm.toolchain.JavaLanguageVersion;
 import org.jetbrains.annotations.NotNull;
-
-import java.util.stream.Collectors;
 
 /**
  * Action to update the JAR manifest with attributes required in a Jenkins Plugin, except for
@@ -35,9 +34,12 @@ class ManifestAction implements Action<Manifest> {
         attributes.put("Extension-Name", extension.getPluginId().get());
         attributes.put("Group-Id", project.getGroup());
         var ext = project.getExtensions().getByType(JavaPluginExtension.class);
-        attributes.put("Minimum-Java-Version", ext.getToolchain().getLanguageVersion()
-                .getOrElse(JavaLanguageVersion.of(DEFAULT_MINIMUM_JAVA_VERSION))
-                .toString());
+        attributes.put(
+                "Minimum-Java-Version",
+                ext.getToolchain()
+                        .getLanguageVersion()
+                        .getOrElse(JavaLanguageVersion.of(DEFAULT_MINIMUM_JAVA_VERSION))
+                        .toString());
         attributes.put("Long-Name", extension.getDisplayName().get());
 
         attributes.put("Jenkins-Version", extension.getJenkinsVersion());
@@ -64,7 +66,8 @@ class ManifestAction implements Action<Manifest> {
         var developers = extension.getPluginDevelopers().get();
         if (!developers.isEmpty()) {
             var formatted = developers.stream()
-                    .map(dev -> String.join(":",
+                    .map(dev -> String.join(
+                            ":",
                             dev.getName().getOrElse(""),
                             dev.getId().getOrElse(""),
                             dev.getEmail().getOrElse("")))

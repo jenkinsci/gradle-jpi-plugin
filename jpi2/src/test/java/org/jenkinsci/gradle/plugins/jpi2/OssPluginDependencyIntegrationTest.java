@@ -1,16 +1,15 @@
 package org.jenkinsci.gradle.plugins.jpi2;
 
-import org.gradle.testkit.runner.GradleRunner;
-import org.jenkinsci.gradle.plugins.jpi.IntegrationTestHelper;
-import org.junit.jupiter.api.Test;
+import static org.assertj.core.api.Assertions.assertThat;
 
 import java.io.File;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Objects;
 import java.util.jar.Manifest;
-
-import static org.assertj.core.api.Assertions.assertThat;
+import org.gradle.testkit.runner.GradleRunner;
+import org.jenkinsci.gradle.plugins.jpi.IntegrationTestHelper;
+import org.junit.jupiter.api.Test;
 
 class OssPluginDependencyIntegrationTest extends V2IntegrationTestBase {
 
@@ -44,8 +43,7 @@ class OssPluginDependencyIntegrationTest extends V2IntegrationTestBase {
         assertThat(jpiLibsDir).exists();
 
         var jpiLibs = jpiLibsDir.list();
-        assertThat(jpiLibs).isNotNull()
-                .containsExactlyInAnyOrder("test-plugin-1.0.0.jar");
+        assertThat(jpiLibs).isNotNull().containsExactlyInAnyOrder("test-plugin-1.0.0.jar");
     }
 
     @Test
@@ -63,8 +61,11 @@ class OssPluginDependencyIntegrationTest extends V2IntegrationTestBase {
         var pluginsDir = ith.inProjectDir("work/plugins");
         assertThat(pluginsDir).exists();
 
-        var files = Arrays.stream(Objects.requireNonNull(pluginsDir.list())).sorted().toList();
-        assertThat(files).isNotNull()
+        var files = Arrays.stream(Objects.requireNonNull(pluginsDir.list()))
+                .sorted()
+                .toList();
+        assertThat(files)
+                .isNotNull()
                 .containsExactly(
                         "apache-httpcomponents-client-4-api.jpi",
                         "asm-api.jpi",
@@ -90,8 +91,7 @@ class OssPluginDependencyIntegrationTest extends V2IntegrationTestBase {
                         "test-plugin.jpi",
                         "variant.jpi",
                         "workflow-scm-step.jpi",
-                        "workflow-step-api.jpi"
-                );
+                        "workflow-step-api.jpi");
     }
 
     @Test
@@ -107,7 +107,9 @@ class OssPluginDependencyIntegrationTest extends V2IntegrationTestBase {
         var pluginsDir = ith.inProjectDir("work/plugins");
         assertThat(pluginsDir).exists();
 
-        var files = Arrays.stream(Objects.requireNonNull(pluginsDir.list())).sorted().toList();
+        var files = Arrays.stream(Objects.requireNonNull(pluginsDir.list()))
+                .sorted()
+                .toList();
         assertThat(files).contains("git.jpi", "test-plugin.hpl", "workflow-step-api.jpi");
         assertThat(files).noneMatch(it -> it.endsWith(".hpi"));
     }

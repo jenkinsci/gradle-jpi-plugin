@@ -6,6 +6,7 @@ buildscript {
 plugins {
     alias(libs.plugins.distribution.sha)
     alias(libs.plugins.test.logger) apply false
+    alias(libs.plugins.spotless)
 }
 
 allprojects {
@@ -13,13 +14,17 @@ allprojects {
     apply(plugin = "nebula.release")
 }
 
+repositories {
+    mavenCentral()
+}
+
 subprojects {
     repositories {
         maven {
             url = uri("https://repo.jenkins-ci.org/public")
             mavenContent {
-               excludeGroup("commons-io")
-               excludeGroup("org.apache.commons")
+                excludeGroup("commons-io")
+                excludeGroup("org.apache.commons")
             }
         }
         mavenCentral()
@@ -33,5 +38,27 @@ subprojects {
             }
         }
         apply(plugin = "com.adarshr.test-logger")
+    }
+}
+
+spotless {
+    java {
+        palantirJavaFormat()
+        target("**/*.java")
+    }
+    kotlin {
+        ktlint()
+        target("**/*.kt")
+    }
+    kotlinGradle {
+        ktlint()
+    }
+    yaml {
+        prettier()
+        target("**/*.yaml", "**/*.yml")
+    }
+    json {
+        prettier()
+        target("**/*.json")
     }
 }

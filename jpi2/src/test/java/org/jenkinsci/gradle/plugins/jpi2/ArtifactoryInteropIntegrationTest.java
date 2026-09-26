@@ -1,11 +1,11 @@
 package org.jenkinsci.gradle.plugins.jpi2;
 
+import static org.assertj.core.api.Assertions.assertThat;
+
 import java.io.IOException;
 import java.nio.file.Files;
 import org.jenkinsci.gradle.plugins.jpi.IntegrationTestHelper;
 import org.junit.jupiter.api.Test;
-
-import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * Reproduces <a href="https://github.com/jenkinsci/gradle-jpi-plugin/issues/429">#429</a>: a plugin
@@ -43,16 +43,20 @@ class ArtifactoryInteropIntegrationTest extends V2IntegrationTestBase {
                 dependencies {
                     testImplementation(platform("org.junit:junit-bom:%s"))
                 }
-                """.formatted(NEWER_THAN_JENKINS_CORE));
+                """.formatted(
+                        NEWER_THAN_JENKINS_CORE));
 
         var result = ith.gradleRunner()
-                .withArguments("dependencyInsight", "--configuration", "testDefaultRuntime",
-                        "--dependency", "org.junit.jupiter:junit-jupiter-api")
+                .withArguments(
+                        "dependencyInsight",
+                        "--configuration",
+                        "testDefaultRuntime",
+                        "--dependency",
+                        "org.junit.jupiter:junit-jupiter-api")
                 .build();
 
         assertThat(result.getOutput())
                 .contains("BUILD SUCCESSFUL")
                 .contains("org.junit.jupiter:junit-jupiter-api:" + NEWER_THAN_JENKINS_CORE);
     }
-
 }

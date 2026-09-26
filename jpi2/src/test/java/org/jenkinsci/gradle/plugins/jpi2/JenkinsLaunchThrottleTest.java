@@ -1,10 +1,10 @@
 package org.jenkinsci.gradle.plugins.jpi2;
 
-import org.junit.jupiter.api.Test;
-
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
 import static org.jenkinsci.gradle.plugins.jpi2.JenkinsLaunchThrottle.resolveMaxParallelLaunches;
+
+import org.junit.jupiter.api.Test;
 
 class JenkinsLaunchThrottleTest {
 

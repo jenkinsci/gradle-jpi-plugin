@@ -1,5 +1,18 @@
 package org.jenkinsci.gradle.plugins.jpi2;
 
+import static java.nio.charset.StandardCharsets.UTF_8;
+import static java.nio.file.StandardOpenOption.CREATE;
+import static java.nio.file.StandardOpenOption.TRUNCATE_EXISTING;
+import static java.util.stream.Collectors.joining;
+
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.Set;
 import org.gradle.api.DefaultTask;
 import org.gradle.api.GradleException;
 import org.gradle.api.file.ConfigurableFileCollection;
@@ -10,20 +23,6 @@ import org.gradle.api.tasks.OutputFile;
 import org.gradle.api.tasks.PathSensitive;
 import org.gradle.api.tasks.PathSensitivity;
 import org.gradle.api.tasks.TaskAction;
-
-import java.io.BufferedWriter;
-import java.io.File;
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.Set;
-
-import static java.nio.charset.StandardCharsets.UTF_8;
-import static java.nio.file.StandardOpenOption.CREATE;
-import static java.nio.file.StandardOpenOption.TRUNCATE_EXISTING;
-import static java.util.stream.Collectors.joining;
 
 /**
  * Verifies that multiple compile outputs don't produce conflicting Sezpoz annotation index files
@@ -70,7 +69,8 @@ public abstract class CheckOverlappingSourcesTask extends DefaultTask {
                     continue;
                 }
                 if (!existingSezpozFiles.add(fileName)) {
-                    throw new GradleException("Found overlapping Sezpoz file: " + fileName + ". Use joint compilation!");
+                    throw new GradleException(
+                            "Found overlapping Sezpoz file: " + fileName + ". Use joint compilation!");
                 }
             }
         }
@@ -84,14 +84,10 @@ public abstract class CheckOverlappingSourcesTask extends DefaultTask {
         }
 
         if (pluginImpls.size() > 1) {
-            String implementations = pluginImpls.stream()
-                    .map(File::getPath)
-                    .collect(joining(", "));
-            throw new GradleException(
-                    "Found multiple directories containing Jenkins plugin implementations ('"
-                            + implementations
-                            + "'). Use joint compilation to work around this problem."
-            );
+            String implementations = pluginImpls.stream().map(File::getPath).collect(joining(", "));
+            throw new GradleException("Found multiple directories containing Jenkins plugin implementations ('"
+                    + implementations
+                    + "'). Use joint compilation to work around this problem.");
         }
         discovered.addAll(pluginImpls);
 

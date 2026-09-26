@@ -1,5 +1,10 @@
 package org.jenkinsci.gradle.plugins.jpi2;
 
+import static org.assertj.core.api.Assertions.assertThat;
+
+import java.io.File;
+import java.io.FileReader;
+import java.io.IOException;
 import java.nio.file.Files;
 import org.apache.maven.model.Dependency;
 import org.apache.maven.model.Model;
@@ -10,13 +15,6 @@ import org.codehaus.plexus.util.xml.pull.XmlPullParserException;
 import org.jenkinsci.gradle.plugins.jpi.IntegrationTestHelper;
 import org.junit.jupiter.api.Test;
 
-import java.io.File;
-import java.io.FileReader;
-import java.io.IOException;
-import java.nio.charset.StandardCharsets;
-
-import static org.assertj.core.api.Assertions.assertThat;
-
 class PublishingIntegrationTest extends V2IntegrationTestBase {
 
     @Test
@@ -24,7 +22,8 @@ class PublishingIntegrationTest extends V2IntegrationTestBase {
         // given
         var ith = new IntegrationTestHelper(tempDir, "8.14");
         initBuild(ith);
-        Files.writeString(ith.inProjectDir("build.gradle.kts").toPath(), getBasePluginConfig() + /* language=kotlin */ """
+        Files.writeString(
+                ith.inProjectDir("build.gradle.kts").toPath(), getBasePluginConfig() + /* language=kotlin */ """
                 dependencies {
                     api("org.jenkins-ci.plugins:jackson2-api:2.18.3-402.v74c4eb_f122b_2")
                     implementation("com.github.rahulsom:nothing-java:0.2.0")
@@ -62,27 +61,28 @@ class PublishingIntegrationTest extends V2IntegrationTestBase {
 
         var dependencies = model.getDependencies();
         assertThat(dependencies)
-                .extracting(Dependency::getGroupId, Dependency::getArtifactId, Dependency::getVersion, Dependency::getScope)
+                .extracting(
+                        Dependency::getGroupId, Dependency::getArtifactId, Dependency::getVersion, Dependency::getScope)
                 .containsExactlyInAnyOrder(
                         new Tuple("org.jenkins-ci.plugins", "jackson2-api", "2.18.3-402.v74c4eb_f122b_2", "compile"),
-                        new Tuple("com.github.rahulsom", "nothing-java", "0.2.0", "runtime")
-                );
+                        new Tuple("com.github.rahulsom", "nothing-java", "0.2.0", "runtime"));
 
         var repositories = model.getRepositories();
         assertThat(repositories)
                 .extracting(Repository::getId, Repository::getUrl)
                 .containsExactlyInAnyOrder(
                         new Tuple("MavenRepo", "https://repo.maven.apache.org/maven2/"),
-                        new Tuple("jenkinsPublic", "https://repo.jenkins-ci.org/public/")
-                );
+                        new Tuple("jenkinsPublic", "https://repo.jenkins-ci.org/public/"));
         var explodedWar = ith.inProjectDir("build/jpi");
 
         var jpiLibsDir = new File(explodedWar, "WEB-INF/lib");
         assertThat(jpiLibsDir).exists();
 
         var jpiLibs = jpiLibsDir.list();
-        assertThat(jpiLibs).isNotNull()
-                .containsExactlyInAnyOrder("nothing-java-0.2.0.jar",
+        assertThat(jpiLibs)
+                .isNotNull()
+                .containsExactlyInAnyOrder(
+                        "nothing-java-0.2.0.jar",
                         "test-plugin-1.0.0.jar",
                         "commons-math3-3.6.1.jar",
                         "commons-lang3-3.12.0.jar");
@@ -93,7 +93,8 @@ class PublishingIntegrationTest extends V2IntegrationTestBase {
         // given
         var ith = new IntegrationTestHelper(tempDir, "8.14");
         initBuild(ith);
-        Files.writeString(ith.inProjectDir("build.gradle.kts").toPath(), getBasePluginConfig() + /* language=kotlin */ """
+        Files.writeString(
+                ith.inProjectDir("build.gradle.kts").toPath(), getBasePluginConfig() + /* language=kotlin */ """
                 publishing {
                     publications.withType<MavenPublication>().configureEach {
                         pom {
@@ -117,7 +118,8 @@ class PublishingIntegrationTest extends V2IntegrationTestBase {
 
         assertThat(model.getScm()).isNotNull();
         assertThat(model.getScm().getConnection()).isEqualTo("scm:git:https://github.com/jenkinsci/example-plugin.git");
-        assertThat(model.getScm().getDeveloperConnection()).isEqualTo("scm:git:git@github.com:jenkinsci/example-plugin.git");
+        assertThat(model.getScm().getDeveloperConnection())
+                .isEqualTo("scm:git:git@github.com:jenkinsci/example-plugin.git");
         assertThat(model.getScm().getTag()).isEqualTo("HEAD");
         assertThat(model.getScm().getUrl()).isEqualTo("https://github.com/jenkinsci/example-plugin");
         assertThat(model.getPackaging()).isEqualTo("jpi");
@@ -164,8 +166,7 @@ class PublishingIntegrationTest extends V2IntegrationTestBase {
                 .extracting(Repository::getId, Repository::getUrl)
                 .containsExactlyInAnyOrder(
                         new Tuple("MavenRepo", "https://repo.maven.apache.org/maven2/"),
-                        new Tuple("jenkinsPublic", "https://repo.jenkins-ci.org/public/")
-                );
+                        new Tuple("jenkinsPublic", "https://repo.jenkins-ci.org/public/"));
     }
 
     private static final String PUBLISH_TO_JENKINS_IMPORT = """
@@ -181,7 +182,9 @@ class PublishingIntegrationTest extends V2IntegrationTestBase {
         // given
         var ith = new IntegrationTestHelper(tempDir, "8.14");
         initBuild(ith);
-        Files.writeString(ith.inProjectDir("build.gradle.kts").toPath(), PUBLISH_TO_JENKINS_IMPORT + getBasePluginConfig() + /* language=kotlin */ """
+        Files.writeString(
+                ith.inProjectDir("build.gradle.kts").toPath(),
+                PUBLISH_TO_JENKINS_IMPORT + getBasePluginConfig() + /* language=kotlin */ """
                 publishing {
                     repositories {
                         publishToJenkins()
@@ -190,8 +193,9 @@ class PublishingIntegrationTest extends V2IntegrationTestBase {
                 """);
 
         // when
-        var result = ith.gradleRunner().withArguments(
-                "publish", "--dry-run", JENKINS_PUBLISH_USERNAME, JENKINS_PUBLISH_PASSWORD).build();
+        var result = ith.gradleRunner()
+                .withArguments("publish", "--dry-run", JENKINS_PUBLISH_USERNAME, JENKINS_PUBLISH_PASSWORD)
+                .build();
 
         // then
         assertThat(result.getOutput()).contains("publishMavenJpiPublicationToJenkinsPublishRepository");
@@ -202,7 +206,11 @@ class PublishingIntegrationTest extends V2IntegrationTestBase {
         // given
         var ith = new IntegrationTestHelper(tempDir, "8.14");
         initBuild(ith);
-        Files.writeString(ith.inProjectDir("build.gradle.kts").toPath(), PUBLISH_TO_JENKINS_IMPORT + String.format(/* language=kotlin */ """
+        Files.writeString(
+                ith.inProjectDir("build.gradle.kts").toPath(),
+                PUBLISH_TO_JENKINS_IMPORT
+                        + String.format(
+                                /* language=kotlin */ """
                 plugins {
                     id("org.jenkins-ci.jpi2")
                 }
@@ -227,12 +235,17 @@ class PublishingIntegrationTest extends V2IntegrationTestBase {
                         }
                     }
                 }
-                """, RandomPortProvider.findFreePort(), RandomPortProvider.findFreePort()));
+                """,
+                                RandomPortProvider.findFreePort(), RandomPortProvider.findFreePort()));
 
         // when
-        var result = ith.gradleRunner().withArguments(
-                "publishMavenJpiPublicationToJenkinsPublishRepository", "--dry-run",
-                JENKINS_PUBLISH_USERNAME, JENKINS_PUBLISH_PASSWORD).build();
+        var result = ith.gradleRunner()
+                .withArguments(
+                        "publishMavenJpiPublicationToJenkinsPublishRepository",
+                        "--dry-run",
+                        JENKINS_PUBLISH_USERNAME,
+                        JENKINS_PUBLISH_PASSWORD)
+                .build();
 
         // then
         assertThat(result.getOutput()).contains("publishMavenJpiPublicationToJenkinsPublishRepository");
@@ -243,7 +256,11 @@ class PublishingIntegrationTest extends V2IntegrationTestBase {
         // given
         var ith = new IntegrationTestHelper(tempDir, "8.14");
         initBuild(ith);
-        Files.writeString(ith.inProjectDir("build.gradle.kts").toPath(), PUBLISH_TO_JENKINS_IMPORT + String.format(/* language=kotlin */ """
+        Files.writeString(
+                ith.inProjectDir("build.gradle.kts").toPath(),
+                PUBLISH_TO_JENKINS_IMPORT
+                        + String.format(
+                                /* language=kotlin */ """
                 plugins {
                     id("org.jenkins-ci.jpi2")
                 }
@@ -268,12 +285,17 @@ class PublishingIntegrationTest extends V2IntegrationTestBase {
                         }
                     }
                 }
-                """, RandomPortProvider.findFreePort(), RandomPortProvider.findFreePort()));
+                """,
+                                RandomPortProvider.findFreePort(), RandomPortProvider.findFreePort()));
 
         // when
-        var result = ith.gradleRunner().withArguments(
-                "publishMavenJpiPublicationToJenkinsPublishRepository", "--dry-run",
-                JENKINS_PUBLISH_USERNAME, JENKINS_PUBLISH_PASSWORD).build();
+        var result = ith.gradleRunner()
+                .withArguments(
+                        "publishMavenJpiPublicationToJenkinsPublishRepository",
+                        "--dry-run",
+                        JENKINS_PUBLISH_USERNAME,
+                        JENKINS_PUBLISH_PASSWORD)
+                .build();
 
         // then
         assertThat(result.getOutput()).contains("publishMavenJpiPublicationToJenkinsPublishRepository");
@@ -306,8 +328,9 @@ class PublishingIntegrationTest extends V2IntegrationTestBase {
                 """);
 
         // when
-        var result = ith.gradleRunner().withArguments(
-                "publish", "--dry-run", JENKINS_PUBLISH_USERNAME, JENKINS_PUBLISH_PASSWORD).build();
+        var result = ith.gradleRunner()
+                .withArguments("publish", "--dry-run", JENKINS_PUBLISH_USERNAME, JENKINS_PUBLISH_PASSWORD)
+                .build();
 
         // then
         assertThat(result.getOutput()).contains("publishMavenJpiPublicationToJenkinsPublishRepository");
@@ -318,14 +341,16 @@ class PublishingIntegrationTest extends V2IntegrationTestBase {
         // given
         var ith = new IntegrationTestHelper(tempDir, "8.14");
         initBuild(ith);
-        Files.writeString(ith.inProjectDir("build.gradle.kts").toPath(), getBasePluginConfig() + /* language=kotlin */ """
+        Files.writeString(
+                ith.inProjectDir("build.gradle.kts").toPath(), getBasePluginConfig() + /* language=kotlin */ """
                 dependencies {
                     implementation("org.jenkins-ci.plugins:jackson2-api:2.18.3-402.v74c4eb_f122b_2")
                 }
                 """);
 
         ith.mkDirInProjectDir("src/main/java/com/example/plugin");
-        Files.writeString(ith.inProjectDir("src/main/java/com/example/plugin/Plugin.java").toPath(), /* language=java */ """
+        Files.writeString(
+                ith.inProjectDir("src/main/java/com/example/plugin/Plugin.java").toPath(), /* language=java */ """
                 package com.example.plugin;
                 import com.fasterxml.jackson.databind.ObjectMapper;
                 public class Plugin {
@@ -348,8 +373,6 @@ class PublishingIntegrationTest extends V2IntegrationTestBase {
         assertThat(jpiLibsDir).exists();
 
         var jpiLibs = jpiLibsDir.list();
-        assertThat(jpiLibs).isNotNull()
-                .containsExactlyInAnyOrder("test-plugin-1.0.0.jar");
-
+        assertThat(jpiLibs).isNotNull().containsExactlyInAnyOrder("test-plugin-1.0.0.jar");
     }
 }

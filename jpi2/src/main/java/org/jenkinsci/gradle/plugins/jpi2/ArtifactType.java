@@ -8,7 +8,8 @@ import org.gradle.api.attributes.Attribute;
  */
 public interface ArtifactType extends Named {
     /** Gradle attribute used to distinguish artifact types in dependency resolution. */
-    Attribute<ArtifactType> ARTIFACT_TYPE_ATTRIBUTE = Attribute.of("org.jenkinsci.gradle.plugins.jpi2.artifact.type", ArtifactType.class);
+    Attribute<ArtifactType> ARTIFACT_TYPE_ATTRIBUTE =
+            Attribute.of("org.jenkinsci.gradle.plugins.jpi2.artifact.type", ArtifactType.class);
     /** Artifact type for Jenkins plugin JAR files. */
     String PLUGIN_JAR = "pluginJar";
     /** Default artifact type. */

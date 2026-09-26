@@ -1,6 +1,16 @@
 package org.jenkinsci.gradle.plugins.jpi2;
 
+import static org.assertj.core.api.Assertions.assertThat;
+
+import java.io.File;
+import java.io.FileReader;
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.util.List;
+import java.util.concurrent.TimeUnit;
+import java.util.jar.JarFile;
+import java.util.regex.Pattern;
 import org.apache.maven.model.Model;
 import org.apache.maven.model.io.xpp3.MavenXpp3Reader;
 import org.codehaus.plexus.util.xml.pull.XmlPullParserException;
@@ -8,17 +18,6 @@ import org.gradle.testkit.runner.BuildResult;
 import org.jenkinsci.gradle.plugins.jpi.IntegrationTestHelper;
 import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.Test;
-
-import java.io.File;
-import java.io.FileReader;
-import java.io.IOException;
-import java.nio.charset.StandardCharsets;
-import java.util.List;
-import java.util.concurrent.TimeUnit;
-import java.util.jar.JarFile;
-import java.util.regex.Pattern;
-
-import static org.assertj.core.api.Assertions.assertThat;
 
 class VersionSourceIntegrationTest extends V2IntegrationTestBase {
 
@@ -168,7 +167,9 @@ class VersionSourceIntegrationTest extends V2IntegrationTestBase {
 
         var versionFile = ith.inProjectDir("build/generated/version/version.txt");
         assertThat(versionFile).exists();
-        var expectedVersion = Files.readAllLines(versionFile.toPath(), StandardCharsets.UTF_8).get(0).trim();
+        var expectedVersion = Files.readAllLines(versionFile.toPath(), StandardCharsets.UTF_8)
+                .get(0)
+                .trim();
 
         var manifest = ith.inProjectDir("build/jpi/META-INF/MANIFEST.MF");
         assertThat(manifest).exists();
@@ -198,7 +199,9 @@ class VersionSourceIntegrationTest extends V2IntegrationTestBase {
 
         var versionFile = ith.inProjectDir("build/generated/version/version.txt");
         assertThat(versionFile).exists();
-        var expectedVersion = Files.readAllLines(versionFile.toPath(), StandardCharsets.UTF_8).get(0).trim();
+        var expectedVersion = Files.readAllLines(versionFile.toPath(), StandardCharsets.UTF_8)
+                .get(0)
+                .trim();
         assertPomAndJpiContainVersion(ith, expectedVersion);
     }
 
@@ -210,7 +213,8 @@ class VersionSourceIntegrationTest extends V2IntegrationTestBase {
         initGitRepo(ith.inProjectDir("."));
         Files.writeString(ith.inProjectDir("uncommitted.txt").toPath(), "dirty");
 
-        BuildResult result = ith.gradleRunner().withArguments("generateGitVersion").buildAndFail();
+        BuildResult result =
+                ith.gradleRunner().withArguments("generateGitVersion").buildAndFail();
 
         assertThat(result.getOutput()).contains("uncommitted changes");
     }
@@ -254,7 +258,8 @@ class VersionSourceIntegrationTest extends V2IntegrationTestBase {
 
         var versionFile = ith.inProjectDir("build/generated/version/version.txt");
         assertThat(versionFile).exists();
-        var firstLine = Files.readAllLines(versionFile.toPath(), StandardCharsets.UTF_8).get(0);
+        var firstLine =
+                Files.readAllLines(versionFile.toPath(), StandardCharsets.UTF_8).get(0);
         assertThat(firstLine).startsWith("rc-");
         assertThat(firstLine).matches("rc-\\d+\\.[a-f0-9]{10}");
     }
@@ -265,19 +270,23 @@ class VersionSourceIntegrationTest extends V2IntegrationTestBase {
         initBuild(ith);
         Files.writeString(ith.inProjectDir("build.gradle.kts").toPath(), getConfig());
 
-        BuildResult result = ith.gradleRunner().withArguments("generateGitVersion").buildAndFail();
+        BuildResult result =
+                ith.gradleRunner().withArguments("generateGitVersion").buildAndFail();
 
         assertThat(result.getOutput()).contains("Not a Git repository");
     }
 
-    private static void assertPomAndJpiContainVersion(IntegrationTestHelper ith, String expectedVersion) throws IOException, XmlPullParserException {
-        var pom = ith.inProjectDir("build/repo/com/example/test-plugin/" + expectedVersion + "/test-plugin-" + expectedVersion + ".pom");
+    private static void assertPomAndJpiContainVersion(IntegrationTestHelper ith, String expectedVersion)
+            throws IOException, XmlPullParserException {
+        var pom = ith.inProjectDir(
+                "build/repo/com/example/test-plugin/" + expectedVersion + "/test-plugin-" + expectedVersion + ".pom");
         assertThat(pom).exists();
         var reader = new MavenXpp3Reader();
         Model model = reader.read(new FileReader(pom, StandardCharsets.UTF_8));
         assertThat(model.getVersion()).isEqualTo(expectedVersion);
 
-        var jpi = ith.inProjectDir("build/repo/com/example/test-plugin/" + expectedVersion + "/test-plugin-" + expectedVersion + ".jpi");
+        var jpi = ith.inProjectDir(
+                "build/repo/com/example/test-plugin/" + expectedVersion + "/test-plugin-" + expectedVersion + ".jpi");
         assertThat(jpi).exists();
         try (var jar = new JarFile(jpi)) {
             var manifest = jar.getManifest();

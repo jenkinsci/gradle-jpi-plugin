@@ -1,6 +1,15 @@
 package org.jenkinsci.gradle.plugins.jpi2;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatCode;
+
+import java.io.File;
+import java.io.FileReader;
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.util.jar.Attributes;
+import java.util.jar.Manifest;
 import org.apache.maven.model.Dependency;
 import org.apache.maven.model.Model;
 import org.apache.maven.model.io.xpp3.MavenXpp3Reader;
@@ -10,23 +19,14 @@ import org.gradle.testkit.runner.GradleRunner;
 import org.jenkinsci.gradle.plugins.jpi.IntegrationTestHelper;
 import org.junit.jupiter.api.Test;
 
-import java.io.File;
-import java.io.FileReader;
-import java.io.IOException;
-import java.nio.charset.StandardCharsets;
-import java.util.jar.Attributes;
-import java.util.jar.Manifest;
-
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatCode;
-
 class ManifestIntegrationTest extends V2IntegrationTestBase {
 
     @Test
     void manifestContainsVersionWhenUsingForce() throws IOException {
         var ith = new IntegrationTestHelper(tempDir, "8.14");
         initBuild(ith);
-        Files.writeString(ith.inProjectDir("build.gradle.kts").toPath(), getBasePluginConfig() + /* language=kotlin */ """
+        Files.writeString(
+                ith.inProjectDir("build.gradle.kts").toPath(), getBasePluginConfig() + /* language=kotlin */ """
                 configurations.configureEach {
                     resolutionStrategy {
                         force("org.jenkins-ci.plugins:git:5.7.0")
@@ -52,7 +52,10 @@ class ManifestIntegrationTest extends V2IntegrationTestBase {
         var ith = new IntegrationTestHelper(tempDir, "8.14");
         initBuild(ith);
         ith.mkDirInProjectDir("src-repo/com/example/bom/bom/1.0.0");
-        Files.writeString(ith.inProjectDir("src-repo/com/example/bom/bom/1.0.0/bom-1.0.0.pom").toPath(), /* language=xml */ """
+        Files.writeString(
+                ith.inProjectDir("src-repo/com/example/bom/bom/1.0.0/bom-1.0.0.pom")
+                        .toPath(), /* language=xml */
+                """
                 <project xmlns="http://maven.apache.org/POM/4.0.0"
                         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
                         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
@@ -72,7 +75,8 @@ class ManifestIntegrationTest extends V2IntegrationTestBase {
                     </dependencyManagement>
                 </project>
                 """);
-        Files.writeString(ith.inProjectDir("build.gradle.kts").toPath(), getBasePluginConfig() + /* language=kotlin */ """
+        Files.writeString(
+                ith.inProjectDir("build.gradle.kts").toPath(), getBasePluginConfig() + /* language=kotlin */ """
                 repositories {
                     maven {
                         url = uri("${rootDir}/src-repo")
@@ -88,7 +92,8 @@ class ManifestIntegrationTest extends V2IntegrationTestBase {
 
         var result = gradleRunner.withArguments("build", "publish").build();
 
-        assertThat(result.getOutput()).doesNotContain("Dependency resolution rules will not be applied to configuration");
+        assertThat(result.getOutput())
+                .doesNotContain("Dependency resolution rules will not be applied to configuration");
 
         var manifestData = manifestAttributes(ith);
         assertThat(manifestData).isNotNull().isNotEmpty();
@@ -106,10 +111,9 @@ class ManifestIntegrationTest extends V2IntegrationTestBase {
         assertThat(model.getPackaging()).isEqualTo("jpi");
         var dependencies = model.getDependencies();
         assertThat(dependencies)
-                .extracting(Dependency::getGroupId, Dependency::getArtifactId, Dependency::getVersion, Dependency::getScope)
-                .containsExactlyInAnyOrder(
-                        new Tuple("org.jenkins-ci.plugins", "git", "5.7.0", "compile")
-                );
+                .extracting(
+                        Dependency::getGroupId, Dependency::getArtifactId, Dependency::getVersion, Dependency::getScope)
+                .containsExactlyInAnyOrder(new Tuple("org.jenkins-ci.plugins", "git", "5.7.0", "compile"));
     }
 
     @Test
@@ -198,7 +202,9 @@ class ManifestIntegrationTest extends V2IntegrationTestBase {
         // manifest) outside of the per-project configuration lock that plain afterEvaluate holds.
         var ith = new IntegrationTestHelper(tempDir, "8.14");
         initBuild(ith);
-        Files.write(ith.inProjectDir("build.gradle.kts").toPath(), (getBasePluginConfig() + /* language=kotlin */ """
+        Files.write(
+                ith.inProjectDir("build.gradle.kts").toPath(),
+                (getBasePluginConfig() + /* language=kotlin */ """
                 gradle.projectsEvaluated {
                     (publishing.publications["mavenJpi"] as MavenPublication).artifacts.forEach { }
                 }
@@ -213,7 +219,8 @@ class ManifestIntegrationTest extends V2IntegrationTestBase {
         return new Manifest(manifest.toURI().toURL().openStream()).getMainAttributes();
     }
 
-    private static void writeJavaSource(IntegrationTestHelper ith, String relativePath, String source) throws IOException {
+    private static void writeJavaSource(IntegrationTestHelper ith, String relativePath, String source)
+            throws IOException {
         var parent = relativePath.substring(0, relativePath.lastIndexOf('/'));
         ith.mkDirInProjectDir("src/main/java/" + parent);
         Files.writeString(ith.inProjectDir("src/main/java/" + relativePath).toPath(), source);

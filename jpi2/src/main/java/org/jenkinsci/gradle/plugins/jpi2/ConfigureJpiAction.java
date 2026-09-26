@@ -12,7 +12,7 @@ import org.jetbrains.annotations.NotNull;
  * Action to configure the JPI task for a Jenkins plugin.
  */
 @SuppressWarnings({
-        "Convert2Lambda", // Gradle doesn't like lambdas
+    "Convert2Lambda", // Gradle doesn't like lambdas
 })
 class ConfigureJpiAction implements Action<War> {
     private final Project project;
@@ -20,7 +20,8 @@ class ConfigureJpiAction implements Action<War> {
     private final Configuration jenkinsCore;
     private final JenkinsPluginExtension extension;
 
-    public ConfigureJpiAction(Project project, Configuration configuration, Configuration jenkinsCore, JenkinsPluginExtension extension) {
+    public ConfigureJpiAction(
+            Project project, Configuration configuration, Configuration jenkinsCore, JenkinsPluginExtension extension) {
         this.project = project;
         this.configuration = configuration;
         this.jenkinsCore = jenkinsCore;

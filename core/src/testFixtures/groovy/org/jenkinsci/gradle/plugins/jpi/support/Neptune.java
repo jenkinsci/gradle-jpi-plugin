@@ -1,16 +1,14 @@
 package org.jenkinsci.gradle.plugins.jpi.support;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import java.io.File;
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.stream.Collectors;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class Neptune {
     private static final Logger LOGGER = LoggerFactory.getLogger(Neptune.class);
@@ -53,8 +51,7 @@ public class Neptune {
     }
 
     public static Neptune.Builder newBuilder(ProjectFile root) {
-        return new Neptune.Builder()
-                .withRootProject(root);
+        return new Neptune.Builder().withRootProject(root);
     }
 
     public static class Builder {
@@ -62,8 +59,7 @@ public class Neptune {
         private final List<ProjectFile> subprojects = new LinkedList<>();
         private final Indenter indenter = FourSpaceIndenter.create();
 
-        private Builder() {
-        }
+        private Builder() {}
 
         public Builder withRootProject(ProjectFile root) {
             this.root = root;
@@ -78,9 +74,8 @@ public class Neptune {
         public Neptune build() {
             SettingsFile settings = SettingsFile.builder()
                     .withRootProjectName(root.getName())
-                    .addSubprojects(subprojects.stream()
-                            .map(ProjectFile::getName)
-                            .collect(Collectors.toSet()))
+                    .addSubprojects(
+                            subprojects.stream().map(ProjectFile::getName).collect(Collectors.toSet()))
                     .build();
             return new Neptune(root, subprojects, settings, indenter);
         }

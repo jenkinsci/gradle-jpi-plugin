@@ -1,13 +1,11 @@
 package org.jenkinsci.gradle.plugins.jpi2;
 
+import static org.assertj.core.api.Assertions.assertThat;
+
+import java.io.IOException;
 import java.nio.file.Files;
 import org.jenkinsci.gradle.plugins.jpi.IntegrationTestHelper;
 import org.junit.jupiter.api.Test;
-
-import java.io.IOException;
-import java.nio.charset.StandardCharsets;
-
-import static org.assertj.core.api.Assertions.assertThat;
 
 class AccessModifierIntegrationTest extends V2IntegrationTestBase {
 
@@ -18,7 +16,10 @@ class AccessModifierIntegrationTest extends V2IntegrationTestBase {
         initBuild(ith);
         Files.writeString(ith.inProjectDir("build.gradle.kts").toPath(), getBasePluginConfig());
         ith.mkDirInProjectDir("src/main/java/com/example/plugin");
-        Files.writeString(ith.inProjectDir("src/main/java/com/example/plugin/Example.java").toPath(), /* language=java */ """
+        Files.writeString(
+                ith.inProjectDir("src/main/java/com/example/plugin/Example.java")
+                        .toPath(), /* language=java */
+                """
                 package com.example.plugin;
                 public class Example {
                     public String value() {
@@ -40,14 +41,18 @@ class AccessModifierIntegrationTest extends V2IntegrationTestBase {
         // given
         var ith = new IntegrationTestHelper(tempDir, "8.14");
         initBuild(ith);
-        Files.writeString(ith.inProjectDir("build.gradle.kts").toPath(), getBasePluginConfig() + /* language=kotlin */ """
+        Files.writeString(
+                ith.inProjectDir("build.gradle.kts").toPath(), getBasePluginConfig() + /* language=kotlin */ """
                 tasks.named<org.jenkinsci.gradle.plugins.jpi2.accmod.CheckAccessModifierTask>("checkAccessModifier") {
                     ignoreFailures.set(false)
                 }
                 """);
         ith.mkDirInProjectDir("src/main/java/org/example/restricted");
         ith.mkDirInProjectDir("src/main/java/org/example/blessed");
-        Files.writeString(ith.inProjectDir("src/main/java/org/example/restricted/OhNo.java").toPath(), /* language=java */ """
+        Files.writeString(
+                ith.inProjectDir("src/main/java/org/example/restricted/OhNo.java")
+                        .toPath(), /* language=java */
+                """
                 package org.example.restricted;
                 import org.kohsuke.accmod.Restricted;
                 import org.kohsuke.accmod.restrictions.DoNotUse;
@@ -58,7 +63,10 @@ class AccessModifierIntegrationTest extends V2IntegrationTestBase {
                     }
                 }
                 """);
-        Files.writeString(ith.inProjectDir("src/main/java/org/example/blessed/Consumer.java").toPath(), /* language=java */ """
+        Files.writeString(
+                ith.inProjectDir("src/main/java/org/example/blessed/Consumer.java")
+                        .toPath(), /* language=java */
+                """
                 package org.example.blessed;
                 import org.example.restricted.OhNo;
                 public class Consumer {

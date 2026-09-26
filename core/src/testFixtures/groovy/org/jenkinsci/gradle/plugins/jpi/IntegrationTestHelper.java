@@ -1,14 +1,13 @@
 package org.jenkinsci.gradle.plugins.jpi;
 
-import org.gradle.testkit.runner.GradleRunner;
-import org.gradle.util.GradleVersion;
-
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.util.Locale;
 import java.util.Properties;
+import org.gradle.testkit.runner.GradleRunner;
+import org.gradle.util.GradleVersion;
 
 public class IntegrationTestHelper {
 
@@ -42,16 +41,13 @@ public class IntegrationTestHelper {
                 props.store(outputStream, "IntegrationSpec default generated values");
             }
         }
-        var runner = GradleRunner.create()
-                .withPluginClasspath()
-                .withProjectDir(projectDir);
+        var runner = GradleRunner.create().withPluginClasspath().withProjectDir(projectDir);
         var gradleVersion = getGradleVersionForTest(minimumGradleVersion);
         if (gradleVersion != GradleVersion.current()) {
             return runner.withGradleVersion(gradleVersion.getVersion());
         }
         return runner.withArguments("-Dorg.gradle.deprecation.trace=true");
     }
-
 
     public static GradleVersion getGradleVersionForTest(String minimumGradleVersion) {
         String gradleUnderTest = System.getProperty("gradle.under.test");
@@ -90,5 +86,4 @@ public class IntegrationTestHelper {
     public File touchInProjectDir(String path) throws IOException {
         return Files.createFile(projectDir.toPath().resolve(path)).toFile();
     }
-
 }

@@ -1,19 +1,17 @@
 package org.jenkinsci.gradle.plugins.jpi2;
 
+import static org.assertj.core.api.Assertions.assertThat;
+
+import java.io.FileReader;
+import java.io.IOException;
 import java.nio.file.Files;
+import java.util.jar.Manifest;
 import org.apache.maven.model.Developer;
 import org.apache.maven.model.License;
 import org.apache.maven.model.io.xpp3.MavenXpp3Reader;
 import org.codehaus.plexus.util.xml.pull.XmlPullParserException;
 import org.jenkinsci.gradle.plugins.jpi.IntegrationTestHelper;
 import org.junit.jupiter.api.Test;
-
-import java.io.FileReader;
-import java.io.IOException;
-import java.nio.charset.StandardCharsets;
-import java.util.jar.Manifest;
-
-import static org.assertj.core.api.Assertions.assertThat;
 
 class MetadataIntegrationTest extends V2IntegrationTestBase {
 
@@ -53,7 +51,10 @@ class MetadataIntegrationTest extends V2IntegrationTestBase {
 
         ith.gradleRunner().withArguments("build").build();
 
-        var manifest = new Manifest(ith.inProjectDir("build/jpi/META-INF/MANIFEST.MF").toURI().toURL().openStream());
+        var manifest = new Manifest(ith.inProjectDir("build/jpi/META-INF/MANIFEST.MF")
+                .toURI()
+                .toURL()
+                .openStream());
         var attrs = manifest.getMainAttributes();
 
         assertThat(attrs.getValue("Url")).isEqualTo("https://example.com/my-plugin");
@@ -81,18 +82,12 @@ class MetadataIntegrationTest extends V2IntegrationTestBase {
                 .extracting(Developer::getId, Developer::getName, Developer::getEmail)
                 .containsExactly(
                         org.assertj.core.groups.Tuple.tuple("alice", "Alice Dev", "alice@example.com"),
-                        org.assertj.core.groups.Tuple.tuple("bob", "Bob Dev", "bob@example.com")
-                );
+                        org.assertj.core.groups.Tuple.tuple("bob", "Bob Dev", "bob@example.com"));
 
         assertThat(model.getLicenses())
                 .extracting(License::getName, License::getUrl, License::getDistribution)
-                .containsExactly(
-                        org.assertj.core.groups.Tuple.tuple(
-                                "Apache License, Version 2.0",
-                                "https://www.apache.org/licenses/LICENSE-2.0",
-                                "repo"
-                        )
-                );
+                .containsExactly(org.assertj.core.groups.Tuple.tuple(
+                        "Apache License, Version 2.0", "https://www.apache.org/licenses/LICENSE-2.0", "repo"));
     }
 
     @Test
@@ -103,7 +98,10 @@ class MetadataIntegrationTest extends V2IntegrationTestBase {
 
         ith.gradleRunner().withArguments("build").build();
 
-        var manifest = new Manifest(ith.inProjectDir("build/jpi/META-INF/MANIFEST.MF").toURI().toURL().openStream());
+        var manifest = new Manifest(ith.inProjectDir("build/jpi/META-INF/MANIFEST.MF")
+                .toURI()
+                .toURL()
+                .openStream());
         var attrs = manifest.getMainAttributes();
 
         assertThat(attrs.getValue("Url")).isNull();

@@ -1,16 +1,15 @@
 package org.jenkinsci.gradle.plugins.jpi2;
 
-import org.gradle.testfixtures.ProjectBuilder;
-import org.junit.jupiter.api.Test;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatCode;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.net.BindException;
 import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.util.ArrayList;
-
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatCode;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import org.gradle.testfixtures.ProjectBuilder;
+import org.junit.jupiter.api.Test;
 
 /**
  * Covers <a href="https://github.com/jenkinsci/gradle-jpi-plugin/issues/344">#344</a>: a port
@@ -54,10 +53,11 @@ class PortAllocationServiceTest {
         // Once released, the port is free again for the caller to actually hand to the process
         // that will bind it.
         assertThatCode(() -> {
-            try (ServerSocket bound = new ServerSocket(port)) {
-                bound.setReuseAddress(true);
-            }
-        }).doesNotThrowAnyException();
+                    try (ServerSocket bound = new ServerSocket(port)) {
+                        bound.setReuseAddress(true);
+                    }
+                })
+                .doesNotThrowAnyException();
     }
 
     @Test
@@ -73,10 +73,9 @@ class PortAllocationServiceTest {
                 reserved.add(service.reservePort());
             }
 
-            assertThat(reserved).allSatisfy(port ->
-                    assertThatThrownBy(() -> new ServerSocket(port))
-                            .as("reservation for port %s must still be held", port)
-                            .isInstanceOf(BindException.class));
+            assertThat(reserved).allSatisfy(port -> assertThatThrownBy(() -> new ServerSocket(port))
+                    .as("reservation for port %s must still be held", port)
+                    .isInstanceOf(BindException.class));
         } finally {
             reserved.forEach(service::releasePort);
         }

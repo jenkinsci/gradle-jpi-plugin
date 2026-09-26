@@ -1,10 +1,9 @@
 package org.jenkinsci.gradle.plugins.jpi2;
 
+import javax.inject.Inject;
 import org.gradle.api.attributes.AttributeDisambiguationRule;
 import org.gradle.api.attributes.MultipleCandidatesDetails;
 import org.jetbrains.annotations.NotNull;
-
-import javax.inject.Inject;
 
 /**
  * Third-party plugins (e.g. {@code pmd}) resolve their own configurations over hpi/jpi-packaged
@@ -16,8 +15,7 @@ import javax.inject.Inject;
 abstract class ArtifactTypeDisambiguationRule implements AttributeDisambiguationRule<ArtifactType> {
 
     @Inject
-    public ArtifactTypeDisambiguationRule() {
-    }
+    public ArtifactTypeDisambiguationRule() {}
 
     @Override
     public void execute(@NotNull MultipleCandidatesDetails<ArtifactType> details) {
