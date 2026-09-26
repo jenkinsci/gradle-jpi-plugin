@@ -4,6 +4,7 @@ plugins {
     alias(libs.plugins.plugin.publish)
     `java-gradle-plugin`
     `kotlin-dsl`
+    jacoco
 }
 
 description = "V2 Gradle plugin for building Jenkins plugins with Gradle 8+"
