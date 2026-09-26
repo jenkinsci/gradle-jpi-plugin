@@ -11,7 +11,7 @@ plugins {
 
 allprojects {
     group = "org.jenkins-ci.tools"
-    apply(plugin = "nebula.release")
+    plugins.apply("nebula.release")
 }
 
 repositories {
@@ -37,7 +37,7 @@ subprojects {
                 languageVersion.set(JavaLanguageVersion.of(17))
             }
         }
-        apply(plugin = "com.adarshr.test-logger")
+        plugins.apply("com.adarshr.test-logger")
     }
 }
 
