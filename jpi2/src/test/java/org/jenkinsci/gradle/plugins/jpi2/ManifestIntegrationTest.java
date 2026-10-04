@@ -131,7 +131,7 @@ class ManifestIntegrationTest extends V2IntegrationTestBase {
         var ith = new IntegrationTestHelper(tempDir, "8.14");
         initBuild(ith);
         Files.writeString(ith.inProjectDir("build.gradle.kts").toPath(), getBasePluginConfig());
-        writeJavaSource(ith, "com/example/plugin/AlwaysReloadable.java", """
+        writeJavaSource(ith, "com/example/plugin/AlwaysReloadable.java", /* language=java */ """
                 package com.example.plugin;
 
                 @hudson.Extension(dynamicLoadable = jenkins.YesNoMaybe.YES)
@@ -149,14 +149,14 @@ class ManifestIntegrationTest extends V2IntegrationTestBase {
         var ith = new IntegrationTestHelper(tempDir, "8.14");
         initBuild(ith);
         Files.writeString(ith.inProjectDir("build.gradle.kts").toPath(), getBasePluginConfig());
-        writeJavaSource(ith, "com/example/plugin/MaybeReloadable.java", """
+        writeJavaSource(ith, "com/example/plugin/MaybeReloadable.java", /* language=java */ """
                 package com.example.plugin;
 
                 @hudson.Extension(dynamicLoadable = jenkins.YesNoMaybe.MAYBE)
                 public class MaybeReloadable {
                 }
                 """);
-        writeJavaSource(ith, "com/example/plugin/AlwaysReloadable.java", """
+        writeJavaSource(ith, "com/example/plugin/AlwaysReloadable.java", /* language=java */ """
                 package com.example.plugin;
 
                 @hudson.Extension(dynamicLoadable = jenkins.YesNoMaybe.YES)
@@ -174,14 +174,14 @@ class ManifestIntegrationTest extends V2IntegrationTestBase {
         var ith = new IntegrationTestHelper(tempDir, "8.14");
         initBuild(ith);
         Files.writeString(ith.inProjectDir("build.gradle.kts").toPath(), getBasePluginConfig());
-        writeJavaSource(ith, "com/example/plugin/NeverReloadable.java", """
+        writeJavaSource(ith, "com/example/plugin/NeverReloadable.java", /* language=java */ """
                 package com.example.plugin;
 
                 @hudson.Extension(dynamicLoadable = jenkins.YesNoMaybe.NO)
                 public class NeverReloadable {
                 }
                 """);
-        writeJavaSource(ith, "com/example/plugin/AlwaysReloadable.java", """
+        writeJavaSource(ith, "com/example/plugin/AlwaysReloadable.java", /* language=java */ """
                 package com.example.plugin;
 
                 @hudson.Extension(dynamicLoadable = jenkins.YesNoMaybe.YES)

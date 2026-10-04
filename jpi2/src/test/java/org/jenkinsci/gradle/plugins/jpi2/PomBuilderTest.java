@@ -24,7 +24,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 class PomBuilderTest {
-    private static final String POM = """
+    private static final String POM = /* language=xml */ """
             <project xmlns="http://maven.apache.org/POM/4.0.0">
                 <modelVersion>4.0.0</modelVersion>
                 <groupId>com.example</groupId>
