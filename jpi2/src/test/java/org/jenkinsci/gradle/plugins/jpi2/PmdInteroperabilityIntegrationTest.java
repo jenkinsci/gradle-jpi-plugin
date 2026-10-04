@@ -7,10 +7,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import org.jenkinsci.gradle.plugins.jpi.IntegrationTestHelper;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.condition.DisabledOnOs;
-import org.junit.jupiter.api.condition.OS;
 
-@DisabledOnOs(value = OS.WINDOWS, disabledReason = "TempDir doesn't appear to work correctly on Windows")
 class PmdInteroperabilityIntegrationTest extends V2IntegrationTestBase {
 
     /**
@@ -27,7 +24,7 @@ class PmdInteroperabilityIntegrationTest extends V2IntegrationTestBase {
         // given
         var ith = new IntegrationTestHelper(tempDir, "8.14");
         initBuild(ith);
-        Files.writeString(ith.inProjectDir("build.gradle.kts").toPath(), """
+        Files.writeString(ith.inProjectDir("build.gradle.kts").toPath(), /* language=kotlin */ """
                 plugins {
                     id("org.jenkins-ci.jpi2")
                     pmd
@@ -49,7 +46,7 @@ class PmdInteroperabilityIntegrationTest extends V2IntegrationTestBase {
                 """, StandardCharsets.UTF_8);
         ith.mkDirInProjectDir("src/test/java/com/example");
         Files.writeString(
-                ith.inProjectDir("src/test/java/com/example/ExampleTest.java").toPath(), """
+                ith.inProjectDir("src/test/java/com/example/ExampleTest.java").toPath(), /* language=java */ """
                 package com.example;
                 import org.junit.jupiter.api.Test;
                 class ExampleTest {

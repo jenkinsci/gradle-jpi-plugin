@@ -27,7 +27,7 @@ class PomLicenseDataExtractorTest {
 
     @Test
     void extractsDirectGavAndLicenses() throws IOException {
-        var pom = writePom("""
+        var pom = writePom(/* language=xml */ """
                 <project>
                   <groupId>com.example</groupId>
                   <artifactId>library</artifactId>
@@ -65,7 +65,7 @@ class PomLicenseDataExtractorTest {
 
     @Test
     void fallsBackToParentGroupIdAndVersionWhenMissing() throws IOException {
-        var pom = writePom("""
+        var pom = writePom(/* language=xml */ """
                 <project>
                   <parent>
                     <groupId>com.parent</groupId>
@@ -87,7 +87,7 @@ class PomLicenseDataExtractorTest {
 
     @Test
     void prefersDirectGroupIdAndVersionOverParent() throws IOException {
-        var pom = writePom("""
+        var pom = writePom(/* language=xml */ """
                 <project>
                   <parent>
                     <groupId>com.parent</groupId>
@@ -108,7 +108,7 @@ class PomLicenseDataExtractorTest {
 
     @Test
     void includesBlankLicenseFieldsRatherThanSkippingThem() throws IOException {
-        var pom = writePom("""
+        var pom = writePom(/* language=xml */ """
                 <project>
                   <groupId>com.example</groupId>
                   <artifactId>library</artifactId>
