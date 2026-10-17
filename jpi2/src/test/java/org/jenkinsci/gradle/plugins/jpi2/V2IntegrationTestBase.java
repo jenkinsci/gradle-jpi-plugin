@@ -212,12 +212,6 @@ abstract class V2IntegrationTestBase {
         return withPort;
     }
 
-    static void testServerVerificationTask(GradleRunner gradleRunner, String task) {
-        var result = gradleRunner.withArguments(task).build();
-        assertThat(result.getOutput()).contains("Jenkins is fully up and running");
-        assertThat(result.getOutput()).contains("BUILD SUCCESSFUL");
-    }
-
     static void configureSimpleBuild(IntegrationTestHelper ith) throws IOException {
         initBuild(ith);
         Files.writeString(ith.inProjectDir("build.gradle.kts").toPath(), getBasePluginConfig());

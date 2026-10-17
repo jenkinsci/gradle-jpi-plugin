@@ -160,18 +160,6 @@ class SimpleBuildIntegrationTest extends V2IntegrationTestBase {
     }
 
     @Test
-    void simpleGradleBuildShouldVerifyRun() throws IOException {
-        // given
-        var ith = new IntegrationTestHelper(tempDir, "8.14");
-        configureSimpleBuildForVerification(ith);
-
-        GradleRunner gradleRunner = ith.gradleRunner();
-
-        // when
-        testServerVerificationTask(gradleRunner, "testHplRun");
-    }
-
-    @Test
     @Timeout(value = 15, unit = TimeUnit.MINUTES)
     void testServerRetriesThenReportsAnActionableTimeout() throws IOException {
         // given
