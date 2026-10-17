@@ -23,6 +23,7 @@ import org.gradle.api.artifacts.ResolvedArtifact;
 import org.gradle.api.artifacts.component.ModuleComponentIdentifier;
 import org.gradle.api.attributes.Usage;
 import org.gradle.api.file.Directory;
+import org.gradle.api.file.FileCollection;
 import org.gradle.api.internal.artifacts.result.DefaultResolvedDependencyResult;
 import org.gradle.api.plugins.BasePlugin;
 import org.gradle.api.plugins.ExtensionAware;
@@ -368,9 +369,10 @@ public class V2JpiPlugin implements Plugin<Project> {
         // Fingerprint the source files that prepareServer would sync (jpi, plugin dependencies,
         // project-dependency jpis), not its destination — prepareServer and prepareRun both write
         // to workDir/plugins, so snapshotting the destination would create an implicit dependency
-        // between the two test tasks.
+        // between the two test tasks. The nested build runs its own prepareServer into a fresh
+        // work directory, so syncing here too would only copy plugins nothing reads.
         testServerTask.configure(task -> {
-            task.getPluginFiles().from(prepareServer.map(Sync::getSource));
+            task.getPluginFiles().from(syncSourceWithoutSyncing(project, prepareServer));
             task.getJenkinsClasspath().from(serverTaskClasspath);
         });
 
@@ -386,7 +388,7 @@ public class V2JpiPlugin implements Plugin<Project> {
                 "Launch Jenkins hplRun task and terminate after success or first error",
                 ":hplRun");
         testHplRunTask.configure(task -> {
-            task.getPluginFiles().from(prepareRun.map(Sync::getSource));
+            task.getPluginFiles().from(syncSourceWithoutSyncing(project, prepareRun));
             task.getJenkinsClasspath().from(serverTaskClasspath);
             // The .hpl manifest points at these directories on disk by absolute path; their
             // contents must be fingerprinted for caching to be correct, even though only the
@@ -398,6 +400,16 @@ public class V2JpiPlugin implements Plugin<Project> {
             task.getReferencedFiles().from(runtimeClasspathArtifacts.getBundledLibraries());
             task.dependsOn(project.getTasks().named("classes"));
         });
+    }
+
+    /**
+     * A mapped task provider carries a dependency on the task itself; going through a plain
+     * provider keeps only the dependencies of the source files (e.g. the {@code jpi} task).
+     */
+    @NotNull
+    private static Provider<FileCollection> syncSourceWithoutSyncing(
+            @NotNull Project project, @NotNull TaskProvider<Sync> sync) {
+        return project.provider(() -> sync.get().getSource());
     }
 
     @NotNull

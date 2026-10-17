@@ -221,13 +221,13 @@ class SimpleBuildIntegrationTest extends V2IntegrationTestBase {
     @Test
     @Timeout(value = 15, unit = TimeUnit.MINUTES)
     void testServerIsCacheableAndInvalidatesOnSourceChange() throws IOException {
-        assertVerificationTaskCachingBehavior("testServer");
+        assertVerificationTaskCachingBehavior("testServer", "prepareServer");
     }
 
     @Test
     @Timeout(value = 15, unit = TimeUnit.MINUTES)
     void testHplRunIsCacheableAndInvalidatesOnSourceChange() throws IOException {
-        assertVerificationTaskCachingBehavior("testHplRun");
+        assertVerificationTaskCachingBehavior("testHplRun", "prepareRun");
     }
 
     @Test
@@ -334,7 +334,7 @@ class SimpleBuildIntegrationTest extends V2IntegrationTestBase {
                 .isEqualTo(TaskOutcome.SUCCESS);
     }
 
-    private void assertVerificationTaskCachingBehavior(String task) throws IOException {
+    private void assertVerificationTaskCachingBehavior(String task, String prepareTask) throws IOException {
         var ith = new IntegrationTestHelper(tempDir, "8.14");
         configureSimpleBuildForVerification(ith);
 
@@ -356,6 +356,9 @@ class SimpleBuildIntegrationTest extends V2IntegrationTestBase {
         assertThat(firstTask).isNotNull();
         assertThat(firstTask.getOutcome()).isEqualTo(TaskOutcome.SUCCESS);
         assertThat(first.getOutput()).contains("Jenkins is fully up and running");
+        assertThat(first.task(":" + prepareTask))
+                .as("only the nested build reads the synced plugins, so the outer build must not sync them")
+                .isNull();
 
         var secondNoChange = runner.withArguments(task, "--build-cache").build();
         var secondNoChangeTask = secondNoChange.task(taskPath);
