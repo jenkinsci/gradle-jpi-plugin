@@ -4,8 +4,10 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import java.io.File;
 import java.io.IOException;
+import java.net.URISyntaxException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 import java.util.concurrent.TimeUnit;
 import java.util.jar.Manifest;
@@ -111,6 +113,52 @@ class SimpleBuildIntegrationTest extends V2IntegrationTestBase {
 
         // when
         testServerStarts(gradleRunner, "server");
+    }
+
+    @Test
+    void serverTasksReuseConfigurationCache() throws IOException, URISyntaxException {
+        var ith = new IntegrationTestHelper(tempDir, "8.14");
+        configureSimpleBuild(ith);
+        var stubClasspath = Path.of(ServerTaskConfigurationCacheMain.class
+                        .getProtectionDomain()
+                        .getCodeSource()
+                        .getLocation()
+                        .toURI())
+                .toAbsolutePath()
+                .toString()
+                .replace("\\", "/")
+                .replace("\"", "\\\"");
+        Files.writeString(
+                ith.inProjectDir("build.gradle.kts").toPath(),
+                """
+
+                tasks.named<JavaExec>("server") {
+                    classpath = files("%s")
+                    mainClass.set("%s")
+                    setDependsOn(emptyList<Any>())
+                }
+                tasks.named<JavaExec>("hplRun") {
+                    classpath = files("%s")
+                    mainClass.set("%s")
+                    setDependsOn(emptyList<Any>())
+                }
+                """.formatted(
+                                stubClasspath,
+                                ServerTaskConfigurationCacheMain.class.getName(),
+                                stubClasspath,
+                                ServerTaskConfigurationCacheMain.class.getName()),
+                StandardOpenOption.APPEND);
+        var runner = ith.gradleRunner();
+        var arguments =
+                new String[] {"server", "hplRun", "--configuration-cache", "--configuration-cache-problems=fail"};
+
+        var firstRun = runner.withArguments(arguments).build();
+        assertThat(firstRun.getOutput()).contains("Configuration cache entry stored.");
+        assertThat(firstRun.getOutput()).contains("SERVER_TASK_EXECUTED");
+
+        var secondRun = runner.withArguments(arguments).build();
+        assertThat(secondRun.getOutput()).contains("Reusing configuration cache.");
+        assertThat(secondRun.getOutput()).contains("SERVER_TASK_EXECUTED");
     }
 
     @Test
