@@ -1,5 +1,5 @@
 plugins {
-    groovy
+    java
     `java-test-fixtures`
 }
 
