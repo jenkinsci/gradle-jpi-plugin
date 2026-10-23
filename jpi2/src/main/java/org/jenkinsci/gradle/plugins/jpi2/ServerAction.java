@@ -16,6 +16,7 @@ class ServerAction implements Action<JavaExec> {
     private final Configuration serverTaskClasspath;
     private final String projectRoot;
     private final Provider<String> workDir;
+    private final Provider<String> serverPort;
     private final TaskProvider<?> prepareServer;
 
     /** Creates an action that configures the Jenkins server process. */
@@ -23,10 +24,12 @@ class ServerAction implements Action<JavaExec> {
             Configuration serverTaskClasspath,
             String projectRoot,
             Provider<String> workDir,
+            Provider<String> serverPort,
             TaskProvider<?> prepareServer) {
         this.serverTaskClasspath = serverTaskClasspath;
         this.projectRoot = projectRoot;
         this.workDir = workDir;
+        this.serverPort = serverPort;
         this.prepareServer = prepareServer;
     }
 
@@ -36,20 +39,17 @@ class ServerAction implements Action<JavaExec> {
         spec.setStandardOutput(System.out);
         spec.setErrorOutput(System.err);
         spec.getMainClass().set("executable.Main");
-        spec.doFirst(task -> {
-            var resolvedWorkDir = workDir.get();
-            var serverPort = task.getProject().findProperty("server.port");
-            var args = new ArrayList<String>();
-            args.addAll(List.of(
-                    "--webroot=" + projectRoot + "/build/jenkins/war",
-                    "--pluginroot=" + projectRoot + "/build/jenkins/plugins",
-                    "--extractedFilesFolder=" + projectRoot + "/build/jenkins/extracted",
-                    "--commonLibFolder=" + resolvedWorkDir + "/lib",
-                    "--httpPort=" + (serverPort != null ? serverPort : "8080")));
-            args.addAll(spec.getArgs());
-            spec.setArgs(args);
-            spec.environment("JENKINS_HOME", resolvedWorkDir);
-        });
+        var resolvedWorkDir = workDir.get();
+        var args = new ArrayList<String>();
+        args.addAll(List.of(
+                "--webroot=" + projectRoot + "/build/jenkins/war",
+                "--pluginroot=" + projectRoot + "/build/jenkins/plugins",
+                "--extractedFilesFolder=" + projectRoot + "/build/jenkins/extracted",
+                "--commonLibFolder=" + resolvedWorkDir + "/lib",
+                "--httpPort=" + serverPort.getOrElse("8080")));
+        args.addAll(spec.getArgs());
+        spec.setArgs(args);
+        spec.environment("JENKINS_HOME", resolvedWorkDir);
 
         spec.dependsOn(prepareServer);
 
