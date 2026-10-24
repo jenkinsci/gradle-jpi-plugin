@@ -38,10 +38,9 @@ class ConfigurePrepareServerAction implements Action<Sync> {
 
     @Override
     public void execute(@NotNull Sync sync) {
-        var jpi = jpiTaskProvider.get();
         sync.into(workDir.map(it -> it + "/plugins"));
 
-        sync.from(jpi)
+        sync.from(jpiTaskProvider)
                 .rename(new DropVersionTransformer(projectName.get(), projectVersion.get(), targetExtension.get()));
 
         defaultRuntime.getResolvedConfiguration().getResolvedArtifacts().stream()
