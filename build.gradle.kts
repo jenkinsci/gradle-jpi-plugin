@@ -10,6 +10,22 @@ plugins {
     alias(libs.plugins.spotless)
 }
 
+val isWindows =
+    providers
+        .systemProperty("os.name")
+        .map { it.startsWith("Windows", ignoreCase = true) }
+        .get()
+val voltaHome =
+    providers.environmentVariable("VOLTA_HOME").orNull?.let { file(it) }
+        ?: if (isWindows) {
+            providers.environmentVariable("LOCALAPPDATA").orNull?.let { file(it).resolve("Volta") }
+        } else {
+            file(providers.systemProperty("user.home").get()).resolve(".volta")
+        }
+val voltaBin = voltaHome?.resolve("bin")
+val voltaNpm = voltaBin?.resolve(if (isWindows) "npm.cmd" else "npm")?.takeIf { it.isFile }
+val voltaNode = voltaBin?.resolve(if (isWindows) "node.exe" else "node")?.takeIf { it.isFile }
+
 allprojects {
     group = "org.jenkins-ci.tools"
     plugins.apply("nebula.release")
@@ -68,11 +84,15 @@ spotless {
         target("**/*.gradle.kts")
     }
     yaml {
-        prettier()
+        val prettier = prettier()
+        voltaNpm?.let(prettier::npmExecutable)
+        voltaNode?.let(prettier::nodeExecutable)
         target("**/*.yaml", "**/*.yml")
     }
     json {
-        prettier()
+        val prettier = prettier()
+        voltaNpm?.let(prettier::npmExecutable)
+        voltaNode?.let(prettier::nodeExecutable)
         target("**/*.json")
     }
 }
