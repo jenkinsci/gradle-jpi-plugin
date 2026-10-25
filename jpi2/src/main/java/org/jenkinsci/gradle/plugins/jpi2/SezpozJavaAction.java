@@ -24,9 +24,8 @@ class SezpozJavaAction implements Action<JavaBasePlugin> {
                 .configure(javaCompile ->
                         javaCompile.getOptions().getCompilerArgs().add("-Asezpoz.quiet=true"));
         project.getTasks()
-                .withType(
-                        JavaCompile.class,
-                        javaCompile ->
-                                javaCompile.getOptions().getCompilerArgs().add("-parameters"));
+                .withType(JavaCompile.class)
+                .configureEach(javaCompile ->
+                        javaCompile.getOptions().getCompilerArgs().add("-parameters"));
     }
 }

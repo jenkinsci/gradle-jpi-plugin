@@ -179,7 +179,7 @@ class RuntimeClasspathArtifacts {
 
             assert dependencyProject.isPresent();
 
-            if (dependencyProject.get().getTasks().findByName("jpi") == null) {
+            if (!dependencyProject.get().getTasks().getNames().contains("jpi")) {
                 return Objects.equals(reqDep.getGroup(), dependency.getModuleGroup())
                         && reqDep.getName().equals(dependency.getModuleName());
             }

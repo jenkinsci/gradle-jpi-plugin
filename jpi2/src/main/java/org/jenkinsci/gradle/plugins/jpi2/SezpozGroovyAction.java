@@ -24,8 +24,7 @@ class SezpozGroovyAction implements Action<GroovyBasePlugin> {
                 .configure(groovyCompile ->
                         groovyCompile.getOptions().getCompilerArgs().add("-Asezpoz.quiet=true"));
         project.getTasks()
-                .withType(
-                        GroovyCompile.class,
-                        groovyCompile -> groovyCompile.getGroovyOptions().setJavaAnnotationProcessing(true));
+                .withType(GroovyCompile.class)
+                .configureEach(groovyCompile -> groovyCompile.getGroovyOptions().setJavaAnnotationProcessing(true));
     }
 }
