@@ -1,8 +1,9 @@
 package org.jenkinsci.gradle.plugins.jpi2.localization;
 
 import java.io.File;
-import java.util.HashSet;
-import java.util.Set;
+import java.nio.file.Path;
+import java.util.Comparator;
+import java.util.List;
 import javax.inject.Inject;
 import org.gradle.api.GradleException;
 import org.gradle.api.file.ConfigurableFileCollection;
@@ -10,7 +11,10 @@ import org.gradle.api.file.DirectoryProperty;
 import org.gradle.api.file.FileSystemOperations;
 import org.gradle.api.file.FileTree;
 import org.gradle.api.tasks.CacheableTask;
+import org.gradle.api.tasks.Classpath;
+import org.gradle.api.tasks.Input;
 import org.gradle.api.tasks.InputFiles;
+import org.gradle.api.tasks.Internal;
 import org.gradle.api.tasks.OutputDirectory;
 import org.gradle.api.tasks.PathSensitive;
 import org.gradle.api.tasks.PathSensitivity;
@@ -32,14 +36,22 @@ public abstract class LocalizationTask extends SourceTask {
     }
 
     /** @return the classpath containing the localizer tool */
-    @InputFiles
-    @PathSensitive(PathSensitivity.RELATIVE)
+    @Classpath
     public abstract ConfigurableFileCollection getLocalizerClasspath();
 
     /** @return the source root directories */
-    @InputFiles
-    @PathSensitive(PathSensitivity.RELATIVE)
+    @Internal
     public abstract ConfigurableFileCollection getSourceRoots();
+
+    /** @return generator paths whose package mapping must participate in up-to-date checks */
+    @Input
+    public List<String> getRelativeSourcePaths() {
+        return getSource().getFiles().stream()
+                .map(this::relativeSourcePath)
+                .map(path -> path.replace(File.separatorChar, '/'))
+                .sorted()
+                .toList();
+    }
 
     /** @return the output directory for generated files */
     @OutputDirectory
@@ -61,32 +73,27 @@ public abstract class LocalizationTask extends SourceTask {
         WorkQueue workQueue = getWorkerExecutor()
                 .classLoaderIsolation(spec -> spec.getClasspath().from(getLocalizerClasspath()));
 
-        Set<String> roots = new HashSet<>();
-        for (File root : getSourceRoots().getFiles()) {
-            String absolutePath = root.getAbsolutePath();
-            roots.add(absolutePath.endsWith(File.separator) ? absolutePath : absolutePath + File.separator);
-        }
-
         for (File file : getSource()) {
-            String absolutePath = file.getAbsolutePath();
-            String candidate = null;
-            for (String root : roots) {
-                if (absolutePath.startsWith(root)) {
-                    candidate = absolutePath.substring(root.length());
-                    break;
-                }
-            }
-            if (candidate == null) {
-                throw new GradleException("Could not determine relative path of " + absolutePath
-                        + " from configured roots: " + String.join(",", roots));
-            }
-            final String relativePath = candidate;
+            var relativePath = relativeSourcePath(file);
             workQueue.submit(RunGenerator.class, parameters -> {
                 parameters.getSourceFile().set(file);
                 parameters.getOutputDir().set(getOutputDir());
                 parameters.getRelativePath().set(relativePath);
             });
         }
+    }
+
+    private String relativeSourcePath(File file) {
+        var path = file.toPath().toAbsolutePath().normalize();
+        var root = getSourceRoots().getFiles().stream()
+                .map(File::toPath)
+                .map(candidate -> candidate.toAbsolutePath().normalize())
+                .filter(path::startsWith)
+                // Nested roots must select the same package regardless of collection iteration order.
+                .max(Comparator.comparingInt(Path::getNameCount))
+                .orElseThrow(() -> new GradleException("Could not determine relative path of " + path
+                        + " from configured roots: " + getSourceRoots().getFiles()));
+        return root.relativize(path).toString();
     }
 
     @SuppressWarnings("EmptyMethod") // We're changing the PathSensitivity here.

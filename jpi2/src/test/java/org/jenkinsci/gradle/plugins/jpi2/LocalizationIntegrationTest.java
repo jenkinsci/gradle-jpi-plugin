@@ -63,6 +63,56 @@ class LocalizationIntegrationTest extends V2IntegrationTestBase {
     }
 
     @Test
+    void unrelatedResourcesDoNotInvalidateLocalization() throws IOException {
+        var ith = new IntegrationTestHelper(tempDir, "8.14");
+        configureSimpleBuild(ith);
+        var messages = ith.inProjectDir("src/main/resources/org/example/Messages.properties")
+                .toPath();
+        Files.createDirectories(messages.getParent());
+        Files.writeString(messages, "greeting=Hello\n");
+        var runner = ith.gradleRunner();
+        runner.withArguments("localizeMessages", "--configuration-cache").build();
+
+        Files.writeString(ith.inProjectDir("src/main/resources/unrelated.txt").toPath(), "unrelated");
+        var unchanged = runner.withArguments("localizeMessages", "--configuration-cache")
+                .build();
+        assertThat(unchanged.task(":localizeMessages").getOutcome()).isEqualTo(TaskOutcome.UP_TO_DATE);
+
+        Files.writeString(messages, "greeting=Changed\n");
+        var changed = runner.withArguments("localizeMessages", "--configuration-cache")
+                .build();
+        assertThat(changed.task(":localizeMessages").getOutcome()).isEqualTo(TaskOutcome.SUCCESS);
+        assertThat(Files.readString(ith.inProjectDir("build/generated-src/localizer/org/example/Messages.java")
+                        .toPath()))
+                .contains("Changed");
+    }
+
+    @Test
+    void changingSourceRootMappingInvalidatesLocalization() throws IOException {
+        var ith = new IntegrationTestHelper(tempDir, "8.14");
+        configureSimpleBuild(ith);
+        Files.writeString(ith.inProjectDir("build.gradle.kts").toPath(), getBasePluginConfig() + """
+                tasks.named<org.jenkinsci.gradle.plugins.jpi2.localization.LocalizationTask>("localizeMessages") {
+                    sourceRoots.setFrom(layout.projectDirectory.dir(providers.gradleProperty("messageRoot").getOrElse("src/main/resources")))
+                }
+                """);
+        var messages = ith.inProjectDir("src/main/resources/org/example/Messages.properties")
+                .toPath();
+        Files.createDirectories(messages.getParent());
+        Files.writeString(messages, "greeting=Hello\n");
+        var runner = ith.gradleRunner();
+        runner.withArguments("localizeMessages").build();
+
+        var changed = runner.withArguments("localizeMessages", "-PmessageRoot=src/main/resources/org")
+                .build();
+
+        assertThat(changed.task(":localizeMessages").getOutcome()).isEqualTo(TaskOutcome.SUCCESS);
+        assertThat(Files.readString(ith.inProjectDir("build/generated-src/localizer/example/Messages.java")
+                        .toPath()))
+                .contains("package example;");
+    }
+
+    @Test
     void classesTaskCompilesGeneratedLocalizationSources() throws IOException {
         var ith = new IntegrationTestHelper(tempDir, "8.14");
         initBuild(ith);
