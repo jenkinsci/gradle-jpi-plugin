@@ -4,11 +4,13 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import java.io.File;
 import java.util.ArrayList;
 import java.util.Set;
+import java.util.concurrent.Callable;
 import org.gradle.api.DefaultTask;
 import org.gradle.api.Project;
 import org.gradle.api.artifacts.Configuration;
@@ -34,6 +36,18 @@ import org.mockito.ArgumentMatchers;
 class RuntimeClasspathArtifactsTest {
 
     @Test
+    void defersResolutionUntilFilesAreRequestedAndSharesTheResult() {
+        var fixture = fixture(Set.of(), Set.of(), Set.of());
+        var libraries = fixture.artifacts().getBundledLibraries();
+        verifyNoInteractions(fixture.configurations());
+
+        libraries.getFiles();
+        fixture.artifacts().getBundledLibraries().getFiles();
+
+        verify(fixture.configurations()).detachedConfiguration(any(Dependency[].class));
+    }
+
+    @Test
     void bundlesOnlyDirectLibrariesNotProvidedByCoreOrPlugins() {
         var core = resolvedDependency("org.example", "core-library", "jar", "core-library.jar", Set.of());
         var provided = resolvedDependency("org.example", "provided-library", "jar", "provided-library.jar", Set.of());
@@ -47,7 +61,7 @@ class RuntimeClasspathArtifactsTest {
                 Set.of(core),
                 Set.of(coreRequest, providedRequest, bundledRequest));
 
-        fixture.artifacts().getBundledLibraries();
+        fixture.artifacts().getBundledLibraries().getFiles();
 
         var dependencies = ArgumentCaptor.<Dependency[]>captor();
         verify(fixture.configurations()).detachedConfiguration(dependencies.capture());
@@ -60,7 +74,7 @@ class RuntimeClasspathArtifactsTest {
         var plugin = resolvedDependency("org.example", "other-plugin", "jpi", "other-plugin.jpi", Set.of(provided));
         var fixture = fixture(Set.of(plugin), Set.of(), Set.of());
 
-        fixture.artifacts().getBundledLibraries();
+        fixture.artifacts().getBundledLibraries().getFiles();
 
         var filter = ArgumentCaptor.<Spec<File>>captor();
         verify(fixture.detached()).filter(filter.capture());
@@ -101,7 +115,7 @@ class RuntimeClasspathArtifactsTest {
                         projectArtifact("org.example", "upstream-plugin", pluginProject.getPath()),
                         projectArtifact("org.example", "upstream-library", libraryProject.getPath())));
 
-        fixture.artifacts().getBundledLibraries();
+        fixture.artifacts().getBundledLibraries().getFiles();
 
         assertThat(realizedTasks).isEmpty();
         var dependencies = ArgumentCaptor.<Dependency[]>captor();
@@ -129,12 +143,15 @@ class RuntimeClasspathArtifactsTest {
         var detached = mock(Configuration.class);
         var attributes = mock(AttributeContainer.class);
         when(project.getConfigurations()).thenReturn(configurations);
-        when(project.getObjects()).thenReturn(ProjectBuilder.builder().build().getObjects());
+        var providerProject = ProjectBuilder.builder().build();
+        when(project.getObjects()).thenReturn(providerProject.getObjects());
+        when(project.provider(ArgumentMatchers.<Callable<FileCollection>>any()))
+                .thenAnswer(invocation -> providerProject.provider(invocation.getArgument(0)));
         when(runtime.getAllDependencies()).thenReturn(dependencySet);
         when(dependencySet.stream()).thenAnswer(ignored -> requestedDependencies.stream());
         when(configurations.detachedConfiguration(any(Dependency[].class))).thenReturn(detached);
         when(detached.getAttributes()).thenReturn(attributes);
-        when(detached.filter(ArgumentMatchers.<Spec<File>>any())).thenReturn(mock(FileCollection.class));
+        when(detached.filter(ArgumentMatchers.<Spec<File>>any())).thenReturn(providerProject.files());
         return new Fixture(new RuntimeClasspathArtifacts(project, runtime, core), configurations, detached);
     }
 
