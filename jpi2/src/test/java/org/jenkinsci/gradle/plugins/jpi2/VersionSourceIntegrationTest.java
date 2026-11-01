@@ -42,6 +42,35 @@ class VersionSourceIntegrationTest extends V2IntegrationTestBase {
     }
 
     @Test
+    void gitVersionTaskRefreshesCustomOutputWhenConfigurationCacheIsReused() throws Exception {
+        var ith = new IntegrationTestHelper(tempDir, "8.14");
+        initBuild(ith);
+        Files.writeString(ith.inProjectDir("build.gradle.kts").toPath(), getBasePluginConfig() + """
+                jenkinsPlugin {
+                    gitVersion {
+                        allowDirty.set(true)
+                        outputFile.set(layout.buildDirectory.file("custom-version.txt"))
+                    }
+                }
+                """);
+        initGitRepo(tempDir);
+        var runner = ith.gradleRunner();
+        runner.withArguments("generateGitVersion", "--configuration-cache").build();
+        var output = ith.inProjectDir("build/custom-version.txt").toPath();
+        var first = Files.readAllLines(output);
+        assertThat(first).hasSize(2);
+
+        runGit(tempDir, "-c", "commit.gpgSign=false", "commit", "--allow-empty", "-m", "Next commit");
+        var result = runner.withArguments("generateGitVersion", "--configuration-cache")
+                .build();
+        var second = Files.readAllLines(output);
+
+        assertThat(result.getOutput()).contains("Reusing configuration cache");
+        assertThat(second.get(0)).startsWith("2.").isNotEqualTo(first.get(0));
+        assertThat(second.get(1)).matches("[a-f0-9]{40}").isNotEqualTo(first.get(1));
+    }
+
+    @Test
     void projectVersionIsUsedByDefault() throws IOException {
         var ith = new IntegrationTestHelper(tempDir, "8.14");
         initBuild(ith);
@@ -60,14 +89,7 @@ class VersionSourceIntegrationTest extends V2IntegrationTestBase {
     }
 
     private static @NotNull String getConfig() {
-        return getBasePluginConfig() + /* language=kotlin */ """
-                tasks.register("generateGitVersion") {
-                    doLast {
-                        file("build/generated/version").mkdirs()
-                        file("build/generated/version/version.txt").writeText(jenkinsPlugin.gitVersion.version.get())
-                    }
-                }
-                """;
+        return getBasePluginConfig();
     }
 
     @Test
@@ -162,9 +184,10 @@ class VersionSourceIntegrationTest extends V2IntegrationTestBase {
         var versionFile = ith.inProjectDir("build/generated/version/version.txt");
         assertThat(versionFile).exists();
         var lines = Files.readAllLines(versionFile.toPath(), StandardCharsets.UTF_8);
-        assertThat(lines).hasSize(1);
+        assertThat(lines).hasSize(2);
         // depth.abbrevHash (e.g. 1.abc123def456)
         assertThat(lines.get(0)).matches("\\d+\\.[a-f0-9]{12}");
+        assertThat(lines.get(1)).matches("[a-f0-9]{40}");
     }
 
     @Test

@@ -84,6 +84,18 @@ public class V2JpiPlugin implements Plugin<Project> {
                         project.getLayout(),
                         project.getProviders());
 
+        var gitVersion = extension.getGitVersion();
+        project.getTasks().register(GenerateGitVersionTask.NAME, GenerateGitVersionTask.class, task -> {
+            task.setGroup(BasePlugin.BUILD_GROUP);
+            task.setDescription("Writes the Git-derived plugin version and commit hash.");
+            task.getGitRoot().set(gitVersion.getGitRoot());
+            task.getVersionFormat().set(gitVersion.getVersionFormat());
+            task.getVersionPrefix().set(gitVersion.getVersionPrefix());
+            task.getAbbrevLength().set(gitVersion.getAbbrevLength());
+            task.getAllowDirty().set(gitVersion.getAllowDirty());
+            task.getOutputFile().set(gitVersion.getOutputFile());
+        });
+
         var configurations = project.getConfigurations();
         var dependencies = project.getDependencies();
 
