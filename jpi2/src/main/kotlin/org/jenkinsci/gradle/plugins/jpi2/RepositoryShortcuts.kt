@@ -3,7 +3,6 @@
 package org.jenkinsci.gradle.plugins.jpi2
 
 import groovy.lang.Closure
-import org.gradle.api.Action
 import org.gradle.api.Project
 import org.gradle.api.artifacts.dsl.RepositoryHandler
 import org.gradle.api.artifacts.repositories.MavenArtifactRepository
@@ -48,26 +47,25 @@ private const val PROJECT_EXTRA_KEY = "org.jenkinsci.gradle.plugins.jpi2.project
 /** Adds the Jenkins publishing repository selected by the project version. */
 fun RepositoryHandler.publishToJenkins(): MavenArtifactRepository {
     val project = (this as ExtensionAware).extensions.extraProperties[PROJECT_EXTRA_KEY] as Project
-    val repo =
-        maven {
-            name = JENKINS_PUBLISH_REPO_NAME
-            // URL is updated in afterEvaluate based on the version; a default is required so that
-            // init scripts that iterate repositories don't encounter a null URL before afterEvaluate runs.
-            url = JENKINS_RELEASES_REPO_URL
-            credentials(PasswordCredentials::class.java)
+    val repositoryUrl =
+        project.providers.provider {
+            val projectVersion =
+                project.extensions
+                    .findByType(JenkinsPluginExtension::class.java)
+                    ?.getEffectiveVersion()
+                    ?.get()
+                    ?: project.version.toString()
+            when {
+                projectVersion.endsWith("-SNAPSHOT") -> JENKINS_SNAPSHOTS_REPO_URL
+                INCREMENTALS_PATTERN.matches(projectVersion) -> JENKINS_INCREMENTALS_REPO_URL
+                else -> JENKINS_RELEASES_REPO_URL
+            }
         }
-    project.afterEvaluate(
-        Action {
-            val projectVersion = version.toString()
-            repo.url =
-                when {
-                    projectVersion.endsWith("-SNAPSHOT") -> JENKINS_SNAPSHOTS_REPO_URL
-                    INCREMENTALS_PATTERN.matches(projectVersion) -> JENKINS_INCREMENTALS_REPO_URL
-                    else -> JENKINS_RELEASES_REPO_URL
-                }
-        },
-    )
-    return repo
+    return maven {
+        name = JENKINS_PUBLISH_REPO_NAME
+        setUrl(repositoryUrl)
+        credentials(PasswordCredentials::class.java)
+    }
 }
 
 /** Registers repository shortcuts, including publishing, for the given project. */
