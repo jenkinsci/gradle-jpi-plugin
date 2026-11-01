@@ -13,6 +13,56 @@ import org.junit.jupiter.api.Test;
 class LocalizationIntegrationTest extends V2IntegrationTestBase {
 
     @Test
+    void removesGeneratedSourcesAndClassesWhenBundlesAreDeletedOrRenamed() throws IOException {
+        var ith = new IntegrationTestHelper(tempDir, "8.14");
+        configureSimpleBuild(ith);
+        var first =
+                ith.inProjectDir("src/main/resources/first/Messages.properties").toPath();
+        var second = ith.inProjectDir("src/main/resources/second/Messages.properties")
+                .toPath();
+        Files.createDirectories(first.getParent());
+        Files.createDirectories(second.getParent());
+        Files.writeString(first, "greeting=Hello\n");
+        Files.writeString(second, "greeting=Goodbye\n");
+        var runner = ith.gradleRunner();
+        runner.withArguments("classes", "--configuration-cache").build();
+        assertThat(ith.inProjectDir("build/generated-src/localizer/first/Messages.java"))
+                .exists();
+        assertThat(ith.inProjectDir("build/classes/java/main/first/Messages.class"))
+                .exists();
+
+        Files.delete(first);
+        runner.withArguments("classes", "--configuration-cache").build();
+        assertThat(ith.inProjectDir("build/generated-src/localizer/first/Messages.java"))
+                .doesNotExist();
+        assertThat(ith.inProjectDir("build/classes/java/main/first/Messages.class"))
+                .doesNotExist();
+        assertThat(ith.inProjectDir("build/generated-src/localizer/second/Messages.java"))
+                .exists();
+
+        var renamed = ith.inProjectDir("src/main/resources/renamed/Messages.properties")
+                .toPath();
+        Files.createDirectories(renamed.getParent());
+        Files.move(second, renamed);
+        runner.withArguments("classes", "--configuration-cache").build();
+        assertThat(ith.inProjectDir("build/generated-src/localizer/second/Messages.java"))
+                .doesNotExist();
+        assertThat(ith.inProjectDir("build/classes/java/main/second/Messages.class"))
+                .doesNotExist();
+        assertThat(ith.inProjectDir("build/generated-src/localizer/renamed/Messages.java"))
+                .exists();
+        assertThat(ith.inProjectDir("build/classes/java/main/renamed/Messages.class"))
+                .exists();
+
+        Files.delete(renamed);
+        runner.withArguments("classes", "--configuration-cache").build();
+        assertThat(ith.inProjectDir("build/generated-src/localizer/renamed/Messages.java"))
+                .doesNotExist();
+        assertThat(ith.inProjectDir("build/classes/java/main/renamed/Messages.class"))
+                .doesNotExist();
+    }
+
+    @Test
     void classesTaskCompilesGeneratedLocalizationSources() throws IOException {
         var ith = new IntegrationTestHelper(tempDir, "8.14");
         initBuild(ith);

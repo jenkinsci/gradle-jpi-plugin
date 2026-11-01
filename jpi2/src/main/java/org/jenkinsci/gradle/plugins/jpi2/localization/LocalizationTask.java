@@ -7,6 +7,7 @@ import javax.inject.Inject;
 import org.gradle.api.GradleException;
 import org.gradle.api.file.ConfigurableFileCollection;
 import org.gradle.api.file.DirectoryProperty;
+import org.gradle.api.file.FileSystemOperations;
 import org.gradle.api.file.FileTree;
 import org.gradle.api.tasks.CacheableTask;
 import org.gradle.api.tasks.InputFiles;
@@ -48,9 +49,15 @@ public abstract class LocalizationTask extends SourceTask {
     @Inject
     public abstract WorkerExecutor getWorkerExecutor();
 
+    /** @return file operations used to remove sources from deleted message bundles */
+    @Inject
+    protected abstract FileSystemOperations getFileSystemOperations();
+
     /** Submits one localizer work item per {@code Messages.properties} file, resolved relative to the configured source roots. */
     @TaskAction
     public void generate() {
+        // A full generation must own the complete output set, including removals and renames.
+        getFileSystemOperations().delete(spec -> spec.delete(getOutputDir()));
         WorkQueue workQueue = getWorkerExecutor()
                 .classLoaderIsolation(spec -> spec.getClasspath().from(getLocalizerClasspath()));
 
