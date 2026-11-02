@@ -1,14 +1,9 @@
 package org.jenkinsci.gradle.plugins.jpi2;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
 
 import java.util.ArrayList;
-import java.util.Set;
 import org.gradle.api.DefaultTask;
-import org.gradle.api.artifacts.Configuration;
-import org.gradle.api.artifacts.ResolvedConfiguration;
 import org.gradle.api.tasks.Sync;
 import org.gradle.testfixtures.ProjectBuilder;
 import org.junit.jupiter.api.Test;
@@ -22,10 +17,10 @@ class ConfigurePrepareServerActionTest {
         var jpiTask = project.getTasks().register("jpi", DefaultTask.class);
         jpiTask.configure(task -> realizedTasks.add(task.getName()));
 
-        var defaultRuntime = mock(Configuration.class);
-        var resolvedRuntime = mock(ResolvedConfiguration.class);
-        when(defaultRuntime.getResolvedConfiguration()).thenReturn(resolvedRuntime);
-        when(resolvedRuntime.getResolvedArtifacts()).thenReturn(Set.of());
+        var defaultRuntime = project.getConfigurations().create("runtime");
+        defaultRuntime.getIncoming().beforeResolve(ignored -> {
+            throw new AssertionError("Runtime must not resolve during task configuration");
+        });
 
         var prepareServer = project.getTasks()
                 .register(
@@ -44,5 +39,22 @@ class ConfigurePrepareServerActionTest {
         assertThat(realizedTasks).isEmpty();
         jpiTask.get();
         assertThat(realizedTasks).containsExactly("jpi");
+    }
+
+    @Test
+    void doesNotResolveRuntimeWhenConfiguringPrepareRun() {
+        var project = ProjectBuilder.builder().build();
+        var runtime = project.getConfigurations().create("runtime");
+        runtime.getIncoming().beforeResolve(ignored -> {
+            throw new AssertionError("Runtime must not resolve during task configuration");
+        });
+        var hpl = project.getTasks().register("hpl", GenerateHplTask.class);
+        var task = project.getTasks()
+                .register(
+                        "prepareRun",
+                        Sync.class,
+                        new ConfigurePrepareRunAction(hpl, project.provider(() -> "build/jenkins"), runtime));
+
+        assertThat(task.get()).isNotNull();
     }
 }

@@ -1,9 +1,7 @@
 package org.jenkinsci.gradle.plugins.jpi2;
 
-import java.util.Comparator;
 import org.gradle.api.Action;
 import org.gradle.api.artifacts.Configuration;
-import org.gradle.api.artifacts.ResolvedArtifact;
 import org.gradle.api.provider.Provider;
 import org.gradle.api.tasks.Sync;
 import org.gradle.api.tasks.TaskProvider;
@@ -40,16 +38,11 @@ class ConfigurePrepareServerAction implements Action<Sync> {
     public void execute(@NotNull Sync sync) {
         sync.into(workDir.map(it -> it + "/plugins"));
 
-        sync.from(jpiTaskProvider)
-                .rename(new DropVersionTransformer(projectName.get(), projectVersion.get(), targetExtension.get()));
+        sync.from(
+                jpiTaskProvider,
+                spec -> spec.rename(
+                        new DropVersionTransformer(projectName.get(), projectVersion.get(), targetExtension.get())));
 
-        defaultRuntime.getResolvedConfiguration().getResolvedArtifacts().stream()
-                .filter(artifact -> HpiMetadataRule.PLUGIN_PACKAGINGS.contains(artifact.getExtension()))
-                .sorted(Comparator.comparing(ResolvedArtifact::getName))
-                .forEach(artifact -> sync.from(artifact.getFile())
-                        .rename(new DropVersionTransformer(
-                                artifact.getModuleVersion().getId().getName(),
-                                artifact.getModuleVersion().getId().getVersion(),
-                                targetExtension.get())));
+        ServerPluginDependencies.configure(sync, defaultRuntime, targetExtension);
     }
 }
