@@ -2,7 +2,9 @@ package org.jenkinsci.gradle.plugins.jpi2;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -70,17 +72,41 @@ public final class GitVersion {
         command.addAll(Arrays.asList(args));
         pb.command(command);
         pb.directory(workDir.toFile());
-        pb.redirectErrorStream(true);
-        Process process = pb.start();
-        String output = new String(process.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
-        boolean finished = process.waitFor(30, TimeUnit.SECONDS);
-        if (!finished) {
-            process.destroyForcibly();
-            throw new RuntimeException("git " + String.join(" ", args) + " timed out");
+        return runCommand(pb, Duration.ofSeconds(30));
+    }
+
+    static List<String> runCommand(ProcessBuilder builder, Duration timeout) throws IOException, InterruptedException {
+        var outputFile = Files.createTempFile("jpi-git-", ".log");
+        Process process = null;
+        try {
+            // A file avoids blocking on an open stdout pipe before the timeout can be enforced.
+            process = builder.redirectErrorStream(true)
+                    .redirectOutput(outputFile.toFile())
+                    .start();
+            if (!process.waitFor(timeout.toMillis(), TimeUnit.MILLISECONDS)) {
+                throw new IllegalStateException(String.join(" ", builder.command()) + " timed out");
+            }
+            var output = Files.readString(outputFile, StandardCharsets.UTF_8);
+            if (process.exitValue() != 0) {
+                throw new IllegalStateException(String.join(" ", builder.command()) + " failed: " + output);
+            }
+            return output.lines().toList();
+        } finally {
+            if (process != null && process.isAlive()) {
+                process.descendants().forEach(ProcessHandle::destroyForcibly);
+                process.destroyForcibly();
+                try {
+                    process.waitFor(5, TimeUnit.SECONDS);
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                }
+            }
+            try {
+                Files.deleteIfExists(outputFile);
+            } catch (IOException e) {
+                // Windows can retain inherited file handles briefly after termination; preserve the command failure.
+                outputFile.toFile().deleteOnExit();
+            }
         }
-        if (process.exitValue() != 0) {
-            throw new RuntimeException("git " + String.join(" ", args) + " failed: " + output);
-        }
-        return output.lines().toList();
     }
 }
