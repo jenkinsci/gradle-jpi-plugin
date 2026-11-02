@@ -17,9 +17,11 @@ import java.util.Set;
 import org.gradle.api.DefaultTask;
 import org.gradle.api.GradleException;
 import org.gradle.api.file.ConfigurableFileCollection;
+import org.gradle.api.file.FileTree;
 import org.gradle.api.file.RegularFileProperty;
 import org.gradle.api.tasks.CacheableTask;
 import org.gradle.api.tasks.InputFiles;
+import org.gradle.api.tasks.Internal;
 import org.gradle.api.tasks.OutputFile;
 import org.gradle.api.tasks.PathSensitive;
 import org.gradle.api.tasks.PathSensitivity;
@@ -37,9 +39,18 @@ public abstract class CheckOverlappingSourcesTask extends DefaultTask {
     public static final String NAME = "checkOverlappingSources";
 
     /** @return all compiled-class directories to inspect for annotation index and plugin service files */
-    @InputFiles
-    @PathSensitive(PathSensitivity.RELATIVE)
+    @Internal
     public abstract ConfigurableFileCollection getClassesDirs();
+
+    /** @return annotation indices and plugin service entries inspected for overlaps */
+    @InputFiles
+    @PathSensitive(PathSensitivity.ABSOLUTE)
+    public FileTree getMetadataFiles() {
+        // Absolute paths distinguish identical entries in separate compiler outputs and match the stamp contents.
+        return getClassesDirs()
+                .getAsFileTree()
+                .matching(pattern -> pattern.include("META-INF/annotations/**", "META-INF/services/hudson.Plugin"));
+    }
 
     /**
      * Stamp file listing discovered metadata paths; used by Gradle for up-to-date checks

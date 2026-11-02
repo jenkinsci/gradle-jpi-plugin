@@ -11,9 +11,11 @@ import java.util.stream.Stream;
 import org.gradle.api.DefaultTask;
 import org.gradle.api.GradleException;
 import org.gradle.api.file.ConfigurableFileCollection;
+import org.gradle.api.file.FileTree;
 import org.gradle.api.file.RegularFileProperty;
 import org.gradle.api.tasks.CacheableTask;
 import org.gradle.api.tasks.InputFiles;
+import org.gradle.api.tasks.Internal;
 import org.gradle.api.tasks.OutputFile;
 import org.gradle.api.tasks.PathSensitive;
 import org.gradle.api.tasks.PathSensitivity;
@@ -31,9 +33,15 @@ public abstract class GenerateOptionalJenkinsManifestTask extends DefaultTask {
     private static final String EXTENSION_INDEX = "META-INF/annotations/hudson.Extension.txt";
 
     /** @return directories containing Sezpoz-generated annotation index files to inspect */
+    @Internal
+    public abstract ConfigurableFileCollection getInspectionDirectories();
+
+    /** @return extension indices whose contents determine dynamic loading support */
     @InputFiles
     @PathSensitive(PathSensitivity.RELATIVE)
-    public abstract ConfigurableFileCollection getInspectionDirectories();
+    public FileTree getExtensionIndices() {
+        return getInspectionDirectories().getAsFileTree().matching(pattern -> pattern.include(EXTENSION_INDEX));
+    }
 
     /** @return the partial manifest file to write (merged into the final plugin JAR manifest) */
     @OutputFile
