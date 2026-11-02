@@ -5,7 +5,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.file.Files;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.jar.Manifest;
 import org.gradle.api.DefaultTask;
@@ -13,9 +12,9 @@ import org.gradle.api.file.ConfigurableFileCollection;
 import org.gradle.api.file.RegularFileProperty;
 import org.gradle.api.provider.Property;
 import org.gradle.api.tasks.CacheableTask;
-import org.gradle.api.tasks.Classpath;
 import org.gradle.api.tasks.Input;
 import org.gradle.api.tasks.InputFile;
+import org.gradle.api.tasks.Internal;
 import org.gradle.api.tasks.Optional;
 import org.gradle.api.tasks.OutputFile;
 import org.gradle.api.tasks.PathSensitive;
@@ -30,6 +29,11 @@ public abstract class GenerateHplTask extends DefaultTask {
     /** Standard name under which this task is registered. */
     public static final String TASK_NAME = "generateJenkinsServerHpl";
 
+    public GenerateHplTask() {
+        // The path input below cannot carry the tasks that produce these files.
+        dependsOn(getLibraries());
+    }
+
     /** @return the {@code .hpl} file to write */
     @OutputFile
     public abstract RegularFileProperty getHpl();
@@ -39,8 +43,17 @@ public abstract class GenerateHplTask extends DefaultTask {
     public abstract Property<File> getResourcePath();
 
     /** @return runtime library JARs listed in the HPL {@code Libraries} attribute */
-    @Classpath
+    @Internal
     public abstract ConfigurableFileCollection getLibraries();
+
+    /** @return existing library paths in the order written to the HPL manifest */
+    @Input
+    public List<String> getLibraryPaths() {
+        return getLibraries().getFiles().stream()
+                .filter(File::exists)
+                .map(File::getAbsolutePath)
+                .toList();
+    }
 
     /** @return upstream {@code MANIFEST.MF} whose attributes are copied into the HPL before augmentation */
     @InputFile
@@ -64,13 +77,7 @@ public abstract class GenerateHplTask extends DefaultTask {
             manifest.getMainAttributes()
                     .putValue("Resource-Path", getResourcePath().get().getAbsolutePath());
 
-            List<String> existing = new LinkedList<>();
-            for (File file : getLibraries()) {
-                if (file.exists()) {
-                    existing.add(file.toString());
-                }
-            }
-            manifest.getMainAttributes().putValue("Libraries", String.join(",", existing));
+            manifest.getMainAttributes().putValue("Libraries", String.join(",", getLibraryPaths()));
             // The upstream manifest only has Plugin-Dependencies if the jpi task ran, which hplRun never needs.
             if (getPluginDependencies().isPresent()) {
                 manifest.getMainAttributes()
