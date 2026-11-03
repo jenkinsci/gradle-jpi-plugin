@@ -2,7 +2,6 @@ package org.jenkinsci.gradle.plugins.jpi2;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -36,8 +35,10 @@ public final class GitVersion {
     public static VersionResult compute(
             Path gitRoot, String versionFormat, String versionPrefix, int abbrevLength, boolean allowDirty)
             throws IOException, InterruptedException {
-        if (!Files.isDirectory(gitRoot.resolve(".git"))) {
-            throw new RuntimeException("Not a Git repository: " + gitRoot);
+        try {
+            runGit(gitRoot, "rev-parse", "--git-dir");
+        } catch (RuntimeException e) {
+            throw new IllegalArgumentException("Not a Git repository: " + gitRoot, e);
         }
 
         if (!allowDirty) {
@@ -80,6 +81,6 @@ public final class GitVersion {
         if (process.exitValue() != 0) {
             throw new RuntimeException("git " + String.join(" ", args) + " failed: " + output);
         }
-        return List.of(output.split("\n"));
+        return output.lines().toList();
     }
 }
