@@ -10,6 +10,42 @@ import org.junit.jupiter.api.Test;
 class AccessModifierIntegrationTest extends V2IntegrationTestBase {
 
     @Test
+    void parallelAccessChecksCanShareDependencyJars() throws IOException {
+        var ith = new IntegrationTestHelper(tempDir, "8.14");
+        Files.writeString(ith.inProjectDir("settings.gradle.kts").toPath(), """
+                rootProject.name = "parallel-access-checks"
+                (1..6).forEach { include("plugin-$it") }
+                """);
+        Files.writeString(ith.inProjectDir("build.gradle.kts").toPath(), """
+                plugins { id("org.jenkins-ci.jpi2") apply false }
+                """);
+        for (var index = 1; index <= 6; index++) {
+            var module = "plugin-" + index;
+            ith.mkDirInProjectDir(module + "/src/main/java/com/example");
+            Files.writeString(ith.inProjectDir(module + "/build.gradle.kts").toPath(), getBasePluginConfig());
+            Files.writeString(
+                    ith.inProjectDir(module + "/src/main/java/com/example/Example.java")
+                            .toPath(),
+                    """
+                    package com.example;
+                    public class Example {
+                        public String value() { return "ok"; }
+                    }
+                    """);
+        }
+
+        var result = ith.gradleRunner()
+                .withArguments("checkAccessModifier", "--parallel", "--max-workers=3")
+                .build();
+
+        for (var index = 1; index <= 6; index++) {
+            assertThat(result.task(":plugin-" + index + ":checkAccessModifier")).isNotNull();
+            assertThat(ith.inProjectDir("plugin-" + index + "/build/access-modifier/main-java.txt"))
+                    .exists();
+        }
+    }
+
+    @Test
     void checkLifecycleRunsCheckAccessModifier() throws IOException {
         // given
         var ith = new IntegrationTestHelper(tempDir, "8.14");

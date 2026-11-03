@@ -1,6 +1,7 @@
 package org.jenkinsci.gradle.plugins.jpi2.accmod;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.net.URL;
 import java.net.URLClassLoader;
 import java.nio.charset.StandardCharsets;
@@ -37,12 +38,11 @@ public abstract class CheckAccess implements WorkAction<CheckAccessParameters> {
                 .toList();
         URL[] urls = toScan.toArray(new URL[0]);
 
-        URLClassLoader loader = new URLClassLoader(urls, getClass().getClassLoader());
         InternalErrorListener listener = new InternalErrorListener();
         Properties props = new Properties();
         props.putAll(getParameters().getPropertiesForAccessModifier().get());
 
-        try {
+        try (var loader = new ScanClassLoader(urls, getClass().getClassLoader())) {
             Checker checker = new Checker(loader, listener, props, new MavenLoggingBridge());
             checker.check(getParameters().getDirToCheck().get().getAsFile());
         } catch (IOException e) {
@@ -63,6 +63,28 @@ public abstract class CheckAccess implements WorkAction<CheckAccessParameters> {
             } else {
                 LOGGER.error(listener.errorMessage());
                 throw new RestrictedApiException();
+            }
+        }
+    }
+
+    static final class ScanClassLoader extends URLClassLoader {
+        ScanClassLoader(URL[] urls, ClassLoader parent) {
+            super(urls, parent);
+        }
+
+        @Override
+        public InputStream getResourceAsStream(String name) {
+            var resource = getResource(name);
+            if (resource == null) {
+                return null;
+            }
+            try {
+                // Closing this loader must not close a cached JAR connection used by another scan.
+                var connection = resource.openConnection();
+                connection.setUseCaches(false);
+                return connection.getInputStream();
+            } catch (IOException e) {
+                return null;
             }
         }
     }
