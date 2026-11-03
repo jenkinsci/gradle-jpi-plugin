@@ -28,16 +28,31 @@ class RuntimeClasspathArtifacts {
     private final Project project;
     private final Configuration configuration;
     private final Configuration jenkinsCore;
+    private final FileCollection bundledLibraries;
+    private FileCollection resolvedBundledLibraries;
 
     RuntimeClasspathArtifacts(Project project, Configuration configuration, Configuration jenkinsCore) {
         this.project = project;
         this.configuration = configuration;
         this.jenkinsCore = jenkinsCore;
+        bundledLibraries = project.getObjects().fileCollection().from(project.provider(this::resolveBundledLibraries));
     }
 
     @NotNull
     FileCollection getBundledLibraries() {
-        var directJarDependencies = getDirectJarDependencies();
+        return bundledLibraries;
+    }
+
+    private synchronized FileCollection resolveBundledLibraries() {
+        if (resolvedBundledLibraries != null) {
+            return resolvedBundledLibraries;
+        }
+        var roots = configuration.getResolvedConfiguration().getFirstLevelModuleDependencies();
+        var pluginTransitives = getAllJpiPluginTransitiveDependencies(roots);
+        var provided = getAllJenkinsCoreDependencies();
+        provided.addAll(pluginTransitives);
+        var providedModules = provided.stream().map(Module::of).collect(Collectors.toSet());
+        var directJarDependencies = getDirectJarDependencies(roots, providedModules);
         var detachedConfiguration =
                 project.getConfigurations().detachedConfiguration(directJarDependencies.toArray(new Dependency[0]));
         detachedConfiguration
@@ -47,22 +62,30 @@ class RuntimeClasspathArtifacts {
                         project.getObjects().named(ArtifactType.class, ArtifactType.PLUGIN_JAR));
         detachedConfiguration.shouldResolveConsistentlyWith(configuration);
 
-        var jpiProvidedJars = getJarArtifactsFromJpiPlugins();
-        return detachedConfiguration.filter(file -> !jpiProvidedJars.contains(file.getName()));
+        var jpiProvidedJars = pluginTransitives.stream()
+                .flatMap(dependency -> dependency.getModuleArtifacts().stream())
+                .filter(artifact -> "jar".equals(artifact.getExtension()))
+                .map(artifact -> artifact.getFile().getName())
+                .collect(Collectors.toSet());
+        resolvedBundledLibraries = detachedConfiguration.filter(file -> !jpiProvidedJars.contains(file.getName()));
+        return resolvedBundledLibraries;
+    }
+
+    private record Module(String group, String name) {
+        static Module of(ResolvedDependency dependency) {
+            return new Module(dependency.getModuleGroup(), dependency.getModuleName());
+        }
     }
 
     @NotNull
-    private List<Dependency> getDirectJarDependencies() {
+    private List<Dependency> getDirectJarDependencies(
+            Set<ResolvedDependency> resolvedDependencies, Set<Module> providedModules) {
         var requestedDependencies = configuration.getAllDependencies();
-        var resolvedDependencies = configuration.getResolvedConfiguration().getFirstLevelModuleDependencies();
-        var jenkinsCoreModules = getAllJenkinsCoreDependencies();
-        var jpiPluginTransitives = getAllJpiPluginTransitiveDependencies();
 
         var projectPathMap = buildProjectPathMap();
 
         return resolvedDependencies.stream()
-                .filter(dependency -> isDependencyUnseen(dependency, jenkinsCoreModules))
-                .filter(dependency -> isDependencyUnseen(dependency, jpiPluginTransitives))
+                .filter(dependency -> !providedModules.contains(Module.of(dependency)))
                 .flatMap(dependency -> dependency.getModuleArtifacts().stream()
                         .filter(artifact -> "jar".equals(artifact.getExtension()))
                         .flatMap(
@@ -113,9 +136,9 @@ class RuntimeClasspathArtifacts {
     }
 
     @NotNull
-    private Set<ResolvedDependency> getAllJpiPluginTransitiveDependencies() {
+    private Set<ResolvedDependency> getAllJpiPluginTransitiveDependencies(
+            Set<ResolvedDependency> resolvedDependencies) {
         var allTransitives = new HashSet<ResolvedDependency>();
-        var resolvedDependencies = configuration.getResolvedConfiguration().getFirstLevelModuleDependencies();
 
         for (var dependency : resolvedDependencies) {
             if (isJpiPluginDependency(dependency)) {
@@ -131,36 +154,6 @@ class RuntimeClasspathArtifacts {
     private boolean isJpiPluginDependency(ResolvedDependency dependency) {
         return dependency.getModuleArtifacts().stream()
                 .anyMatch(artifact -> "jpi".equals(artifact.getExtension()) || "hpi".equals(artifact.getExtension()));
-    }
-
-    private boolean isDependencyUnseen(ResolvedDependency dependency, Set<ResolvedDependency> dependencySet) {
-        return dependencySet.stream()
-                .noneMatch(setMember -> Objects.equals(setMember.getModuleGroup(), dependency.getModuleGroup())
-                        && Objects.equals(setMember.getModuleName(), dependency.getModuleName()));
-    }
-
-    @NotNull
-    private Set<String> getJarArtifactsFromJpiPlugins() {
-        var jpiProvidedJars = new HashSet<String>();
-        var resolvedDependencies = configuration.getResolvedConfiguration().getFirstLevelModuleDependencies();
-
-        for (var dependency : resolvedDependencies) {
-            if (isJpiPluginDependency(dependency)) {
-                var allTransitives = new HashSet<ResolvedDependency>();
-                for (var child : dependency.getChildren()) {
-                    collectAllDependencies(child, allTransitives);
-                }
-
-                for (var transitive : allTransitives) {
-                    transitive.getModuleArtifacts().stream()
-                            .filter(artifact -> "jar".equals(artifact.getExtension()))
-                            .forEach(artifact ->
-                                    jpiProvidedJars.add(artifact.getFile().getName()));
-                }
-            }
-        }
-
-        return jpiProvidedJars;
     }
 
     private boolean matches(ResolvedDependency dependency, Dependency reqDep, Map<String, String> projectPathMap) {

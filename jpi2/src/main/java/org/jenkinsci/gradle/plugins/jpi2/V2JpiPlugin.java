@@ -21,10 +21,10 @@ import org.gradle.api.artifacts.Dependency;
 import org.gradle.api.artifacts.ProjectDependency;
 import org.gradle.api.artifacts.ResolvedArtifact;
 import org.gradle.api.artifacts.component.ModuleComponentIdentifier;
+import org.gradle.api.artifacts.result.ResolvedDependencyResult;
 import org.gradle.api.attributes.Usage;
 import org.gradle.api.file.Directory;
 import org.gradle.api.file.FileCollection;
-import org.gradle.api.internal.artifacts.result.DefaultResolvedDependencyResult;
 import org.gradle.api.plugins.BasePlugin;
 import org.gradle.api.plugins.ExtensionAware;
 import org.gradle.api.plugins.GroovyBasePlugin;
@@ -177,8 +177,13 @@ public class V2JpiPlugin implements Plugin<Project> {
                 });
         var optionalManifestFile = optionalManifest.flatMap(GenerateOptionalJenkinsManifestTask::getOutputFile);
 
+        var runtimeClasspathArtifacts = new RuntimeClasspathArtifacts(project, defaultRuntime, jenkinsCore);
         var jpiTask = project.getTasks()
-                .register(JPI_TASK, War.class, new ConfigureJpiAction(project, defaultRuntime, jenkinsCore, extension));
+                .register(
+                        JPI_TASK,
+                        War.class,
+                        new ConfigureJpiAction(
+                                project, defaultRuntime, runtimeClasspathArtifacts.getBundledLibraries(), extension));
         jpiTask.configure(war -> {
             war.dependsOn(licenseTask);
             war.getInputs().file(optionalManifestFile);
@@ -215,7 +220,6 @@ public class V2JpiPlugin implements Plugin<Project> {
         });
         Provider<Directory> jpiDirectory =
                 project.getLayout().getBuildDirectory().dir("jpi");
-        var runtimeClasspathArtifacts = new RuntimeClasspathArtifacts(project, defaultRuntime, jenkinsCore);
         project.getTasks().register(EXPLODED_JPI_TASK, Sync.class, sync -> {
             sync.into(jpiDirectory);
             sync.with(jpiTask.get());
@@ -814,8 +818,8 @@ public class V2JpiPlugin implements Plugin<Project> {
 
         var pluginDependencies = rootDependencies.stream()
                 .filter(it -> !it.isConstraint())
-                .filter(it -> it instanceof DefaultResolvedDependencyResult)
-                .map(it -> ((DefaultResolvedDependencyResult) it))
+                .filter(it -> it instanceof ResolvedDependencyResult)
+                .map(it -> ((ResolvedDependencyResult) it))
                 .filter(it -> it.getResolvedVariant().getDisplayName().equals(HpiMetadataRule.DEFAULT_RUNTIME_VARIANT))
                 .map(it -> it.getSelected().getModuleVersion())
                 .filter(Objects::nonNull)

@@ -20,6 +20,22 @@ import org.junit.jupiter.api.Timeout;
 class SimpleBuildIntegrationTest extends V2IntegrationTestBase {
 
     @Test
+    void realizingPackagingAndHplTasksDoesNotResolveDependencies() throws IOException {
+        var ith = new IntegrationTestHelper(tempDir, "8.14");
+        initBuild(ith);
+        Files.writeString(ith.inProjectDir("build.gradle.kts").toPath(), """
+                plugins { id("org.jenkins-ci.jpi2") }
+                tasks.named("jpi").get()
+                tasks.named("generateJenkinsServerHpl").get()
+                tasks.named("testHplRun").get()
+                """);
+
+        var result = ith.gradleRunner().withArguments("help", "--offline").build();
+
+        assertThat(result.task(":help").getOutcome()).isEqualTo(TaskOutcome.SUCCESS);
+    }
+
+    @Test
     void simpleGradleBuildShouldBuild() throws IOException {
         // given
         var ith = new IntegrationTestHelper(tempDir, "8.14");
