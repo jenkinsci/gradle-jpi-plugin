@@ -21,6 +21,27 @@ import org.junit.jupiter.api.Test;
 class VersionSourceIntegrationTest extends V2IntegrationTestBase {
 
     @Test
+    void fixedVersionIsUsedForStagedArchiveAndLicenseMetadata() throws IOException {
+        var ith = new IntegrationTestHelper(tempDir, "8.14");
+        initBuild(ith);
+        Files.writeString(ith.inProjectDir("build.gradle.kts").toPath(), getBasePluginConfig() + """
+                jenkinsPlugin {
+                    versionSource.set(org.jenkinsci.gradle.plugins.jpi2.VersionSource.FIXED)
+                    fixedVersion.set("2.0.0-beta")
+                }
+                """);
+
+        ith.gradleRunner().withArguments("prepareServer").build();
+
+        assertThat(ith.inProjectDir("work/plugins/test-plugin.jpi")).exists();
+        assertThat(ith.inProjectDir("work/plugins/test-plugin-2.0.0-beta.jpi")).doesNotExist();
+        assertThat(Files.readString(
+                        ith.inProjectDir("build/licenses/licenses.xml").toPath()))
+                .contains("version=\"2.0.0-beta\"")
+                .doesNotContain("version=\"1.0.0\"");
+    }
+
+    @Test
     void projectVersionIsUsedByDefault() throws IOException {
         var ith = new IntegrationTestHelper(tempDir, "8.14");
         initBuild(ith);

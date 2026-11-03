@@ -139,8 +139,7 @@ public class V2JpiPlugin implements Plugin<Project> {
                     task.getOutputDirectory()
                             .set(project.getLayout().getBuildDirectory().dir("licenses"));
                     task.getPomFiles().from(pomFiles);
-                    task.getProjectVersion()
-                            .set(project.provider(() -> project.getVersion().toString()));
+                    task.getProjectVersion().set(extension.getEffectiveVersion());
                     task.getProjectName().set(project.getName());
                     task.getProjectGroup()
                             .set(project.provider(() -> project.getGroup().toString()));
@@ -590,7 +589,7 @@ public class V2JpiPlugin implements Plugin<Project> {
             @NotNull Project project,
             Provider<String> workDir,
             Configuration defaultRuntime,
-            TaskProvider<?> jpiTaskProvider) {
+            TaskProvider<War> jpiTaskProvider) {
         return project.getTasks()
                 .register(
                         "prepareServer",
@@ -599,8 +598,8 @@ public class V2JpiPlugin implements Plugin<Project> {
                                 jpiTaskProvider,
                                 workDir,
                                 defaultRuntime,
-                                project.provider(project::getName),
-                                project.provider(() -> project.getVersion().toString()),
+                                jpiTaskProvider.flatMap(War::getArchiveBaseName),
+                                jpiTaskProvider.flatMap(War::getArchiveVersion),
                                 project.getExtensions()
                                         .getByType(JenkinsPluginExtension.class)
                                         .getArchiveExtension()));
