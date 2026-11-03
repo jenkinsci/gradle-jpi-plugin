@@ -45,4 +45,6 @@ jobs:
         if: ${{ failure() }}
         with:
           name: ${{ matrix.os }}-${{ matrix.gradle_version }}-test-results
-          path: build/reports/tests
+          path: |
+            **/build/reports/tests/**
+            **/build/test-results/**
