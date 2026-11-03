@@ -3,17 +3,14 @@ package org.jenkinsci.gradle.plugins.jpi2;
 import static org.jenkinsci.gradle.plugins.jpi2.ArtifactType.ARTIFACT_TYPE_ATTRIBUTE;
 
 import java.io.File;
-import java.net.URI;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
-import org.gradle.StartParameter;
 import org.gradle.api.Plugin;
 import org.gradle.api.Project;
 import org.gradle.api.artifacts.Configuration;
@@ -24,7 +21,6 @@ import org.gradle.api.artifacts.component.ModuleComponentIdentifier;
 import org.gradle.api.artifacts.result.ResolvedDependencyResult;
 import org.gradle.api.attributes.Usage;
 import org.gradle.api.file.Directory;
-import org.gradle.api.file.FileCollection;
 import org.gradle.api.plugins.BasePlugin;
 import org.gradle.api.plugins.ExtensionAware;
 import org.gradle.api.plugins.GroovyBasePlugin;
@@ -35,7 +31,6 @@ import org.gradle.api.provider.Provider;
 import org.gradle.api.publish.PublishingExtension;
 import org.gradle.api.publish.maven.MavenPublication;
 import org.gradle.api.publish.maven.plugins.MavenPublishPlugin;
-import org.gradle.api.services.BuildServiceRegistry;
 import org.gradle.api.tasks.JavaExec;
 import org.gradle.api.tasks.SourceSet;
 import org.gradle.api.tasks.SourceSetContainer;
@@ -43,13 +38,9 @@ import org.gradle.api.tasks.Sync;
 import org.gradle.api.tasks.TaskProvider;
 import org.gradle.api.tasks.bundling.Jar;
 import org.gradle.api.tasks.bundling.War;
-import org.gradle.api.tasks.testing.Test;
-import org.jenkinsci.gradle.plugins.jpi2.accmod.CheckAccessModifierTask;
-import org.jenkinsci.gradle.plugins.jpi2.accmod.PrefixedPropertiesProvider;
 import org.jenkinsci.gradle.plugins.jpi2.localization.LocalizationPlugin;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-import org.jspecify.annotations.NonNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -287,7 +278,7 @@ public class V2JpiPlugin implements Plugin<Project> {
                         new ServerAction(serverTaskClasspath, projectRoot, workDir, serverPort, prepareRun));
         project.getPlugins().withType(JavaBasePlugin.class, new SezpozJavaAction(project));
         project.getPlugins().withType(GroovyBasePlugin.class, new SezpozGroovyAction(project));
-        configureAccessModifier(project);
+        AccessModifierConfigurer.configure(project);
 
         /*
          * We want sezpoz to be the last annotation processor.
@@ -309,7 +300,7 @@ public class V2JpiPlugin implements Plugin<Project> {
         dependencies.add("testImplementation", "org.junit.jupiter:junit-jupiter");
         dependencies.add("testRuntimeOnly", "org.junit.platform:junit-platform-launcher");
 
-        configureTestPluginDependencies(project, testDefaultRuntime);
+        TestHarnessConfigurer.configure(project, testDefaultRuntime);
 
         dependencies.add(jenkinsCore.getName(), jenkinsCoreCoordinate);
 
@@ -319,7 +310,7 @@ public class V2JpiPlugin implements Plugin<Project> {
                 .attribute(ARTIFACT_TYPE_ATTRIBUTE)
                 .getDisambiguationRules()
                 .add(ArtifactTypeDisambiguationRule.class);
-        var publicationName = configurePublishing(project, jpiTask, defaultRuntime, extension);
+        var publicationName = PublishingConfigurer.configure(project, jpiTask, defaultRuntime, extension);
 
         var publishing = project.getExtensions().getByType(PublishingExtension.class);
         var resolveVersion = project.getTasks().register("resolvePluginVersion", task -> {
@@ -343,261 +334,8 @@ public class V2JpiPlugin implements Plugin<Project> {
                 .named("generateMetadataFileFor" + capitalizedName + "Publication")
                 .configure(t -> t.dependsOn(resolveVersion));
 
-        BuildServiceRegistry buildServices = project.getGradle().getSharedServices();
-
-        // Cap how many Jenkins servers boot at once. Each launch is a nested Gradle build plus a
-        // Jenkins JVM, so unbounded parallelism saturates the machine and Jenkins misses its startup
-        // timeout (killed → exit 143). The cap governs only the launch tasks, so the rest of the
-        // build keeps full parallelism. Default scales with CPUs (~1 launch per 3 cores); override
-        // with -DtestServer.maxParallelLaunches, which accepts an absolute count or a processor-
-        // relative C/D so one setting survives moving to a machine with a different core count.
-        var availableProcessors = Runtime.getRuntime().availableProcessors();
-        Provider<Integer> maxParallelLaunches = project.getProviders()
-                .systemProperty(JenkinsLaunchThrottle.MAX_PARALLEL_LAUNCHES_PROPERTY)
-                .map(spec -> JenkinsLaunchThrottle.resolveMaxParallelLaunches(spec, availableProcessors))
-                .orElse(JenkinsLaunchThrottle.resolveMaxParallelLaunches(null, availableProcessors));
-        var launchThrottle = buildServices.registerIfAbsent(
-                "jenkinsLaunchThrottle",
-                JenkinsLaunchThrottle.class,
-                spec -> spec.getMaxParallelUsages().set(maxParallelLaunches));
-
-        var gradle = project.getGradle();
-        var startParameter = gradle.getStartParameter();
-        var gradleHome = gradle.getGradleHomeDir();
-        var isWindows =
-                System.getProperty("os.name", "").toLowerCase(Locale.ROOT).contains("windows");
-        var gradleScriptName = isWindows ? "bin/gradle.bat" : "bin/gradle";
-        var gradleExecutable = gradleHome != null ? new File(gradleHome, gradleScriptName).getAbsolutePath() : "gradle";
-        var isRootProject = project == project.getRootProject();
-        var projectPath = project.getPath();
-
-        var testServerTask = registerTestTask(
-                project,
-                launchThrottle,
-                maxParallelLaunches,
-                gradleExecutable,
-                startParameter,
-                isRootProject,
-                projectPath,
-                "testServer",
-                "Launch Jenkins server and terminate after success or first error",
-                ":server");
-        // Fingerprint the source files that prepareServer would sync (jpi, plugin dependencies,
-        // project-dependency jpis), not its destination — prepareServer and prepareRun both write
-        // to workDir/plugins, so snapshotting the destination would create an implicit dependency
-        // between the two test tasks. The nested build runs its own prepareServer into a fresh
-        // work directory, so syncing here too would only copy plugins nothing reads.
-        testServerTask.configure(task -> {
-            task.getPluginFiles().from(syncSourceWithoutSyncing(project, prepareServer));
-            task.getJenkinsClasspath().from(serverTaskClasspath);
-        });
-
-        var testHplRunTask = registerTestTask(
-                project,
-                launchThrottle,
-                maxParallelLaunches,
-                gradleExecutable,
-                startParameter,
-                isRootProject,
-                projectPath,
-                "testHplRun",
-                "Launch Jenkins hplRun task and terminate after success or first error",
-                ":hplRun");
-        testHplRunTask.configure(task -> {
-            task.getPluginFiles().from(syncSourceWithoutSyncing(project, prepareRun));
-            task.getJenkinsClasspath().from(serverTaskClasspath);
-            // The .hpl manifest points at these directories on disk by absolute path; their
-            // contents must be fingerprinted for caching to be correct, even though only the
-            // generated .hpl file (whose text doesn't change when sources change) is an input
-            // to prepareRun.
-            task.getReferencedFiles().from(main.getResources().getSrcDirs());
-            task.getReferencedFiles().from(main.getOutput().getClassesDirs());
-            task.getReferencedFiles().from(project.provider(main.getOutput()::getResourcesDir));
-            task.getReferencedFiles().from(runtimeClasspathArtifacts.getBundledLibraries());
-            task.dependsOn(project.getTasks().named("classes"));
-        });
-    }
-
-    /**
-     * A mapped task provider carries a dependency on the task itself; going through a plain
-     * provider keeps only the dependencies of the source files (e.g. the {@code jpi} task).
-     */
-    @NotNull
-    private static Provider<FileCollection> syncSourceWithoutSyncing(
-            @NotNull Project project, @NotNull TaskProvider<Sync> sync) {
-        return project.provider(() -> sync.get().getSource());
-    }
-
-    @NotNull
-    private static TaskProvider<TestServerTask> registerTestTask(
-            @NotNull Project project,
-            @NotNull Provider<JenkinsLaunchThrottle> launchThrottle,
-            @NotNull Provider<Integer> maxParallelLaunches,
-            @NotNull String gradleExecutable,
-            @NotNull StartParameter startParameter,
-            boolean isRootProject,
-            @NotNull String projectPath,
-            @NotNull String taskName,
-            @NotNull String description,
-            @NotNull String taskSuffix) {
-        return project.getTasks().register(taskName, TestServerTask.class, task -> {
-            task.setGroup("verification");
-            task.setDescription(description);
-            task.getRootDir().set(project.getRootDir().getAbsolutePath());
-            task.getGradleExecutable().set(gradleExecutable);
-            task.getJavaHome().set(System.getProperty("java.home"));
-            var initScripts = startParameter.getAllInitScripts();
-            task.getInitScriptFiles().from(initScripts);
-            task.getInitScriptPaths()
-                    .set(initScripts.stream().map(File::getAbsolutePath).toList());
-            addBuildConfigFiles(project, task);
-            task.getIncludedBuilds()
-                    .set(startParameter.getIncludedBuilds().stream()
-                            .map(File::getPath)
-                            .toList());
-            task.getGradleUserHome().set(startParameter.getGradleUserHomeDir().getAbsolutePath());
-            task.getOffline().set(startParameter.isOffline());
-            task.getBuildCacheEnabled().set(startParameter.isBuildCacheEnabled());
-            task.getRefreshDependencies().set(startParameter.isRefreshDependencies());
-            task.getContinueOnFailure().set(startParameter.isContinueOnFailure());
-            task.getParallelExecution().set(startParameter.isParallelProjectExecutionEnabled());
-            task.getProfile().set(startParameter.isProfile());
-            task.getDryRun().set(startParameter.isDryRun());
-            task.getSystemProperties().set(startParameter.getSystemPropertiesArgs());
-            task.getProjectProperties().set(startParameter.getProjectProperties());
-            task.getServerTaskPath().set(isRootProject ? taskSuffix : projectPath + taskSuffix);
-            task.getSuccessMarker()
-                    .set(project.getLayout().getBuildDirectory().file("test-server/" + taskName + ".success"));
-            // Bounds concurrent Jenkins launches across the whole build (see JenkinsLaunchThrottle).
-            task.usesService(launchThrottle);
-            task.getMaxParallelLaunches().set(maxParallelLaunches);
-        });
-    }
-
-    /**
-     * Registers the build logic that can change how the nested {@code :server} / {@code :hplRun}
-     * build behaves: build &amp; settings scripts, {@code gradle.properties}, version catalogs and
-     * {@code buildSrc} sources.
-     *
-     * <p>The files are enumerated per project instead of scanned from the root directory. A file
-     * tree rooted at the root directory is an ancestor of every other task's output in the build
-     * (a sibling module's Jenkins work directory, an npm install directory, …), and Gradle reports
-     * such an input as an undeclared dependency on those producing tasks and, since Gradle 9, fails
-     * the build for it. Naming the files keeps the fingerprint without claiming to read the whole
-     * tree.
-     *
-     * <p>This cannot be exhaustive — the nested build re-evaluates everything — so see the
-     * cacheability note on {@link TestServerTask} for what is and isn't guaranteed.
-     */
-    private static void addBuildConfigFiles(@NotNull Project project, @NotNull TestServerTask task) {
-        var rootDir = project.getRootDir();
-        var files = findBuildConfigFiles(project, rootDir);
-        task.getBuildConfigFiles().from(files);
-        // The `gradle` and `buildSrc/src` directories hold no task outputs, so they are safe to
-        // walk as trees: version catalogs, script plugins and precompiled build logic.
-        task.getBuildConfigFiles()
-                .from(project.fileTree(
-                        new File(rootDir, "gradle"),
-                        tree -> tree.include("**/*.versions.toml", "**/*.gradle", "**/*.gradle.kts")));
-        task.getBuildConfigFiles().from(project.fileTree(new File(rootDir, "buildSrc/src")));
-    }
-
-    @NonNull
-    private static LinkedHashSet<File> findBuildConfigFiles(@NonNull Project project, File rootDir) {
-        var files = new LinkedHashSet<File>();
-        files.add(new File(rootDir, "settings.gradle"));
-        files.add(new File(rootDir, "settings.gradle.kts"));
-        // buildSrc is a separate build, so it is not part of getAllprojects().
-        for (var name : List.of(
-                "build.gradle", "build.gradle.kts", "settings.gradle", "settings.gradle.kts", "gradle.properties")) {
-            files.add(new File(rootDir, "buildSrc/" + name));
-        }
-        for (var candidate : project.getRootProject().getAllprojects()) {
-            files.add(candidate.getBuildFile());
-            files.add(new File(candidate.getProjectDir(), "gradle.properties"));
-        }
-        return files;
-    }
-
-    private static void configureAccessModifier(@NotNull Project project) {
-        var library = project.getDependencies().create("org.kohsuke:access-modifier-checker:1.35");
-        var mavenLog = project.getDependencies().create("org.apache.maven:maven-plugin-api:2.0.1");
-        var jenkinsAccessModifier = project.getConfigurations().create("jenkinsAccessModifier", c -> {
-            c.getAttributes()
-                    .attribute(Usage.USAGE_ATTRIBUTE, project.getObjects().named(Usage.class, Usage.JAVA_RUNTIME));
-            c.setCanBeConsumed(false);
-            c.setCanBeResolved(true);
-            c.withDependencies(dependencies -> {
-                dependencies.add(library);
-                dependencies.add(mavenLog);
-            });
-        });
-
-        var propertyProvider =
-                PrefixedPropertiesProvider.gradlePropertiesPrefixedBy(project, CheckAccessModifierTask.PREFIX);
-        var checkAccessModifier = project.getTasks()
-                .register(CheckAccessModifierTask.NAME, CheckAccessModifierTask.class, task -> {
-                    task.setGroup("Verification");
-                    task.setDescription(
-                            "Checks if Jenkins restricted apis are used (https://tiny.cc/jenkins-restricted).");
-                    var dirs = project.getExtensions()
-                            .getByType(JavaPluginExtension.class)
-                            .getSourceSets()
-                            .getByName(SourceSet.MAIN_SOURCE_SET_NAME)
-                            .getOutput()
-                            .getClassesDirs();
-                    task.getAccessModifierClasspath().from(jenkinsAccessModifier);
-                    task.getAccessModifierProperties().set(propertyProvider);
-                    task.getCompileClasspath().from(project.getConfigurations().getByName("compileClasspath"));
-                    task.getCompilationDirs().from(dirs);
-                    task.getIgnoreFailures().convention(true);
-                    task.getOutputDirectory()
-                            .set(project.getLayout().getBuildDirectory().dir("access-modifier"));
-                    task.getOutputs()
-                            .upToDateWhen(element -> !task.getIgnoreFailures().get());
-                });
-
-        project.getTasks().named("check", task -> task.dependsOn(checkAccessModifier));
-    }
-
-    /** Returns the name of the publication that was configured (for task name resolution). */
-    @NotNull
-    private static String configurePublishing(
-            @NotNull Project project,
-            TaskProvider<?> jpiTask,
-            Configuration runtimeClasspath,
-            JenkinsPluginExtension extension) {
-        var publishingExtension = project.getExtensions().getByType(PublishingExtension.class);
-        var existingPublication = !publishingExtension.getPublications().isEmpty()
-                ? publishingExtension.getPublications().iterator().next()
-                : null;
-        var javaPlugin = project.getExtensions().getByType(JavaPluginExtension.class);
-        javaPlugin.withJavadocJar();
-        javaPlugin.withSourcesJar();
-        if (existingPublication instanceof MavenPublication publication) {
-            configurePublication(publication, jpiTask, runtimeClasspath, project, extension);
-            return publication.getName();
-        } else {
-            publishingExtension.getPublications().create("mavenJpi", MavenPublication.class, publication -> {
-                publication.from(project.getComponents().getByName("java"));
-                configurePublication(publication, jpiTask, runtimeClasspath, project, extension);
-            });
-            return "mavenJpi";
-        }
-    }
-
-    private static void configurePublication(
-            @NotNull MavenPublication publication,
-            TaskProvider<?> jpiTask,
-            Configuration runtimeClasspath,
-            Project project,
-            JenkinsPluginExtension extension) {
-        publication.artifact(jpiTask);
-        publication.getPom().setPackaging(extension.getArchiveExtension().get());
-        publication.getPom().getName().set(extension.getDisplayName());
-        publication.getPom().getUrl().set(extension.getHomePage().map(URI::toASCIIString));
-        publication.getPom().getDescription().set(project.provider(project::getDescription));
-        publication.getPom().withXml(new PomBuilder(runtimeClasspath, project, extension, project.getLogger()));
+        ServerVerificationConfigurer.configure(
+                project, serverTaskClasspath, prepareServer, prepareRun, main, runtimeClasspathArtifacts);
     }
 
     @NotNull
@@ -784,43 +522,6 @@ public class V2JpiPlugin implements Plugin<Project> {
             @NotNull Project project, String propertyName, String defaultVersion) {
         Provider<String> myProperty = project.getProviders().gradleProperty(propertyName);
         return myProperty.getOrElse(defaultVersion);
-    }
-
-    /**
-     * Wires up {@link CopyTestPluginDependenciesTask} so that Jenkins plugin dependencies
-     * resolved on the test classpath (not just library jars) are installed into the
-     * {@code JenkinsRule} instance used by the {@code test} task, mirroring what JPI (v1)'s
-     * {@code copyTestPluginDependencies} task does.
-     */
-    private static void configureTestPluginDependencies(
-            @NotNull Project project, @NotNull Configuration testDefaultRuntime) {
-        var testPluginDependenciesDir = project.getLayout().getBuildDirectory().dir("jpi-plugin/test");
-        var copyTestPluginDependencies = project.getTasks()
-                .register(CopyTestPluginDependenciesTask.NAME, CopyTestPluginDependenciesTask.class, task -> {
-                    task.setGroup("Verification");
-                    task.setDescription("Copies Jenkins plugin dependencies on the test classpath into a directory "
-                            + "jenkins-test-harness reads to install them as plugins in JenkinsRule.");
-                    task.getPluginFiles()
-                            .from(project.provider(() -> resolveTestPluginArtifacts(testDefaultRuntime).stream()
-                                    .map(ResolvedArtifact::getFile)
-                                    .collect(Collectors.toList())));
-                    task.getFileNameToPluginId()
-                            .set(project.provider(() -> resolveTestPluginArtifacts(testDefaultRuntime).stream()
-                                    .collect(Collectors.toMap(
-                                            a -> a.getFile().getName(), ResolvedArtifact::getName, (a, b) -> a))));
-                    task.getOutputDir().set(testPluginDependenciesDir.map(dir -> dir.dir("test-dependencies")));
-                });
-        project.getTasks().named("test", Test.class, task -> {
-            task.getInputs().files(copyTestPluginDependencies);
-            task.setClasspath(task.getClasspath().plus(project.files(testPluginDependenciesDir)));
-        });
-    }
-
-    @NotNull
-    private static List<ResolvedArtifact> resolveTestPluginArtifacts(@NotNull Configuration testDefaultRuntime) {
-        return testDefaultRuntime.getResolvedConfiguration().getResolvedArtifacts().stream()
-                .filter(a -> "jpi".equals(a.getExtension()) || "hpi".equals(a.getExtension()))
-                .collect(Collectors.toList());
     }
 
     @Nullable
