@@ -119,8 +119,9 @@ gradlePlugin {
 fun Project.stringProp(named: String): String? = findProperty(named) as String?
 
 val javaVersions = listOf(17)
-val umbrellaPattern = Regex("^testGradle([0-9]+(?:\\.[0-9]+)*)$")
-val perJavaPattern = Regex("^testGradle([0-9]+(?:\\.[0-9]+)*)onJava([0-9]+)$")
+val gradleVersionPattern = """[0-9]+(?:\.[0-9]+)*(?:-[0-9A-Za-z.+-]+)?"""
+val umbrellaPattern = Regex("^testGradle($gradleVersionPattern)$")
+val perJavaPattern = Regex("^testGradle($gradleVersionPattern)onJava([0-9]+)$")
 
 fun Project.registerJavaSpecificTestGradleTask(
     gradleVersion: String,
