@@ -76,6 +76,26 @@ class GenerateLicenseInfoTaskTest {
         assertThat(description(plugin)).isEmpty();
     }
 
+    @Test
+    void ordersCollidingPomNamesByCoordinates() throws Exception {
+        var first = writePom("first.xml", "same", "MIT");
+        var second = writePom("second.xml", "same", "Apache-2.0");
+        var a = Files.createDirectory(tempDir.resolve("a")).resolve("same.pom");
+        var b = Files.createDirectory(tempDir.resolve("b")).resolve("same.pom");
+        Files.writeString(a, Files.readString(first).replace("com.example.libs", "a.example"));
+        Files.writeString(b, Files.readString(second).replace("com.example.libs", "b.example"));
+        var task = task();
+        task.getPomFiles().setFrom(b.toFile(), a.toFile());
+        task.generateLicenseInfo();
+        var report = Files.readString(tempDir.resolve("licenses/licenses.xml"));
+
+        task.getPomFiles().setFrom(a.toFile(), b.toFile());
+        task.generateLicenseInfo();
+
+        assertThat(Files.readString(tempDir.resolve("licenses/licenses.xml"))).isEqualTo(report);
+        assertThat(report.indexOf("a.example")).isLessThan(report.indexOf("b.example"));
+    }
+
     private GenerateLicenseInfoTask task() {
         var project = ProjectBuilder.builder().withProjectDir(tempDir.toFile()).build();
         var task = project.getTasks()
