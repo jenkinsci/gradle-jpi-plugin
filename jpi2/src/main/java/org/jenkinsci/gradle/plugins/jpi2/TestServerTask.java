@@ -10,6 +10,11 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
+import java.util.function.Consumer;
 import org.gradle.api.DefaultTask;
 import org.gradle.api.GradleException;
 import org.gradle.api.file.ConfigurableFileCollection;
@@ -199,7 +204,7 @@ public abstract class TestServerTask extends DefaultTask {
         SUCCESS,
         /** Jenkins printed a deterministic startup failure (e.g. a plugin failed to load). */
         CRASH,
-        /** The startup timeout fired and we terminated the process (exit code 143). */
+        /** The startup timeout fired and we terminated the process. */
         TIMEOUT,
         /** The nested build exited on its own without reporting success. */
         EXITED
@@ -269,45 +274,60 @@ public abstract class TestServerTask extends DefaultTask {
      * successful start or the timeout. A fresh work directory is used per attempt.
      */
     private LaunchResult attemptLaunch(Path workDir, int timeout) throws IOException, InterruptedException {
-        var process = launchProcess(getCommandLine(workDir));
-        var timedOut = new java.util.concurrent.atomic.AtomicBoolean(false);
+        return awaitLaunch(
+                launchProcess(getCommandLine(workDir)),
+                timeout,
+                line -> getLogger().lifecycle("    {}", line));
+    }
 
-        var timerThread = new Thread(() -> {
-            try {
-                Thread.sleep(timeout * 1000L);
-                timedOut.set(true);
-                getLogger().warn("Timeout reached, terminating Jenkins server");
-                destroyTree(process);
-            } catch (InterruptedException e) {
-                // The launch reached a verdict before the timeout; nothing to terminate.
-            }
+    static LaunchResult awaitLaunch(Process process, int timeout, Consumer<String> output)
+            throws IOException, InterruptedException {
+        var executor = Executors.newSingleThreadExecutor(runnable -> {
+            var thread = new Thread(runnable, "jenkins-startup-output");
+            thread.setDaemon(true);
+            return thread;
         });
-        timerThread.setDaemon(true);
-        timerThread.start();
-
+        var deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(timeout);
+        var reader = new BufferedReader(new InputStreamReader(process.getInputStream(), StandardCharsets.UTF_8));
+        var verdict = executor.submit(() -> readUntilVerdict(reader, output));
         try {
-            var reader = new BufferedReader(new InputStreamReader(process.getInputStream(), StandardCharsets.UTF_8));
-            LaunchResult verdict;
-            try {
-                verdict = readUntilVerdict(reader, process);
-            } catch (IOException e) {
-                if (!timedOut.get()) {
-                    throw e;
+            var result = verdict.get(timeout, TimeUnit.SECONDS);
+            if (result.status() == Status.EXITED) {
+                var remaining = Math.max(0, deadline - System.nanoTime());
+                if (!process.waitFor(remaining, TimeUnit.NANOSECONDS)) {
+                    return new LaunchResult(Status.TIMEOUT, -1, null);
                 }
-                verdict = new LaunchResult(Status.EXITED, -1, null);
+                return new LaunchResult(Status.EXITED, process.exitValue(), null);
             }
-            process.waitFor();
-            return switch (verdict.status()) {
-                case SUCCESS, CRASH -> verdict;
-                // EOF without a reported verdict: either our timer killed it, or it exited on its own.
-                default ->
-                    timedOut.get()
-                            ? new LaunchResult(Status.TIMEOUT, process.exitValue(), null)
-                            : new LaunchResult(Status.EXITED, process.exitValue(), null);
-            };
+            return result;
+        } catch (TimeoutException e) {
+            return new LaunchResult(Status.TIMEOUT, -1, null);
+        } catch (ExecutionException e) {
+            if (e.getCause() instanceof IOException failure) {
+                throw failure;
+            }
+            if (e.getCause() instanceof RuntimeException failure) {
+                throw failure;
+            }
+            if (e.getCause() instanceof Error failure) {
+                throw failure;
+            }
+            throw new IOException("Failed to read Jenkins startup output", e.getCause());
         } finally {
-            // Stop the timer promptly so a fast start doesn't leave a thread sleeping for the full timeout.
-            timerThread.interrupt();
+            // Reading a process pipe does not respond to interruption. Waiting on the future
+            // lets cancellation reach this cleanup even when Jenkins never writes another line.
+            verdict.cancel(true);
+            destroyTree(process);
+            executor.shutdownNow();
+            try {
+                process.waitFor(5, TimeUnit.SECONDS);
+            } finally {
+                // Closing stdout can make a launcher exit on a broken pipe before its children
+                // are captured. Close only after teardown, once no reader can block cancellation.
+                if (executor.awaitTermination(5, TimeUnit.SECONDS)) {
+                    reader.close();
+                }
+            }
         }
     }
 
@@ -345,22 +365,22 @@ public abstract class TestServerTask extends DefaultTask {
      */
     private static void destroyTree(Process process) {
         process.descendants().forEach(ProcessHandle::destroyForcibly);
-        process.destroy();
+        process.destroyForcibly();
     }
 
     /**
      * Streams the nested build's output until Jenkins reports success, prints a known failure, or
-     * the stream closes. Terminates the process on success or crash; the caller decides whether an
-     * unresolved stream close was a timeout or an independent exit.
+     * the stream closes. The caller owns process termination and determines whether an unresolved
+     * stream close was a timeout or an independent exit.
      */
-    private LaunchResult readUntilVerdict(BufferedReader stdoutReader, Process process) throws IOException {
+    private static LaunchResult readUntilVerdict(BufferedReader stdoutReader, Consumer<String> output)
+            throws IOException {
         String stdout;
 
         while ((stdout = stdoutReader.readLine()) != null) {
-            getLogger().lifecycle("    {}", stdout);
+            output.accept(stdout);
             var verdict = verdictForLine(stdout);
             if (verdict != null) {
-                destroyTree(process);
                 return verdict;
             }
         }
@@ -380,7 +400,7 @@ public abstract class TestServerTask extends DefaultTask {
     private String timeoutMessage(int timeout, int maxAttempts) {
         var message = new StringBuilder("Jenkins did not start within ")
                 .append(timeout)
-                .append("s and was terminated (exit code 143)");
+                .append("s and was terminated");
         if (maxAttempts > 1) {
             message.append(" after ").append(maxAttempts).append(" attempts");
         }

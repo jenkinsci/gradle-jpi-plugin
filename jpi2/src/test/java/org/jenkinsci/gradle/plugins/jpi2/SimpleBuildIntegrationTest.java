@@ -239,7 +239,7 @@ class SimpleBuildIntegrationTest extends V2IntegrationTestBase {
         assertThat(result.getOutput()).contains("Jenkins did not start within 5s (attempt 1 of 2); retrying");
         // ...and the final failure is actionable rather than a bare "exit code 143"
         assertThat(result.getOutput())
-                .contains("Jenkins did not start within 5s and was terminated (exit code 143) after 2 attempts")
+                .contains("Jenkins did not start within 5s and was terminated after 2 attempts")
                 .contains("concurrent launches")
                 .contains("-DtestServer.maxParallelLaunches=N")
                 .contains("-DtestServer.timeoutSeconds=N")
