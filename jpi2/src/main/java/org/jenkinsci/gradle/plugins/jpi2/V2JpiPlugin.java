@@ -4,11 +4,11 @@ import static org.jenkinsci.gradle.plugins.jpi2.ArtifactType.ARTIFACT_TYPE_ATTRI
 
 import java.io.File;
 import java.util.Comparator;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 import org.gradle.api.Plugin;
@@ -16,7 +16,10 @@ import org.gradle.api.Project;
 import org.gradle.api.artifacts.Configuration;
 import org.gradle.api.artifacts.Dependency;
 import org.gradle.api.artifacts.ProjectDependency;
+import org.gradle.api.artifacts.component.ComponentIdentifier;
+import org.gradle.api.artifacts.result.DependencyResult;
 import org.gradle.api.artifacts.result.ResolvedDependencyResult;
+import org.gradle.api.artifacts.result.ResolvedVariantResult;
 import org.gradle.api.attributes.Usage;
 import org.gradle.api.file.Directory;
 import org.gradle.api.plugins.BasePlugin;
@@ -529,19 +532,37 @@ public class V2JpiPlugin implements Plugin<Project> {
 
     @Nullable
     static String resolvePluginDependencies(@NotNull Configuration defaultRuntime) {
-        var rootDependencies =
-                defaultRuntime.getIncoming().getResolutionResult().getRoot().getDependencies();
+        var plugins = new LinkedHashSet<String>();
+        var visited = new HashSet<PluginVariant>();
+        defaultRuntime
+                .getIncoming()
+                .getResolutionResult()
+                .getRoot()
+                .getDependencies()
+                .forEach(dependency -> collectPluginDependencies(dependency, plugins, visited));
+        return plugins.isEmpty() ? null : String.join(",", plugins);
+    }
 
-        var pluginDependencies = rootDependencies.stream()
-                .filter(it -> !it.isConstraint())
-                .filter(it -> it instanceof ResolvedDependencyResult)
-                .map(it -> ((ResolvedDependencyResult) it))
-                .filter(it -> it.getResolvedVariant().getDisplayName().equals(HpiMetadataRule.DEFAULT_RUNTIME_VARIANT))
-                .map(it -> it.getSelected().getModuleVersion())
-                .filter(Objects::nonNull)
-                .map(it -> it.getName() + ":" + it.getVersion())
-                .toList();
+    private record PluginVariant(ComponentIdentifier component, ResolvedVariantResult variant) {}
 
-        return pluginDependencies.isEmpty() ? null : String.join(",", pluginDependencies);
+    private static void collectPluginDependencies(
+            DependencyResult dependency, Set<String> plugins, Set<PluginVariant> visited) {
+        if (dependency.isConstraint() || !(dependency instanceof ResolvedDependencyResult resolved)) {
+            return;
+        }
+        var component = resolved.getSelected();
+        if (resolved.getResolvedVariant().getDisplayName().equals(HpiMetadataRule.DEFAULT_RUNTIME_VARIANT)) {
+            var version = component.getModuleVersion();
+            if (version != null) {
+                plugins.add(version.getName() + ":" + version.getVersion());
+            }
+            return;
+        }
+        if (!visited.add(new PluginVariant(component.getId(), resolved.getResolvedVariant()))) {
+            return;
+        }
+        component
+                .getDependenciesForVariant(resolved.getResolvedVariant())
+                .forEach(child -> collectPluginDependencies(child, plugins, visited));
     }
 }

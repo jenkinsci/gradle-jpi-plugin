@@ -11,7 +11,7 @@ import org.junit.jupiter.api.Test;
 class DependencyFilteringIntegrationTest extends V2IntegrationTestBase {
 
     @Test
-    void skipsJenkinsCoreDependencies() throws IOException {
+    void skipsJenkinsCoreDependenciesButRetainsExcludedLibraries() throws IOException {
         // given
         var ith = new IntegrationTestHelper(tempDir, "8.14");
         initBuild(ith);
@@ -61,7 +61,9 @@ class DependencyFilteringIntegrationTest extends V2IntegrationTestBase {
         assertThat(jpiLibsDir).exists();
 
         var jpiLibs = jpiLibsDir.list();
-        assertThat(jpiLibs).isNotNull().containsExactlyInAnyOrder("test-plugin-1.0.0.jar");
+        // Jenkins excludes aopalliance from Guice, so the plugin must supply it when
+        // its own Guice dependency reintroduces it.
+        assertThat(jpiLibs).isNotNull().containsExactlyInAnyOrder("test-plugin-1.0.0.jar", "aopalliance-1.0.jar");
     }
 
     @Test
