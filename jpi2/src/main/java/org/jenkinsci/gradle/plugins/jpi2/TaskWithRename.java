@@ -1,5 +1,6 @@
 package org.jenkinsci.gradle.plugins.jpi2;
 
+import org.gradle.api.Transformer;
 import org.gradle.api.tasks.TaskProvider;
 
 /**
@@ -7,9 +8,9 @@ import org.gradle.api.tasks.TaskProvider;
  */
 class TaskWithRename {
     private final TaskProvider<?> taskProvider;
-    private final DropVersionTransformer renameTransformer;
+    private final Transformer<String, String> renameTransformer;
 
-    TaskWithRename(TaskProvider<?> taskProvider, DropVersionTransformer renameTransformer) {
+    TaskWithRename(TaskProvider<?> taskProvider, Transformer<String, String> renameTransformer) {
         this.taskProvider = taskProvider;
         this.renameTransformer = renameTransformer;
     }
@@ -18,7 +19,7 @@ class TaskWithRename {
         return taskProvider;
     }
 
-    DropVersionTransformer getRenameTransformer() {
+    Transformer<String, String> getRenameTransformer() {
         return renameTransformer;
     }
 }

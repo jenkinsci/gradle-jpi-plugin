@@ -258,9 +258,7 @@ public class V2JpiPlugin implements Plugin<Project> {
                     .collect(Collectors.toMap(Project::getPath, it -> it));
             var projectDependencies = getProjectDependencies(runtimeClasspath, projectByPath);
             configureProjectDependencyJpis(
-                    prepareServer,
-                    getProjectDependencyJpis(
-                            projectDependencies, extension.getArchiveExtension().get()));
+                    prepareServer, getProjectDependencyJpis(projectDependencies, extension.getArchiveExtension()));
             configureProjectDependencyTasks(
                     prepareRun, getProjectDependencyTasks(projectDependencies, GenerateHplTask.TASK_NAME));
             wireUpstreamJpiReferencedFiles(project, projectDependencies);
@@ -352,8 +350,10 @@ public class V2JpiPlugin implements Plugin<Project> {
                                 jpiTaskProvider,
                                 workDir,
                                 defaultRuntime,
-                                jpiTaskProvider.flatMap(War::getArchiveBaseName),
-                                jpiTaskProvider.flatMap(War::getArchiveVersion),
+                                jpiTaskProvider.flatMap(War::getArchiveFileName),
+                                project.getExtensions()
+                                        .getByType(JenkinsPluginExtension.class)
+                                        .getPluginId(),
                                 project.getExtensions()
                                         .getByType(JenkinsPluginExtension.class)
                                         .getArchiveExtension()));
@@ -404,7 +404,7 @@ public class V2JpiPlugin implements Plugin<Project> {
     private static void configureProjectDependencyJpis(
             TaskProvider<Sync> prepareTask, List<TaskWithRename> projectDependencyJpis) {
         prepareTask.configure(sync -> projectDependencyJpis.forEach(
-                task -> sync.from(task.getTaskProvider()).rename(task.getRenameTransformer())));
+                task -> sync.from(task.getTaskProvider(), spec -> spec.rename(task.getRenameTransformer()))));
     }
 
     @NotNull
@@ -418,13 +418,18 @@ public class V2JpiPlugin implements Plugin<Project> {
 
     @NotNull
     private static List<TaskWithRename> getProjectDependencyJpis(
-            List<Project> projectDependencies, String targetExtension) {
+            List<Project> projectDependencies, Provider<String> targetExtension) {
         return projectDependencies.stream()
                 .filter(it -> it.getTasks().getNames().contains(JPI_TASK))
                 .sorted(Comparator.comparing(Project::getName))
                 .map(it -> new TaskWithRename(
                         it.getTasks().named(JPI_TASK),
-                        new DropVersionTransformer(it.getName(), it.getVersion().toString(), targetExtension)))
+                        new PluginArchiveRenamer(
+                                it.getTasks().named(JPI_TASK, War.class).flatMap(War::getArchiveFileName),
+                                it.getExtensions()
+                                        .getByType(JenkinsPluginExtension.class)
+                                        .getPluginId(),
+                                targetExtension)))
                 .collect(Collectors.toList());
     }
 
