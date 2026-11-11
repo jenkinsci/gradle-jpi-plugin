@@ -88,19 +88,18 @@ abstract class GitVersionExtension
 
         /**
          * Provider for the Git-derived version string (commit depth + abbreviated hash per [versionFormat]).
-         * Resolved on demand when the value is read; no task required. Use this as the source of truth
+         * Computed once when first read in a build; no task required.
+         * Gradle revalidates Git state before reusing a configuration that consumed the value. Use this as the source of truth
          * for the plugin version when [VersionSource.GIT]. The `generateGitVersion` task still writes
          * this value (and the full hash) to [outputFile] for scripts and compatibility.
          */
         val version: Provider<String> =
-            providers.provider {
-                GitVersion
-                    .compute(
-                        gitRoot.get().asFile.toPath(),
-                        versionFormat.get(),
-                        versionPrefix.get(),
-                        abbrevLength.get(),
-                        allowDirty.get(),
-                    ).version()
-            }
+            providers
+                .of(GitVersionValueSource::class.java) {
+                    parameters.gitRoot.set(gitRoot)
+                    parameters.versionFormat.set(versionFormat)
+                    parameters.versionPrefix.set(versionPrefix)
+                    parameters.abbrevLength.set(abbrevLength)
+                    parameters.allowDirty.set(allowDirty)
+                }.map { it.version() }
     }

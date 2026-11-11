@@ -1,6 +1,7 @@
 package org.jenkinsci.gradle.plugins.jpi2;
 
 import java.io.IOException;
+import java.io.Serializable;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -20,7 +21,7 @@ public final class GitVersion {
     /**
      * Result of computing the Git-derived version (version string and full hash for file output).
      */
-    public record VersionResult(String version, String fullHash) {}
+    public record VersionResult(String version, String fullHash) implements Serializable {}
 
     /**
      * Computes the version string and full hash from the given Git repository and format options.
