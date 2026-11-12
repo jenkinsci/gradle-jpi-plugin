@@ -16,8 +16,6 @@ import org.gradle.api.Project;
 import org.gradle.api.artifacts.Configuration;
 import org.gradle.api.artifacts.Dependency;
 import org.gradle.api.artifacts.ProjectDependency;
-import org.gradle.api.artifacts.ResolvedArtifact;
-import org.gradle.api.artifacts.component.ModuleComponentIdentifier;
 import org.gradle.api.artifacts.result.ResolvedDependencyResult;
 import org.gradle.api.attributes.Usage;
 import org.gradle.api.file.Directory;
@@ -134,7 +132,8 @@ public class V2JpiPlugin implements Plugin<Project> {
                 .attribute(
                         ARTIFACT_TYPE_ATTRIBUTE, project.getObjects().named(ArtifactType.class, ArtifactType.DEFAULT));
 
-        var pomFiles = resolvePomFiles(project, defaultRuntime);
+        var runtimeClasspathArtifacts = new RuntimeClasspathArtifacts(project, defaultRuntime, jenkinsCore);
+        var pomFiles = resolvePomFiles(project, runtimeClasspathArtifacts);
         var licenseTask = project.getTasks()
                 .register(GenerateLicenseInfoTask.NAME, GenerateLicenseInfoTask.class, task -> {
                     task.setGroup(BasePlugin.BUILD_GROUP);
@@ -180,7 +179,6 @@ public class V2JpiPlugin implements Plugin<Project> {
                 });
         var optionalManifestFile = optionalManifest.flatMap(GenerateOptionalJenkinsManifestTask::getOutputFile);
 
-        var runtimeClasspathArtifacts = new RuntimeClasspathArtifacts(project, defaultRuntime, jenkinsCore);
         var jpiTask = project.getTasks()
                 .register(
                         JPI_TASK,
@@ -492,15 +490,12 @@ public class V2JpiPlugin implements Plugin<Project> {
     }
 
     @NotNull
-    private static Provider<Set<File>> resolvePomFiles(@NotNull Project project, Configuration libraryConfiguration) {
+    private static Provider<Set<File>> resolvePomFiles(
+            @NotNull Project project, RuntimeClasspathArtifacts runtimeClasspathArtifacts) {
         return project.provider(() -> {
-            var pomCoordinates = libraryConfiguration.getResolvedConfiguration().getResolvedArtifacts().stream()
-                    .filter(artifact -> "jar".equals(artifact.getExtension()))
-                    .filter(artifact -> artifact.getId().getComponentIdentifier() instanceof ModuleComponentIdentifier)
-                    .map(artifact -> {
-                        var id = artifact.getModuleVersion().getId();
-                        return id.getGroup() + ":" + id.getName() + ":" + id.getVersion() + "@pom";
-                    })
+            var pomCoordinates = runtimeClasspathArtifacts.getBundledModules().stream()
+                    .map(id -> id.getGroup() + ":" + id.getModule() + ":" + id.getVersion() + "@pom")
+                    .distinct()
                     .toList();
 
             var deps = pomCoordinates.stream()
@@ -511,10 +506,13 @@ public class V2JpiPlugin implements Plugin<Project> {
             detached.getAttributes()
                     .attribute(Usage.USAGE_ATTRIBUTE, project.getObjects().named(Usage.class, Usage.JAVA_RUNTIME));
 
-            var lenient = detached.getResolvedConfiguration().getLenientConfiguration();
-            return lenient.getArtifacts().stream()
-                    .map(ResolvedArtifact::getFile)
-                    .collect(Collectors.toSet());
+            var artifacts = detached.getIncoming()
+                    .artifactView(view -> view.setLenient(true))
+                    .getArtifacts();
+            for (var failure : artifacts.getFailures()) {
+                project.getLogger().warn("License metadata is incomplete: {}", failure.getMessage());
+            }
+            return artifacts.getArtifactFiles().getFiles();
         });
     }
 

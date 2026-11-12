@@ -122,15 +122,19 @@ public abstract class GenerateLicenseInfoTask extends DefaultTask {
                 appendDependency(document, root, version, name, group, description != null ? description : name, url);
         appendDescription(document, projectDependency, description != null ? description : "");
 
-        pomFiles.stream().sorted(Comparator.comparing(File::getName)).forEach(pomFile -> {
-            var data = extractor.extractFrom(pomFile);
-            var dependency = appendDependency(
-                    document, root, data.version(), data.artifactId(), data.groupId(), data.name(), data.url());
-            appendDescription(document, dependency, data.description());
-            for (var license : data.licenses()) {
-                appendLicense(document, dependency, license);
-            }
-        });
+        pomFiles.stream()
+                .map(extractor::extractFrom)
+                .sorted(Comparator.comparing(PomLicenseData::groupId)
+                        .thenComparing(PomLicenseData::artifactId)
+                        .thenComparing(PomLicenseData::version))
+                .forEach(data -> {
+                    var dependency = appendDependency(
+                            document, root, data.version(), data.artifactId(), data.groupId(), data.name(), data.url());
+                    appendDescription(document, dependency, data.description());
+                    for (var license : data.licenses()) {
+                        appendLicense(document, dependency, license);
+                    }
+                });
 
         writeDocument(document, outputFile);
     }
