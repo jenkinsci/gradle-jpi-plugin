@@ -30,8 +30,8 @@ class ConfigurePrepareServerActionTest {
                                 jpiTask,
                                 project.provider(() -> "build/jenkins"),
                                 defaultRuntime,
-                                project.provider(project::getName),
-                                project.provider(() -> "1.0"),
+                                project.provider(() -> "plugin-1.0.jpi"),
+                                project.provider(() -> "plugin"),
                                 project.provider(() -> "jpi")));
 
         prepareServer.get();
