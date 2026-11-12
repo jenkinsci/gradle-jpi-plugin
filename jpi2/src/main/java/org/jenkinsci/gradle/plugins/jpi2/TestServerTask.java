@@ -10,6 +10,7 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Locale;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
@@ -352,7 +353,10 @@ public abstract class TestServerTask extends DefaultTask {
 
     @NotNull
     private Process launchProcess(List<String> commandLine) throws IOException {
-        return new ProcessBuilder(commandLine)
+        var arguments = commandLine.get(0).toLowerCase(Locale.ROOT).endsWith(".bat")
+                ? commandLine
+                : WindowsGradleLauncher.processArguments(commandLine);
+        return new ProcessBuilder(arguments)
                 .directory(new File(getRootDir().get()))
                 .redirectErrorStream(true)
                 .start();
@@ -435,10 +439,23 @@ public abstract class TestServerTask extends DefaultTask {
     }
 
     @NotNull
-    private List<String> getCommandLine(@NotNull Path workDir) {
-        List<String> commandLine = new ArrayList<>();
-        commandLine.add(slashify(getGradleExecutable().get()));
+    List<String> getCommandLine(@NotNull Path workDir) {
+        var executable = getGradleExecutable().get();
+        var commandLine = executable.toLowerCase(Locale.ROOT).endsWith(".bat")
+                ? WindowsGradleLauncher.command(
+                        Path.of(executable), Path.of(getJavaHome().get()), System.getenv())
+                : new ArrayList<>(List.of(slashify(executable)));
         commandLine.add("-Dorg.gradle.java.home=" + slashify(getJavaHome().get()));
+        getSystemProperties().get().forEach((key, value) -> {
+            if (!key.equals(WorkDirectorySettings.PROPERTY)) {
+                commandLine.add("-D" + key + "=" + value);
+            }
+        });
+        getProjectProperties().get().forEach((key, value) -> {
+            if (!key.equals(WorkDirectorySettings.PROPERTY)) {
+                commandLine.add("-P" + key + "=" + value);
+            }
+        });
 
         for (var initScriptPath : getInitScriptPaths().get()) {
             commandLine.add("--init-script");
@@ -461,17 +478,6 @@ public abstract class TestServerTask extends DefaultTask {
         if (getParallelExecution().get()) commandLine.add("--parallel");
         if (getProfile().get()) commandLine.add("--profile");
         if (getDryRun().get()) commandLine.add("--dry-run");
-
-        getSystemProperties().get().forEach((k, v) -> {
-            if (!k.equals(WorkDirectorySettings.PROPERTY)) {
-                commandLine.add("-D" + k + "=" + slashify(v));
-            }
-        });
-        getProjectProperties().get().forEach((k, v) -> {
-            if (!k.equals(WorkDirectorySettings.PROPERTY)) {
-                commandLine.add("-P" + k + "=" + slashify(v));
-            }
-        });
 
         commandLine.add(getServerTaskPath().get());
         // Port 0 lets Jetty bind an ephemeral port atomically. Picking a free port up front can't
