@@ -2,6 +2,8 @@ package org.jenkinsci.gradle.plugins.jpi2.localization;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.Files;
+import java.util.Properties;
 import org.gradle.api.GradleException;
 import org.gradle.workers.WorkAction;
 import org.jvnet.localizer.ClassGenerator;
@@ -22,13 +24,31 @@ public abstract class RunGenerator implements WorkAction<LocalizationParameters>
         File outputDir = getParameters().getOutputDir().get().getAsFile();
         String relativePath = getParameters().getRelativePath().get();
         GeneratorConfig config = GeneratorConfig.of(outputDir, null, new InfoReporter(), null, false);
-        ClassGenerator generator = new Generator(config);
+        ClassGenerator generator = new ClosingGenerator(config);
 
         try {
             generator.generate(file, relativePath);
             generator.build();
         } catch (IOException e) {
             throw new GradleException("Failed to generate Java source file from " + file.getAbsolutePath(), e);
+        }
+    }
+
+    // Localizer 1.31 closes the input stream only on failure. Owning the stream here
+    // lets Windows builds delete or rename message bundles after generation.
+    private static final class ClosingGenerator extends Generator {
+        private ClosingGenerator(GeneratorConfig config) {
+            super(config);
+        }
+
+        @Override
+        public void generate(File source, String relativePath) throws IOException {
+            var properties = new Properties();
+            try (var input = Files.newInputStream(source.toPath())) {
+                properties.load(input);
+            }
+            properties.stringPropertyNames().forEach(this::assertKeyPatternMatched);
+            generateImpl(toClassName(relativePath), properties);
         }
     }
 

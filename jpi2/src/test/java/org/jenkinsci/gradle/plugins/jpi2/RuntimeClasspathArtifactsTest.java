@@ -1,217 +1,336 @@
 package org.jenkinsci.gradle.plugins.jpi2;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.verifyNoInteractions;
-import static org.mockito.Mockito.when;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.jenkinsci.gradle.plugins.jpi2.MavenDependencyFixture.dependency;
+import static org.jenkinsci.gradle.plugins.jpi2.MavenDependencyFixture.writeModule;
+import static org.junit.jupiter.api.DynamicTest.dynamicTest;
 
 import java.io.File;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.ArrayList;
-import java.util.Set;
-import java.util.concurrent.Callable;
-import org.gradle.api.DefaultTask;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Stream;
 import org.gradle.api.Project;
+import org.gradle.api.Task;
 import org.gradle.api.artifacts.Configuration;
-import org.gradle.api.artifacts.ConfigurationContainer;
-import org.gradle.api.artifacts.Dependency;
-import org.gradle.api.artifacts.DependencySet;
-import org.gradle.api.artifacts.ModuleVersionIdentifier;
-import org.gradle.api.artifacts.ProjectDependency;
-import org.gradle.api.artifacts.ResolvedArtifact;
-import org.gradle.api.artifacts.ResolvedConfiguration;
-import org.gradle.api.artifacts.ResolvedDependency;
-import org.gradle.api.artifacts.ResolvedModuleVersion;
-import org.gradle.api.artifacts.component.ComponentArtifactIdentifier;
-import org.gradle.api.artifacts.component.ProjectComponentIdentifier;
-import org.gradle.api.attributes.AttributeContainer;
-import org.gradle.api.file.FileCollection;
-import org.gradle.api.specs.Spec;
+import org.gradle.api.artifacts.ExternalModuleDependency;
+import org.gradle.api.artifacts.component.ModuleComponentIdentifier;
 import org.gradle.testfixtures.ProjectBuilder;
+import org.gradle.testfixtures.internal.ProjectBuilderImpl;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.DynamicTest;
 import org.junit.jupiter.api.Test;
-import org.mockito.ArgumentCaptor;
-import org.mockito.ArgumentMatchers;
+import org.junit.jupiter.api.TestFactory;
+import org.junit.jupiter.api.io.TempDir;
 
 class RuntimeClasspathArtifactsTest {
+    @TempDir
+    Path tempDir;
+
+    private final List<Project> projects = new ArrayList<>();
+
+    @AfterEach
+    void closeProjects() {
+        projects.forEach(ProjectBuilderImpl::stop);
+    }
 
     @Test
-    void defersResolutionUntilFilesAreRequestedAndSharesTheResult() {
-        var fixture = fixture(Set.of(), Set.of(), Set.of());
+    void preservesLocalJarDependenciesAndProducerTasks() throws Exception {
+        var fixture = fixture("local");
+        var local = Files.createFile(fixture.root().resolve("local.jar"));
+        var producer = fixture.project().getTasks().register("produceLocalJar");
+        fixture.runtime()
+                .getDependencies()
+                .add(fixture.project()
+                        .getDependencies()
+                        .create(fixture.project().files(local.toFile()).builtBy(producer)));
         var libraries = fixture.artifacts().getBundledLibraries();
-        verifyNoInteractions(fixture.configurations());
+
+        assertThat(libraries.getFiles()).containsExactly(local.toFile());
+        assertThat(libraries.getBuildDependencies().getDependencies(null))
+                .extracting(Task::getName)
+                .contains("produceLocalJar");
+    }
+
+    @Test
+    void resolvesLazilyWithoutCreatingDetachedConfigurations() throws Exception {
+        var fixture = fixture("lazy");
+        var count = fixture.project().getConfigurations().size();
+        var libraries = fixture.artifacts().getBundledLibraries();
+        assertThat(fixture.runtime().getState()).isEqualTo(Configuration.State.UNRESOLVED);
 
         libraries.getFiles();
-        fixture.artifacts().getBundledLibraries().getFiles();
+        libraries.getFiles();
 
-        verify(fixture.configurations()).detachedConfiguration(any(Dependency[].class));
+        assertThat(fixture.project().getConfigurations()).hasSize(count);
+    }
+
+    @TestFactory
+    Stream<DynamicTest> omitsExcludedAndProvidedTransitiveLibraries() {
+        return Stream.of("exclude", "core", "hpi", "jpi")
+                .map(kind -> dynamicTest(kind, () -> {
+                    var fixture = fixture(kind);
+                    writeModule(fixture.root(), "example", "provided", "jar", "");
+                    var providedDependency = dependency("example", "provided");
+                    writeModule(fixture.root(), "example", "library", "jar", providedDependency);
+                    fixture.project().getDependencies().add(fixture.runtime().getName(), "example:library:1");
+                    if (kind.equals("exclude")) {
+                        fixture.runtime().exclude(Map.of("group", "example", "module", "provided"));
+                    } else if (kind.equals("core")) {
+                        fixture.project().getDependencies().add(fixture.core().getName(), "example:provided:1");
+                    } else {
+                        writeModule(fixture.root(), "example", "plugin", kind, providedDependency);
+                        Files.delete(fixture.root().resolve("repo/example/plugin/1/plugin-1." + kind));
+                        fixture.project()
+                                .getDependencies()
+                                .add(fixture.runtime().getName(), "example:plugin:1");
+                    }
+
+                    assertThat(fixture.artifacts().getBundledLibraries().getFiles())
+                            .extracting(File::getName)
+                            .containsExactly("library-1.jar");
+                }));
     }
 
     @Test
-    void bundlesOnlyDirectLibrariesNotProvidedByCoreOrPlugins() {
-        var core = resolvedDependency("org.example", "core-library", "jar", "core-library.jar", Set.of());
-        var provided = resolvedDependency("org.example", "provided-library", "jar", "provided-library.jar", Set.of());
-        var plugin = resolvedDependency("org.example", "other-plugin", "hpi", "other-plugin.hpi", Set.of(provided));
-        var bundled = resolvedDependency("org.example", "bundled-library", "jar", "bundled-library.jar", Set.of());
-        var coreRequest = requestedDependency("org.example", "core-library");
-        var providedRequest = requestedDependency("org.example", "provided-library");
-        var bundledRequest = requestedDependency("org.example", "bundled-library");
-        var fixture = fixture(
-                Set.of(core, plugin, provided, bundled),
-                Set.of(core),
-                Set.of(coreRequest, providedRequest, bundledRequest));
+    void distinguishesModulesWithIdenticalArtifactNames() throws Exception {
+        var fixture = fixture("identity");
+        writeModule(fixture.root(), "provided", "same", "jar", "");
+        writeModule(fixture.root(), "bundled", "same", "jar", "");
+        writeModule(fixture.root(), "example", "plugin", "hpi", dependency("provided", "same"));
+        fixture.project().getDependencies().add(fixture.runtime().getName(), "example:plugin:1");
+        fixture.project().getDependencies().add(fixture.runtime().getName(), "bundled:same:1");
 
-        fixture.artifacts().getBundledLibraries().getFiles();
-
-        var dependencies = ArgumentCaptor.<Dependency[]>captor();
-        verify(fixture.configurations()).detachedConfiguration(dependencies.capture());
-        assertThat(dependencies.getValue()).containsExactly(bundledRequest);
+        assertThat(fixture.artifacts().getBundledLibraries().getFiles())
+                .containsExactly(
+                        fixture.root().resolve("repo/bundled/same/1/same-1.jar").toFile());
     }
 
     @Test
-    void excludesJarsAlreadyPackagedByPluginDependencies() {
-        var provided = resolvedDependency("org.example", "provided-library", "jar", "provided-library.jar", Set.of());
-        var plugin = resolvedDependency("org.example", "other-plugin", "jpi", "other-plugin.jpi", Set.of(provided));
-        var fixture = fixture(Set.of(plugin), Set.of(), Set.of());
+    void retainsNonCoreDescendantsReachedThroughBundledLibrary() throws Exception {
+        var fixture = fixture("core-exclusion");
+        writeModule(fixture.root(), "example", "extra", "jar", "");
+        writeModule(fixture.root(), "example", "core-library", "jar", dependency("example", "extra"));
+        writeModule(fixture.root(), "example", "library", "jar", dependency("example", "core-library"));
+        fixture.project().getDependencies().add(fixture.runtime().getName(), "example:library:1");
+        fixture.project().getDependencies().add(fixture.core().getName(), "example:core-library:1");
+        fixture.core().exclude(Map.of("group", "example", "module", "extra"));
 
-        fixture.artifacts().getBundledLibraries().getFiles();
-
-        var filter = ArgumentCaptor.<Spec<File>>captor();
-        verify(fixture.detached()).filter(filter.capture());
-        assertThat(filter.getValue().isSatisfiedBy(new File("provided-library.jar")))
-                .isFalse();
-        assertThat(filter.getValue().isSatisfiedBy(new File("unrelated-library.jar")))
-                .isTrue();
+        assertThat(fixture.artifacts().getBundledLibraries().getFiles())
+                .extracting(File::getName)
+                .containsExactlyInAnyOrder("library-1.jar", "extra-1.jar");
     }
 
     @Test
-    void doesNotRealizeProjectJpiTaskWhenCheckingDependencyType() {
-        var rootProject = ProjectBuilder.builder().withName("root").build();
-        var pluginProject = ProjectBuilder.builder()
-                .withParent(rootProject)
-                .withName("upstream-plugin")
-                .build();
-        var libraryProject = ProjectBuilder.builder()
-                .withParent(rootProject)
-                .withName("upstream-library")
-                .build();
-        var project = mock(Project.class);
-        when(project.getRootProject()).thenReturn(rootProject);
+    void retainsNonCoreDescendantsOfDirectCoreRoots() throws Exception {
+        var fixture = fixture("direct-core-root");
+        writeModule(fixture.root(), "example", "extra", "jar", "");
+        writeModule(fixture.root(), "example", "core-library", "jar", dependency("example", "extra"));
+        fixture.project().getDependencies().add(fixture.runtime().getName(), "example:core-library:1");
+        fixture.project().getDependencies().add(fixture.core().getName(), "example:core-library:1");
+        fixture.core().exclude(Map.of("group", "example", "module", "extra"));
 
-        var realizedTasks = new ArrayList<String>();
-        var jpiTask = pluginProject.getTasks().register("jpi", DefaultTask.class);
-        jpiTask.configure(task -> realizedTasks.add(task.getName()));
-
-        var pluginDependency = projectDependency("org.example", "upstream-plugin");
-        var libraryDependency = projectDependency("org.example", "upstream-library");
-        var fixture = fixture(
-                project,
-                Set.of(
-                        resolvedDependency("org.example", "upstream-plugin", "jar", "upstream-plugin.jar", Set.of()),
-                        resolvedDependency("org.example", "upstream-library", "jar", "upstream-library.jar", Set.of())),
-                Set.of(),
-                Set.of(pluginDependency, libraryDependency),
-                Set.of(
-                        projectArtifact("org.example", "upstream-plugin", pluginProject.getPath()),
-                        projectArtifact("org.example", "upstream-library", libraryProject.getPath())));
-
-        fixture.artifacts().getBundledLibraries().getFiles();
-
-        assertThat(realizedTasks).isEmpty();
-        var dependencies = ArgumentCaptor.<Dependency[]>captor();
-        verify(fixture.configurations()).detachedConfiguration(dependencies.capture());
-        assertThat(dependencies.getValue()).containsExactly(libraryDependency);
+        assertThat(fixture.artifacts().getBundledLibraries().getFiles())
+                .extracting(File::getName)
+                .containsExactly("extra-1.jar");
+        assertThat(fixture.artifacts().getBundledModules())
+                .extracting(ModuleComponentIdentifier::getModule)
+                .containsExactly("extra");
     }
 
-    private static Fixture fixture(
-            Set<ResolvedDependency> runtimeDependencies,
-            Set<ResolvedDependency> coreDependencies,
-            Set<Dependency> requestedDependencies) {
-        return fixture(mock(Project.class), runtimeDependencies, coreDependencies, requestedDependencies, Set.of());
+    @Test
+    void usesTheConsumersSelectedNestedPluginVersion() throws Exception {
+        var fixture = fixture("nested-plugin-upgrade");
+        writeModule(fixture.root(), "example", "extra", "jar", "");
+        writeModule(fixture.root(), "example", "nested-plugin", "hpi", dependency("example", "extra"));
+        writeModule(fixture.root(), "example", "nested-plugin", "2", "hpi", "");
+        writeModule(fixture.root(), "example", "plugin", "hpi", dependency("example", "nested-plugin"));
+        fixture.project().getDependencies().add(fixture.runtime().getName(), "example:plugin:1");
+        fixture.project().getDependencies().add(fixture.runtime().getName(), "example:nested-plugin:2");
+        fixture.project().getDependencies().add(fixture.runtime().getName(), "example:extra:1");
+
+        assertThat(fixture.artifacts().getBundledLibraries().getFiles())
+                .extracting(File::getName)
+                .containsExactly("extra-1.jar");
+        assertThat(fixture.artifacts().getBundledModules())
+                .extracting(ModuleComponentIdentifier::getModule)
+                .containsExactly("extra");
     }
 
-    private static Fixture fixture(
-            Project project,
-            Set<ResolvedDependency> runtimeDependencies,
-            Set<ResolvedDependency> coreDependencies,
-            Set<Dependency> requestedDependencies,
-            Set<ResolvedArtifact> runtimeArtifacts) {
-        var configurations = mock(ConfigurationContainer.class);
-        var runtime = configuration(runtimeDependencies, runtimeArtifacts);
-        var core = configuration(coreDependencies);
-        var dependencySet = mock(DependencySet.class);
-        var detached = mock(Configuration.class);
-        var attributes = mock(AttributeContainer.class);
-        when(project.getConfigurations()).thenReturn(configurations);
-        var providerProject = ProjectBuilder.builder().build();
-        when(project.getObjects()).thenReturn(providerProject.getObjects());
-        when(project.provider(ArgumentMatchers.<Callable<FileCollection>>any()))
-                .thenAnswer(invocation -> providerProject.provider(invocation.getArgument(0)));
-        when(runtime.getAllDependencies()).thenReturn(dependencySet);
-        when(dependencySet.stream()).thenAnswer(ignored -> requestedDependencies.stream());
-        when(configurations.detachedConfiguration(any(Dependency[].class))).thenReturn(detached);
-        when(detached.getAttributes()).thenReturn(attributes);
-        when(detached.filter(ArgumentMatchers.<Spec<File>>any())).thenReturn(providerProject.files());
-        return new Fixture(new RuntimeClasspathArtifacts(project, runtime, core), configurations, detached);
+    @Test
+    void ignoresUnavailableUpstreamArtifactsExcludedByTheConsumer() throws Exception {
+        var fixture = fixture("unavailable-provided-artifact");
+        writeModule(fixture.root(), "example", "unavailable", "jar", "");
+        Files.delete(fixture.root().resolve("repo/example/unavailable/1/unavailable-1.jar"));
+        writeModule(fixture.root(), "example", "plugin", "hpi", dependency("example", "unavailable"));
+        fixture.project().getDependencies().add(fixture.runtime().getName(), "example:plugin:1");
+        fixture.runtime().exclude(Map.of("group", "example", "module", "unavailable"));
+        var local = Files.createFile(fixture.root().resolve("bundled.jar"));
+        fixture.project()
+                .getDependencies()
+                .add(fixture.runtime().getName(), fixture.project().files(local.toFile()));
+
+        assertThat(fixture.artifacts().getBundledLibraries().getFiles()).containsExactly(local.toFile());
     }
 
-    private static Configuration configuration(Set<ResolvedDependency> dependencies) {
-        return configuration(dependencies, Set.of());
+    @TestFactory
+    Stream<DynamicTest> failsForUnavailableConsumerLibraries() {
+        return Stream.of("metadata", "artifact")
+                .map(kind -> dynamicTest(kind, () -> {
+                    var fixture = fixture("unavailable-consumer-" + kind);
+                    if (kind.equals("artifact")) {
+                        writeModule(fixture.root(), "example", "unavailable", "jar", "");
+                        Files.delete(fixture.root().resolve("repo/example/unavailable/1/unavailable-1.jar"));
+                    }
+                    fixture.project().getDependencies().add(fixture.runtime().getName(), "example:unavailable:1");
+
+                    assertThatThrownBy(() ->
+                                    fixture.artifacts().getBundledLibraries().getFiles())
+                            .hasStackTraceContaining("unavailable");
+                }));
     }
 
-    private static Configuration configuration(
-            Set<ResolvedDependency> dependencies, Set<ResolvedArtifact> resolvedArtifacts) {
-        var configuration = mock(Configuration.class);
-        var resolved = mock(ResolvedConfiguration.class);
-        when(configuration.getResolvedConfiguration()).thenReturn(resolved);
-        when(resolved.getFirstLevelModuleDependencies()).thenReturn(dependencies);
-        when(resolved.getResolvedArtifacts()).thenReturn(resolvedArtifacts);
-        return configuration;
+    @TestFactory
+    Stream<DynamicTest> retainsExternalClassifiersNotSuppliedByProviders() {
+        return Stream.of("plugin", "core")
+                .map(provider -> dynamicTest(provider, () -> {
+                    var fixture = fixture("provided-main-artifact-" + provider);
+                    writeModule(fixture.root(), "example", "shared", "jar", "");
+                    Files.copy(
+                            fixture.root().resolve("repo/example/shared/1/shared-1.jar"),
+                            fixture.root().resolve("repo/example/shared/1/shared-1-extra.jar"));
+                    if (provider.equals("plugin")) {
+                        writeModule(fixture.root(), "example", "plugin", "hpi", dependency("example", "shared"));
+                        fixture.project()
+                                .getDependencies()
+                                .add(fixture.runtime().getName(), "example:plugin:1");
+                    } else {
+                        fixture.project().getDependencies().add(fixture.core().getName(), "example:shared:1");
+                    }
+                    fixture.project().getDependencies().add(fixture.runtime().getName(), "example:shared:1:extra");
+
+                    assertThat(fixture.artifacts().getBundledLibraries().getFiles())
+                            .extracting(File::getName)
+                            .containsExactly("shared-1-extra.jar");
+                    assertThat(fixture.artifacts().getBundledModules())
+                            .extracting(ModuleComponentIdentifier::getModule)
+                            .containsExactly("shared");
+                }));
     }
 
-    private static ResolvedArtifact projectArtifact(String group, String name, String projectPath) {
-        var artifact = mock(ResolvedArtifact.class);
-        var componentIdentifier = mock(ProjectComponentIdentifier.class);
-        when(componentIdentifier.getProjectPath()).thenReturn(projectPath);
-        var artifactIdentifier = mock(ComponentArtifactIdentifier.class);
-        when(artifactIdentifier.getComponentIdentifier()).thenReturn(componentIdentifier);
-        when(artifact.getId()).thenReturn(artifactIdentifier);
-        var moduleVersionIdentifier = mock(ModuleVersionIdentifier.class);
-        when(moduleVersionIdentifier.getGroup()).thenReturn(group);
-        when(moduleVersionIdentifier.getName()).thenReturn(name);
-        var moduleVersion = mock(ResolvedModuleVersion.class);
-        when(moduleVersion.getId()).thenReturn(moduleVersionIdentifier);
-        when(artifact.getModuleVersion()).thenReturn(moduleVersion);
-        return artifact;
+    @Test
+    void retainsDirectLibraryNoLongerSuppliedBySelectedNestedPlugin() throws Exception {
+        var fixture = fixture("nested-plugin-direct-library");
+        writeModule(fixture.root(), "example", "extra", "jar", "");
+        writeModule(fixture.root(), "example", "nested-plugin", "hpi", dependency("example", "extra"));
+        writeModule(fixture.root(), "example", "nested-plugin", "2", "hpi", "");
+        writeModule(
+                fixture.root(),
+                "example",
+                "plugin",
+                "hpi",
+                dependency("example", "nested-plugin") + dependency("example", "extra"));
+        fixture.project().getDependencies().add(fixture.runtime().getName(), "example:plugin:1");
+        fixture.project().getDependencies().add(fixture.runtime().getName(), "example:nested-plugin:2");
+        fixture.project().getDependencies().add(fixture.runtime().getName(), "example:extra:1");
+
+        assertThat(fixture.artifacts().getBundledLibraries().getFiles())
+                .extracting(File::getName)
+                .containsExactly("extra-1.jar");
+        assertThat(fixture.artifacts().getBundledModules())
+                .extracting(ModuleComponentIdentifier::getModule)
+                .containsExactly("extra");
     }
 
-    private static ResolvedDependency resolvedDependency(
-            String group, String name, String extension, String fileName, Set<ResolvedDependency> children) {
-        var dependency = mock(ResolvedDependency.class);
-        var artifact = mock(ResolvedArtifact.class);
-        when(dependency.getModuleGroup()).thenReturn(group);
-        when(dependency.getModuleName()).thenReturn(name);
-        when(dependency.getChildren()).thenReturn(children);
-        when(dependency.getModuleArtifacts()).thenReturn(Set.of(artifact));
-        when(artifact.getExtension()).thenReturn(extension);
-        when(artifact.getFile()).thenReturn(new File(fileName));
-        return dependency;
+    @Test
+    void retainsLibrariesExcludedByPublishedPlugins() throws Exception {
+        var fixture = fixture("published-plugin-exclusion");
+        writeModule(fixture.root(), "example", "extra", "jar", "");
+        writeModule(fixture.root(), "example", "shared", "jar", dependency("example", "extra"));
+        writeModule(fixture.root(), "example", "plugin", "hpi", """
+                <dependency><groupId>example</groupId><artifactId>shared</artifactId><version>1</version>
+                <exclusions><exclusion><groupId>example</groupId><artifactId>extra</artifactId></exclusion></exclusions>
+                </dependency>
+                """);
+        fixture.project().getDependencies().add(fixture.runtime().getName(), "example:plugin:1");
+        fixture.project().getDependencies().add(fixture.runtime().getName(), "example:shared:1");
+
+        assertThat(fixture.artifacts().getBundledLibraries().getFiles())
+                .extracting(File::getName)
+                .containsExactly("extra-1.jar");
+        assertThat(fixture.artifacts().getBundledModules())
+                .extracting(ModuleComponentIdentifier::getModule)
+                .containsExactly("extra");
     }
 
-    private static Dependency requestedDependency(String group, String name) {
-        var dependency = mock(org.gradle.api.artifacts.ModuleDependency.class);
-        when(dependency.getGroup()).thenReturn(group);
-        when(dependency.getName()).thenReturn(name);
-        return dependency;
+    @Test
+    void declaresPluginsReachedThroughBundledLibraryRoots() throws Exception {
+        var fixture = fixture("transitive-plugin");
+        fixture.runtime()
+                .getAttributes()
+                .attribute(
+                        ArtifactType.ARTIFACT_TYPE_ATTRIBUTE,
+                        fixture.project().getObjects().named(ArtifactType.class, ArtifactType.DEFAULT));
+        writeModule(fixture.root(), "example", "provided", "jar", "");
+        writeModule(fixture.root(), "example", "plugin", "hpi", dependency("example", "provided"));
+        writeModule(fixture.root(), "example", "library", "jar", dependency("example", "plugin"));
+        fixture.project().getDependencies().add(fixture.runtime().getName(), "example:library:1");
+
+        assertThat(V2JpiPlugin.resolvePluginDependencies(fixture.runtime())).isEqualTo("plugin:1");
+        assertThat(fixture.artifacts().getBundledLibraries().getFiles())
+                .extracting(File::getName)
+                .containsExactly("library-1.jar");
     }
 
-    private static ProjectDependency projectDependency(String group, String name) {
-        var dependency = mock(ProjectDependency.class);
-        when(dependency.getGroup()).thenReturn(group);
-        when(dependency.getName()).thenReturn(name);
-        return dependency;
+    @TestFactory
+    Stream<DynamicTest> declaresPluginsWhenJarAndArchiveVariantsAreSelectedInEitherOrder() {
+        return Stream.of(true, false)
+                .map(jarFirst -> dynamicTest("jarFirst=" + jarFirst, () -> {
+                    var fixture = fixture("variant-order-" + jarFirst);
+                    fixture.runtime()
+                            .getAttributes()
+                            .attribute(
+                                    ArtifactType.ARTIFACT_TYPE_ATTRIBUTE,
+                                    fixture.project().getObjects().named(ArtifactType.class, ArtifactType.DEFAULT));
+                    writeModule(fixture.root(), "example", "plugin", "hpi", "");
+                    var jar = (ExternalModuleDependency)
+                            fixture.project().getDependencies().create("example:plugin:1");
+                    jar.attributes(attributes -> attributes.attribute(
+                            ArtifactType.ARTIFACT_TYPE_ATTRIBUTE,
+                            fixture.project().getObjects().named(ArtifactType.class, ArtifactType.PLUGIN_JAR)));
+                    var archive = fixture.project().getDependencies().create("example:plugin:1");
+                    fixture.runtime().getDependencies().add(jarFirst ? jar : archive);
+                    fixture.runtime().getDependencies().add(jarFirst ? archive : jar);
+
+                    assertThat(V2JpiPlugin.resolvePluginDependencies(fixture.runtime()))
+                            .isEqualTo("plugin:1");
+                }));
+    }
+
+    private Fixture fixture(String name) throws IOException {
+        var root = Files.createDirectory(tempDir.resolve(name));
+        var project = ProjectBuilder.builder().withProjectDir(root.toFile()).build();
+        projects.add(project);
+        project.getRepositories()
+                .maven(repository -> repository.setUrl(root.resolve("repo").toUri()));
+        project.getDependencies().getComponents().all(HpiMetadataRule.class);
+        var runtime = project.getConfigurations().create("reviewedRuntime");
+        runtime.getAttributes()
+                .attribute(
+                        ArtifactType.ARTIFACT_TYPE_ATTRIBUTE,
+                        project.getObjects().named(ArtifactType.class, ArtifactType.DEFAULT));
+        var core = project.getConfigurations().create("reviewedCore");
+        return new Fixture(root, project, runtime, core, new RuntimeClasspathArtifacts(project, runtime, core));
     }
 
     private record Fixture(
-            RuntimeClasspathArtifacts artifacts, ConfigurationContainer configurations, Configuration detached) {}
+            Path root,
+            Project project,
+            Configuration runtime,
+            Configuration core,
+            RuntimeClasspathArtifacts artifacts) {}
 }
