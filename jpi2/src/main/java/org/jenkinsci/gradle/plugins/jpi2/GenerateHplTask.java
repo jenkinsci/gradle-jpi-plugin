@@ -78,7 +78,6 @@ public abstract class GenerateHplTask extends DefaultTask {
                     .putValue("Resource-Path", getResourcePath().get().getAbsolutePath());
 
             manifest.getMainAttributes().putValue("Libraries", String.join(",", getLibraryPaths()));
-            // The upstream manifest only has Plugin-Dependencies if the jpi task ran, which hplRun never needs.
             if (getPluginDependencies().isPresent()) {
                 manifest.getMainAttributes()
                         .putValue("Plugin-Dependencies", getPluginDependencies().get());

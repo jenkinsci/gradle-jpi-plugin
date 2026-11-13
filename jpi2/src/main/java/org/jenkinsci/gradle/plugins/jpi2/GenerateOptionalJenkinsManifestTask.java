@@ -13,9 +13,12 @@ import org.gradle.api.GradleException;
 import org.gradle.api.file.ConfigurableFileCollection;
 import org.gradle.api.file.FileTree;
 import org.gradle.api.file.RegularFileProperty;
+import org.gradle.api.provider.Property;
 import org.gradle.api.tasks.CacheableTask;
+import org.gradle.api.tasks.Input;
 import org.gradle.api.tasks.InputFiles;
 import org.gradle.api.tasks.Internal;
+import org.gradle.api.tasks.Optional;
 import org.gradle.api.tasks.OutputFile;
 import org.gradle.api.tasks.PathSensitive;
 import org.gradle.api.tasks.PathSensitivity;
@@ -43,6 +46,11 @@ public abstract class GenerateOptionalJenkinsManifestTask extends DefaultTask {
         return getInspectionDirectories().getAsFileTree().matching(pattern -> pattern.include(EXTENSION_INDEX));
     }
 
+    /** @return resolved plugin dependencies, absent when the plugin declares none */
+    @Input
+    @Optional
+    public abstract Property<String> getPluginDependencies();
+
     /** @return the partial manifest file to write (merged into the final plugin JAR manifest) */
     @OutputFile
     public abstract RegularFileProperty getOutputFile();
@@ -55,6 +63,11 @@ public abstract class GenerateOptionalJenkinsManifestTask extends DefaultTask {
     public void generate() {
         var manifest = new Manifest();
         manifest.getMainAttributes().put(Attributes.Name.MANIFEST_VERSION, "1.0");
+
+        var dependencies = getPluginDependencies().getOrNull();
+        if (dependencies != null) {
+            manifest.getMainAttributes().putValue("Plugin-Dependencies", dependencies);
+        }
 
         var supportDynamicLoading = resolveDynamicLoadingSupport();
         if (supportDynamicLoading != null) {

@@ -13,6 +13,7 @@ import java.util.Set;
 import java.util.stream.Collectors;
 import org.gradle.api.Plugin;
 import org.gradle.api.Project;
+import org.gradle.api.Task;
 import org.gradle.api.artifacts.Configuration;
 import org.gradle.api.artifacts.Dependency;
 import org.gradle.api.artifacts.ProjectDependency;
@@ -174,21 +175,56 @@ public class V2JpiPlugin implements Plugin<Project> {
                     task.setGroup(BasePlugin.BUILD_GROUP);
                     task.setDescription("Generates optional Jenkins manifest attributes.");
                     task.getInspectionDirectories().from(main.getOutput());
+                    task.getPluginDependencies().set(project.provider(() -> resolvePluginDependencies(defaultRuntime)));
                     task.getOutputFile()
                             .set(project.getLayout().getBuildDirectory().file("jenkins-manifests/optional.mf"));
                 });
         var optionalManifestFile = optionalManifest.flatMap(GenerateOptionalJenkinsManifestTask::getOutputFile);
 
+        var manifestTask = project.getTasks()
+                .register(GenerateJenkinsManifestTask.NAME, GenerateJenkinsManifestTask.class, task -> {
+                    task.setGroup(BasePlugin.BUILD_GROUP);
+                    task.setDescription("Generates common Jenkins plugin manifest metadata.");
+                    task.getOptionalManifest().set(optionalManifestFile);
+                    task.getOutputFile()
+                            .set(project.getLayout().getBuildDirectory().file("jenkins-manifests/plugin.mf"));
+                });
+        var manifestFile = manifestTask.flatMap(GenerateJenkinsManifestTask::getOutputFile);
+
         var jpiTask = project.getTasks()
                 .register(
                         JPI_TASK,
                         War.class,
-                        new ConfigureJpiAction(
-                                project, defaultRuntime, runtimeClasspathArtifacts.getBundledLibraries(), extension));
+                        new ConfigureJpiAction(project, runtimeClasspathArtifacts.getBundledLibraries(), extension));
+        manifestTask.configure(task -> {
+            task.getSourceManifest().set(jpiTask.get().getManifest());
+            // Resolve dependency notation and file producers before dropping the archive
+            // pipeline, so imported manifests retain their producer tasks.
+            task.dependsOn(project.provider(() -> {
+                var archive = jpiTask.get();
+                var prerequisites =
+                        new LinkedHashSet<Task>(archive.getTaskDependencies().getDependencies(archive));
+                prerequisites.addAll(
+                        archive.getInputs().getFiles().getBuildDependencies().getDependencies(archive));
+                return prerequisites.stream()
+                        .filter(dependency -> !isPackagingTask(dependency))
+                        .toList();
+            }));
+        });
         jpiTask.configure(war -> {
+            war.getManifest()
+                    .from(
+                            optionalManifestFile,
+                            merge -> merge.eachEntry(entry -> {
+                                if (entry.getValue() == null) {
+                                    entry.exclude();
+                                }
+                            }));
             war.dependsOn(licenseTask);
-            war.getInputs().file(optionalManifestFile);
-            war.getManifest().from(optionalManifestFile);
+            war.getInputs().file(manifestFile);
+            // Use the same configured source without merging generated output back into its
+            // inputs. Resolve absent providers even when shared generation is restored from cache.
+            war.doFirst(task -> JenkinsManifestAttributes.resolveProviders(((War) task).getManifest()));
             war.getWebInf().from(licenseTask.flatMap(GenerateLicenseInfoTask::getOutputDirectory));
             war.getArchiveVersion().set(extension.getEffectiveVersion());
             // Gradle's own default for these flipped between the 8.x and 9.x lines; pin them so the
@@ -198,32 +234,23 @@ public class V2JpiPlugin implements Plugin<Project> {
             war.setReproducibleFileOrder(true);
         });
         project.getTasks().named("jar", Jar.class).configure(jarTask -> {
-            jarTask.manifest(new ManifestAction(project, extension));
-            jarTask.getInputs().file(optionalManifestFile);
-            jarTask.getManifest().from(optionalManifestFile);
+            jarTask.getInputs().file(manifestFile);
+            jarTask.getManifest()
+                    .from(
+                            manifestFile,
+                            merge -> merge.eachEntry(entry -> {
+                                if (entry.getBaseValue() != null) {
+                                    entry.setValue(entry.getBaseValue());
+                                }
+                            }));
             jarTask.setPreserveFileTimestamps(false);
             jarTask.setReproducibleFileOrder(true);
-
-            // Resolving defaultRuntime must wait until the jar task actually executes: some publishing
-            // plugins (e.g. com.jfrog.artifactory) realize this task from a gradle.projectsEvaluated
-            // listener, before projects are configured and before Gradle's exclusive project-execution
-            // lock is available, and an eager resolution there is rejected as unsafe.
-            var pluginDependencies = project.provider(() -> resolvePluginDependencies(defaultRuntime));
-            jarTask.getInputs()
-                    .property("pluginDependencies", pluginDependencies)
-                    .optional(true);
-            jarTask.doFirst(task -> {
-                var value = pluginDependencies.getOrNull();
-                if (value != null) {
-                    jarTask.getManifest().getAttributes().put("Plugin-Dependencies", value);
-                }
-            });
         });
         Provider<Directory> jpiDirectory =
                 project.getLayout().getBuildDirectory().dir("jpi");
         project.getTasks().register(EXPLODED_JPI_TASK, Sync.class, sync -> {
             sync.into(jpiDirectory);
-            sync.with(jpiTask.get());
+            sync.from(project.zipTree(jpiTask.flatMap(War::getArchiveFile)));
         });
         var generateHpl = project.getTasks().register(GenerateHplTask.TASK_NAME, GenerateHplTask.class, task -> {
             task.setGroup("Jenkins Server");
@@ -237,10 +264,8 @@ public class V2JpiPlugin implements Plugin<Project> {
             task.getLibraries().from(main.getOutput().getClassesDirs());
             task.getLibraries().from(project.provider(main.getOutput()::getResourcesDir));
             task.getLibraries().from(runtimeClasspathArtifacts.getBundledLibraries());
-            task.getUpstreamManifest().set(jpiDirectory.map(dir -> dir.file("META-INF/MANIFEST.MF")));
-            task.getPluginDependencies().set(project.provider(() -> resolvePluginDependencies(defaultRuntime)));
+            task.getUpstreamManifest().set(manifestFile);
             task.dependsOn(project.getTasks().named("classes"));
-            task.dependsOn(project.getTasks().named(EXPLODED_JPI_TASK));
         });
         project.getTasks().named("assemble", task -> task.dependsOn(jpiTask));
 
@@ -332,6 +357,27 @@ public class V2JpiPlugin implements Plugin<Project> {
 
         ServerVerificationConfigurer.configure(
                 project, serverTaskClasspath, prepareServer, prepareRun, main, runtimeClasspathArtifacts);
+    }
+
+    private static boolean isPackagingTask(Object dependency) {
+        String name;
+        if (dependency instanceof TaskProvider<?> provider) {
+            name = provider.getName();
+        } else if (dependency instanceof Task task) {
+            name = task.getName();
+        } else if (dependency instanceof CharSequence text) {
+            var path = text.toString();
+            name = path.substring(path.lastIndexOf(':') + 1);
+        } else {
+            return false;
+        }
+        return Set.of(
+                        "jar",
+                        JPI_TASK,
+                        EXPLODED_JPI_TASK,
+                        GenerateLicenseInfoTask.NAME,
+                        GenerateJenkinsManifestTask.NAME)
+                .contains(name);
     }
 
     @NotNull
