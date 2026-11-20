@@ -227,6 +227,9 @@ class SimpleBuildIntegrationTest extends V2IntegrationTestBase {
                     mainClass.set("%s")
                     setDependsOn(emptyList<Any>())
                 }
+                tasks.named("server").get()
+                tasks.named("hplRun").get()
+                layout.buildDirectory.set(layout.projectDirectory.dir("custom-build"))
                 """.formatted(
                                 stubClasspath,
                                 ServerTaskConfigurationCacheMain.class.getName(),
@@ -240,10 +243,14 @@ class SimpleBuildIntegrationTest extends V2IntegrationTestBase {
         var firstRun = runner.withArguments(arguments).build();
         assertThat(firstRun.getOutput()).contains("Configuration cache entry stored.");
         assertThat(firstRun.getOutput()).contains("SERVER_TASK_EXECUTED");
+        var expectedWebroot = "SERVER_ARG=--webroot="
+                + ith.inProjectDir("custom-build/jenkins/war").getCanonicalPath();
+        assertThat(firstRun.getOutput()).contains(expectedWebroot);
 
         var secondRun = runner.withArguments(arguments).build();
         assertThat(secondRun.getOutput()).contains("Reusing configuration cache.");
         assertThat(secondRun.getOutput()).contains("SERVER_TASK_EXECUTED");
+        assertThat(secondRun.getOutput()).contains(expectedWebroot);
     }
 
     @Test

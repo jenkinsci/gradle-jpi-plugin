@@ -6,5 +6,6 @@ public final class ServerTaskConfigurationCacheMain {
 
     public static void main(String[] args) {
         System.out.println("SERVER_TASK_EXECUTED");
+        for (var arg : args) System.out.println("SERVER_ARG=" + arg);
     }
 }

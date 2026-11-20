@@ -12,15 +12,22 @@ class ServerActionTest {
     void defaultLaunchDirectoryTracksBuildDirectory() {
         var project = ProjectBuilder.builder().build();
         var launchDir = WorkDirectorySettings.getLaunchDir(project);
+        var classpath = project.getConfigurations().create("serverClasspath");
+        var prepare = project.getTasks().register("prepare", DefaultTask.class);
+        var task = project.getTasks().create("server", JavaExec.class);
+        new ServerAction(classpath, project.provider(() -> "/home"), project.provider(() -> "0"), launchDir, prepare)
+                .execute(task);
         project.getLayout()
                 .getBuildDirectory()
                 .set(project.getLayout().getProjectDirectory().dir("custom-build"));
-        assertThat(launchDir.get())
-                .isEqualTo(project.getLayout()
-                        .getProjectDirectory()
-                        .dir("custom-build/jenkins")
-                        .getAsFile()
-                        .getAbsolutePath());
+        task.getActions().get(0).execute(task);
+        assertThat(task.getArgs())
+                .contains("--webroot="
+                        + project.getLayout()
+                                .getProjectDirectory()
+                                .dir("custom-build/jenkins/war")
+                                .getAsFile()
+                                .getAbsolutePath());
     }
 
     @Test
@@ -37,6 +44,7 @@ class ServerActionTest {
                             project.provider(() -> "/isolated"),
                             prepare)
                     .execute(task);
+            task.getActions().get(0).execute(task);
             assertThat(task.getArgs())
                     .contains(
                             "--webroot=/isolated/war",
