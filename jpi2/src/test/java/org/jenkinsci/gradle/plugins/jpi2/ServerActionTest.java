@@ -2,6 +2,7 @@ package org.jenkinsci.gradle.plugins.jpi2;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.nio.file.Path;
 import org.gradle.api.DefaultTask;
 import org.gradle.api.tasks.JavaExec;
 import org.gradle.testfixtures.ProjectBuilder;
@@ -21,13 +22,16 @@ class ServerActionTest {
                 .getBuildDirectory()
                 .set(project.getLayout().getProjectDirectory().dir("custom-build"));
         task.getActions().get(0).execute(task);
-        assertThat(task.getArgs())
-                .contains("--webroot="
-                        + project.getLayout()
-                                .getProjectDirectory()
-                                .dir("custom-build/jenkins/war")
-                                .getAsFile()
-                                .getAbsolutePath());
+        var webroots = task.getArgs().stream()
+                .filter(arg -> arg.startsWith("--webroot="))
+                .map(arg -> Path.of(arg.substring("--webroot=".length())))
+                .toList();
+        assertThat(webroots)
+                .containsExactly(project.getLayout()
+                        .getProjectDirectory()
+                        .dir("custom-build/jenkins/war")
+                        .getAsFile()
+                        .toPath());
     }
 
     @Test

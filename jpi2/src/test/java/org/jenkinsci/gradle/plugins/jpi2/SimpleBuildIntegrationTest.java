@@ -243,14 +243,23 @@ class SimpleBuildIntegrationTest extends V2IntegrationTestBase {
         var firstRun = runner.withArguments(arguments).build();
         assertThat(firstRun.getOutput()).contains("Configuration cache entry stored.");
         assertThat(firstRun.getOutput()).contains("SERVER_TASK_EXECUTED");
-        var expectedWebroot = "SERVER_ARG=--webroot="
-                + ith.inProjectDir("custom-build/jenkins/war").getCanonicalPath();
-        assertThat(firstRun.getOutput()).contains(expectedWebroot);
+        var expectedWebroot =
+                ith.inProjectDir("custom-build/jenkins/war").getCanonicalFile().toPath();
+        assertServerWebroots(firstRun.getOutput(), expectedWebroot);
 
         var secondRun = runner.withArguments(arguments).build();
         assertThat(secondRun.getOutput()).contains("Reusing configuration cache.");
         assertThat(secondRun.getOutput()).contains("SERVER_TASK_EXECUTED");
-        assertThat(secondRun.getOutput()).contains(expectedWebroot);
+        assertServerWebroots(secondRun.getOutput(), expectedWebroot);
+    }
+
+    private static void assertServerWebroots(String output, Path expectedWebroot) {
+        var prefix = "SERVER_ARG=--webroot=";
+        var webroots = output.lines()
+                .filter(line -> line.startsWith(prefix))
+                .map(line -> Path.of(line.substring(prefix.length())))
+                .toList();
+        assertThat(webroots).containsExactly(expectedWebroot, expectedWebroot);
     }
 
     @Test
