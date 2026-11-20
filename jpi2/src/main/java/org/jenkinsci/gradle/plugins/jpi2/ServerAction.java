@@ -14,22 +14,22 @@ import org.jetbrains.annotations.NotNull;
  */
 class ServerAction implements Action<JavaExec> {
     private final Configuration serverTaskClasspath;
-    private final String projectRoot;
     private final Provider<String> workDir;
     private final Provider<String> serverPort;
+    private final Provider<String> launchDir;
     private final TaskProvider<?> prepareServer;
 
     /** Creates an action that configures the Jenkins server process. */
     public ServerAction(
             Configuration serverTaskClasspath,
-            String projectRoot,
             Provider<String> workDir,
             Provider<String> serverPort,
+            Provider<String> launchDir,
             TaskProvider<?> prepareServer) {
         this.serverTaskClasspath = serverTaskClasspath;
-        this.projectRoot = projectRoot;
         this.workDir = workDir;
         this.serverPort = serverPort;
+        this.launchDir = launchDir;
         this.prepareServer = prepareServer;
     }
 
@@ -40,11 +40,12 @@ class ServerAction implements Action<JavaExec> {
         spec.setErrorOutput(System.err);
         spec.getMainClass().set("executable.Main");
         var resolvedWorkDir = workDir.get();
+        var resolvedLaunchDir = launchDir.get();
         var args = new ArrayList<String>();
         args.addAll(List.of(
-                "--webroot=" + projectRoot + "/build/jenkins/war",
-                "--pluginroot=" + projectRoot + "/build/jenkins/plugins",
-                "--extractedFilesFolder=" + projectRoot + "/build/jenkins/extracted",
+                "--webroot=" + resolvedLaunchDir + "/war",
+                "--pluginroot=" + resolvedLaunchDir + "/plugins",
+                "--extractedFilesFolder=" + resolvedLaunchDir + "/extracted",
                 "--commonLibFolder=" + resolvedWorkDir + "/lib",
                 "--httpPort=" + serverPort.getOrElse("8080")));
         args.addAll(spec.getArgs());

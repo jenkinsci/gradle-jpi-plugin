@@ -120,6 +120,77 @@ class SimpleBuildIntegrationTest extends V2IntegrationTestBase {
     }
 
     @Test
+    void verificationLaunchDirectoriesAreIsolatedAndSurviveConfigurationCache() throws Exception {
+        var ith = new IntegrationTestHelper(tempDir, "8.14");
+        configureSimpleBuildForVerification(ith);
+        var stubClasspath = Path.of(LaunchDirectoryProbe.class
+                        .getProtectionDomain()
+                        .getCodeSource()
+                        .getLocation()
+                        .toURI())
+                .toAbsolutePath()
+                .toString()
+                .replace("\\", "/")
+                .replace("\"", "\\\"");
+        Files.writeString(
+                ith.inProjectDir("build.gradle.kts").toPath(),
+                """
+                listOf("server", "hplRun").forEach { name ->
+                    tasks.named<JavaExec>(name) {
+                        classpath = files("%s")
+                        mainClass.set("%s")
+                        setDependsOn(emptyList<Any>())
+                        systemProperty("probe.output", layout.projectDirectory.file("$name-paths.txt").asFile.absolutePath)
+                    }
+                }
+                """.formatted(stubClasspath, LaunchDirectoryProbe.class.getName()),
+                StandardOpenOption.APPEND);
+        var runner = ith.gradleRunner();
+        var args = new String[] {
+            "testServer",
+            "testHplRun",
+            "--configuration-cache",
+            "--configuration-cache-problems=fail",
+            "--rerun-tasks",
+            "-Djpi2.preserveTestWorkDir=true"
+        };
+        var first = runner.withArguments(args).build();
+        assertThat(first.getOutput()).contains("Configuration cache entry stored.");
+        var firstServer =
+                Files.readAllLines(ith.inProjectDir("server-paths.txt").toPath());
+        var firstHpl = Files.readAllLines(ith.inProjectDir("hplRun-paths.txt").toPath());
+        assertIsolatedLaunch(firstServer);
+        assertIsolatedLaunch(firstHpl);
+        assertThat(firstServer.get(0)).isNotEqualTo(firstHpl.get(0));
+        var second = runner.withArguments(args).build();
+        assertThat(second.getOutput()).contains("Reusing configuration cache.");
+        var secondServer =
+                Files.readAllLines(ith.inProjectDir("server-paths.txt").toPath());
+        var secondHpl = Files.readAllLines(ith.inProjectDir("hplRun-paths.txt").toPath());
+        assertIsolatedLaunch(secondServer);
+        assertIsolatedLaunch(secondHpl);
+        assertThat(secondServer.get(0)).isNotEqualTo(firstServer.get(0));
+        assertThat(secondHpl.get(0)).isNotEqualTo(firstHpl.get(0));
+
+        runner.withArguments("testServer", "testHplRun", "--rerun-tasks").build();
+        for (var name : new String[] {"server", "hplRun"}) {
+            var paths = Files.readAllLines(ith.inProjectDir(name + "-paths.txt").toPath());
+            for (var path : paths) assertThat(Path.of(path)).doesNotExist();
+        }
+    }
+
+    private static void assertIsolatedLaunch(java.util.List<String> paths) {
+        assertThat(paths).hasSize(4);
+        var home = Path.of(paths.get(0));
+        assertThat(paths.subList(1, 4))
+                .containsExactly(
+                        home.resolve("launch/war").toString(),
+                        home.resolve("launch/plugins").toString(),
+                        home.resolve("launch/extracted").toString());
+        for (var path : paths) assertThat(Path.of(path).resolve("probe")).exists();
+    }
+
+    @Test
     void simpleGradleBuildShouldLaunchServer() throws IOException, InterruptedException {
         // given
         var ith = new IntegrationTestHelper(tempDir, "8.14");

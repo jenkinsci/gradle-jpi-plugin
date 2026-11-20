@@ -273,6 +273,7 @@ public class V2JpiPlugin implements Plugin<Project> {
                 project.getLayout().getProjectDirectory().getAsFile().getAbsolutePath();
         final var workDir = WorkDirectorySettings.getWorkDir(project, extension, projectRoot);
         final var serverPort = project.getProviders().gradleProperty("server.port");
+        final var launchDir = WorkDirectorySettings.getLaunchDir(project);
         final var prepareServer = createPrepareServerTask(project, workDir, defaultRuntime, jpiTask);
         final var prepareRun = createPrepareRunTask(project, workDir, defaultRuntime, generateHpl);
 
@@ -291,12 +292,12 @@ public class V2JpiPlugin implements Plugin<Project> {
                 .register(
                         "server",
                         JavaExec.class,
-                        new ServerAction(serverTaskClasspath, projectRoot, workDir, serverPort, prepareServer));
+                        new ServerAction(serverTaskClasspath, workDir, serverPort, launchDir, prepareServer));
         project.getTasks()
                 .register(
                         "hplRun",
                         JavaExec.class,
-                        new ServerAction(serverTaskClasspath, projectRoot, workDir, serverPort, prepareRun));
+                        new ServerAction(serverTaskClasspath, workDir, serverPort, launchDir, prepareRun));
         project.getPlugins().withType(JavaBasePlugin.class, new SezpozJavaAction(project));
         project.getPlugins().withType(GroovyBasePlugin.class, new SezpozGroovyAction(project));
         AccessModifierConfigurer.configure(project);
