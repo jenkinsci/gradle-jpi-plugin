@@ -182,11 +182,9 @@ class SimpleBuildIntegrationTest extends V2IntegrationTestBase {
     private static void assertIsolatedLaunch(java.util.List<String> paths) {
         assertThat(paths).hasSize(4);
         var home = Path.of(paths.get(0));
-        assertThat(paths.subList(1, 4))
+        assertThat(paths.subList(1, 4).stream().map(Path::of).toList())
                 .containsExactly(
-                        home.resolve("launch/war").toString(),
-                        home.resolve("launch/plugins").toString(),
-                        home.resolve("launch/extracted").toString());
+                        home.resolve("launch/war"), home.resolve("launch/plugins"), home.resolve("launch/extracted"));
         for (var path : paths) assertThat(Path.of(path).resolve("probe")).exists();
     }
 
