@@ -23,6 +23,52 @@ import org.junit.jupiter.api.Timeout;
 class MultiModuleIntegrationTest extends V2IntegrationTestBase {
 
     @Test
+    void parallelVerificationLaunchesUseSeparateDirectories() throws Exception {
+        var ith = new IntegrationTestHelper(tempDir, "8.14");
+        configureTwoPluginsForVerification(ith);
+        var stubClasspath = java.nio.file.Path.of(LaunchDirectoryProbe.class
+                        .getProtectionDomain()
+                        .getCodeSource()
+                        .getLocation()
+                        .toURI())
+                .toAbsolutePath()
+                .toString()
+                .replace("\\", "/")
+                .replace("\"", "\\\"");
+        for (var module : new String[] {"upstream", "downstream"}) {
+            Files.writeString(
+                    ith.inProjectDir(module + "/build.gradle.kts").toPath(),
+                    """
+                    tasks.named<JavaExec>("server") {
+                        classpath = files("%s")
+                        mainClass.set("%s")
+                        setDependsOn(emptyList<Any>())
+                        systemProperty("probe.output", layout.projectDirectory.file("paths.txt").asFile.absolutePath)
+                    }
+                    """.formatted(stubClasspath, LaunchDirectoryProbe.class.getName()),
+                    java.nio.file.StandardOpenOption.APPEND);
+        }
+        ith.gradleRunner()
+                .withArguments(
+                        ":upstream:testServer",
+                        ":downstream:testServer",
+                        "--parallel",
+                        "--max-workers=4",
+                        "-DtestServer.maxParallelLaunches=2",
+                        "-Djpi2.preserveTestWorkDir=true")
+                .build();
+        var upstream = Files.readAllLines(ith.inProjectDir("upstream/paths.txt").toPath());
+        var downstream =
+                Files.readAllLines(ith.inProjectDir("downstream/paths.txt").toPath());
+        assertThat(upstream).hasSize(4).doesNotContainAnyElementsOf(downstream);
+        assertThat(downstream).hasSize(4);
+        for (var path : upstream)
+            assertThat(java.nio.file.Path.of(path).resolve("probe")).exists();
+        for (var path : downstream)
+            assertThat(java.nio.file.Path.of(path).resolve("probe")).exists();
+    }
+
+    @Test
     void multiModuleWithNestedDependenciesShouldBuild() throws IOException, XmlPullParserException {
         // given
         var ith = new IntegrationTestHelper(tempDir, "8.14");

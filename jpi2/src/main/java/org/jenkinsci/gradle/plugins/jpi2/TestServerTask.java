@@ -463,12 +463,12 @@ public abstract class TestServerTask extends DefaultTask {
         if (getDryRun().get()) commandLine.add("--dry-run");
 
         getSystemProperties().get().forEach((k, v) -> {
-            if (!k.equals(WorkDirectorySettings.PROPERTY)) {
+            if (!k.equals(WorkDirectorySettings.PROPERTY) && !k.equals(WorkDirectorySettings.LAUNCH_DIR_PROPERTY)) {
                 commandLine.add("-D" + k + "=" + slashify(v));
             }
         });
         getProjectProperties().get().forEach((k, v) -> {
-            if (!k.equals(WorkDirectorySettings.PROPERTY)) {
+            if (!k.equals(WorkDirectorySettings.PROPERTY) && !k.equals(WorkDirectorySettings.LAUNCH_DIR_PROPERTY)) {
                 commandLine.add("-P" + k + "=" + slashify(v));
             }
         });
@@ -481,6 +481,8 @@ public abstract class TestServerTask extends DefaultTask {
         commandLine.add("-Pserver.port=0");
         commandLine.add("-P" + WorkDirectorySettings.PROPERTY + "="
                 + slashify(workDir.toAbsolutePath().toString()));
+        commandLine.add("-P" + WorkDirectorySettings.LAUNCH_DIR_PROPERTY + "="
+                + slashify(workDir.resolve("launch").toAbsolutePath().toString()));
         getLogger().info("Command: {}", commandLine);
         return commandLine;
     }
