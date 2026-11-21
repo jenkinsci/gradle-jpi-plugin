@@ -18,6 +18,7 @@ import org.gradle.api.artifacts.Configuration;
 import org.gradle.api.artifacts.Dependency;
 import org.gradle.api.artifacts.ProjectDependency;
 import org.gradle.api.artifacts.result.ResolvedDependencyResult;
+import org.gradle.api.attributes.Category;
 import org.gradle.api.attributes.Usage;
 import org.gradle.api.file.Directory;
 import org.gradle.api.plugins.BasePlugin;
@@ -98,6 +99,8 @@ public class V2JpiPlugin implements Plugin<Project> {
                 testHarnessVersion.map(version -> "org.jenkins-ci.main:jenkins-test-harness:" + version);
 
         var jenkinsCore = configurations.create("jenkinsCore");
+        jenkinsCore.setCanBeConsumed(false);
+        configureRuntimeAttributes(project, jenkinsCore);
         var jenkinsCoreAlignment = ConsistentResolution.createAlignment(project, jenkinsCore);
 
         var runtimeClasspath = configurations.getByName("runtimeClasspath");
@@ -118,6 +121,7 @@ public class V2JpiPlugin implements Plugin<Project> {
 
         var testDefaultRuntime = configurations.create("testDefaultRuntime");
         testDefaultRuntime.setCanBeConsumed(false);
+        configureRuntimeAttributes(project, testDefaultRuntime);
         testRuntimeClasspath.getExtendsFrom().forEach(testDefaultRuntime::extendsFrom);
         testDefaultRuntime.extendsFrom(jenkinsCoreAlignment);
         testDefaultRuntime
@@ -126,6 +130,8 @@ public class V2JpiPlugin implements Plugin<Project> {
                         ARTIFACT_TYPE_ATTRIBUTE, project.getObjects().named(ArtifactType.class, ArtifactType.DEFAULT));
 
         var defaultRuntime = configurations.create("defaultRuntime");
+        // Also consumed by sibling Jenkins plugins to identify their plugin dependencies.
+        configureRuntimeAttributes(project, defaultRuntime);
         runtimeClasspath.getExtendsFrom().forEach(defaultRuntime::extendsFrom);
         defaultRuntime.extendsFrom(jenkinsCoreAlignment);
         defaultRuntime
@@ -307,6 +313,8 @@ public class V2JpiPlugin implements Plugin<Project> {
          * If other annotation processors contribute methods/controllers that sezpoz expects, this will ensure it happens.
          */
         var lastAnnotationProcessor = project.getConfigurations().create("lastAnnotationProcessor");
+        lastAnnotationProcessor.setCanBeConsumed(false);
+        lastAnnotationProcessor.setCanBeResolved(false);
         project.getDependencies().add("lastAnnotationProcessor", "net.java.sezpoz:sezpoz:1.13");
         project.getDependencies().add("lastAnnotationProcessor", jenkinsCoreCoordinate);
         project.getConfigurations().getByName("annotationProcessor").extendsFrom(lastAnnotationProcessor);
@@ -538,7 +546,15 @@ public class V2JpiPlugin implements Plugin<Project> {
         return project.getConfigurations().create("serverTaskClasspath", c -> {
             c.setCanBeConsumed(false);
             c.setTransitive(false);
+            configureRuntimeAttributes(project, c);
         });
+    }
+
+    private static void configureRuntimeAttributes(Project project, Configuration configuration) {
+        configuration
+                .getAttributes()
+                .attribute(Usage.USAGE_ATTRIBUTE, project.getObjects().named(Usage.class, Usage.JAVA_RUNTIME))
+                .attribute(Category.CATEGORY_ATTRIBUTE, project.getObjects().named(Category.class, Category.LIBRARY));
     }
 
     @NotNull
