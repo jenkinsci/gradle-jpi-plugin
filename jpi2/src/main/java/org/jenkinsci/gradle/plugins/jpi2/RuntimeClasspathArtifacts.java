@@ -27,6 +27,7 @@ import org.gradle.api.artifacts.result.ResolvedVariantResult;
 import org.gradle.api.artifacts.result.UnresolvedDependencyResult;
 import org.gradle.api.attributes.Category;
 import org.gradle.api.attributes.LibraryElements;
+import org.gradle.api.attributes.Usage;
 import org.gradle.api.file.FileCollection;
 import org.jetbrains.annotations.NotNull;
 
@@ -126,11 +127,11 @@ class RuntimeClasspathArtifacts {
         var directJarDependencies = getDirectJarDependencies(roots, providedModules);
         var detachedConfiguration =
                 project.getConfigurations().detachedConfiguration(directJarDependencies.toArray(new Dependency[0]));
-        detachedConfiguration
-                .getAttributes()
-                .attribute(
-                        ARTIFACT_TYPE_ATTRIBUTE,
-                        project.getObjects().named(ArtifactType.class, ArtifactType.PLUGIN_JAR));
+        var attributes = detachedConfiguration.getAttributes();
+        attributes.attribute(Usage.USAGE_ATTRIBUTE, project.getObjects().named(Usage.class, Usage.JAVA_RUNTIME));
+        attributes.attribute(Category.CATEGORY_ATTRIBUTE, project.getObjects().named(Category.class, Category.LIBRARY));
+        attributes.attribute(
+                ARTIFACT_TYPE_ATTRIBUTE, project.getObjects().named(ArtifactType.class, ArtifactType.PLUGIN_JAR));
         detachedConfiguration.shouldResolveConsistentlyWith(configuration);
 
         var jpiProvidedJars = pluginTransitives.stream()
