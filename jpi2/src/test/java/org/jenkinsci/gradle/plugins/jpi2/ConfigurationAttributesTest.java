@@ -34,5 +34,15 @@ class ConfigurationAttributesTest {
                     .as(name)
                     .isFalse();
         }
+        var core = project.getConfigurations().getByName("jenkinsCore");
+        var coreElements = project.getConfigurations().getByName(V2JpiPlugin.JENKINS_CORE_ELEMENTS);
+        assertThat(coreElements.isCanBeResolved()).isFalse();
+        assertThat(coreElements.isCanBeConsumed()).isTrue();
+        assertThat(coreElements.getExtendsFrom()).containsExactly(core);
+        assertThat(coreElements
+                        .getAttributes()
+                        .getAttribute(ArtifactType.ARTIFACT_TYPE_ATTRIBUTE)
+                        .getName())
+                .isEqualTo(V2JpiPlugin.JENKINS_CORE_ELEMENTS);
     }
 }
